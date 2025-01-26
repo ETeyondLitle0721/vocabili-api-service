@@ -576,7 +576,7 @@ export class DatabaseOperator {
      * @param {(value: any)=>any} parser 语句构建结果处理器
      * @returns 执行结果
      */
-    #process(generator, list, options, handler, parser) {
+    #process(generator, list, options, handler, parser = (value) => value) {
         let result = [];
 
         if (get_type(list).second !== "array") {
