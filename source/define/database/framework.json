@@ -1,0 +1,390 @@
+{
+    "table": [
+        {
+            "name": "Song_Table",
+            "flag": "if-not-exists",
+            "column": [
+                {
+                    "name": "id",
+                    "mark": "primary-key",
+                    "value": {
+                        "type": "text",
+                        "restrict": [
+                            "not-null",
+                            "unique"
+                        ]
+                    }
+                },
+                {
+                    "name": "name",
+                    "value": {
+                        "type": "text",
+                        "restrict": "not-null"
+                    }
+                },
+                {
+                    "name": "title",
+                    "value": {
+                        "type": "text",
+                        "restrict": "not-null"
+                    }
+                },
+                {
+                    "name": "link",
+                    "value": {
+                        "type": "text",
+                        "restrict": "not-null"
+                    }
+                },
+                {
+                    "name": "type",
+                    "value": {
+                        "type": "text",
+                        "restrict": "not-null"
+                    }
+                },
+                {
+                    "name": "page",
+                    "value": {
+                        "type": "integer"
+                    }
+                },
+                {
+                    "name": "duration",
+                    "value": {
+                        "type": "integer"
+                    }
+                },
+                {
+                    "name": "copyright",
+                    "value": {
+                        "type": "text",
+                        "restrict": "not-null"
+                    }
+                },
+                {
+                    "name": "cover",
+                    "value": {
+                        "type": "text",
+                        "restrict": "not-null"
+                    }
+                },
+                {
+                    "name": "uploaded_at",
+                    "value": {
+                        "type": "text",
+                        "restrict": "not-null"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Mark_Table",
+            "flag": "if-not-exists",
+            "column": [
+                {
+                    "name": "id",
+                    "mark": "primary-key",
+                    "value": {
+                        "type": "text",
+                        "restrict": [
+                            "not-null",
+                            "unique"
+                        ]
+                    }
+                },
+                {
+                    "name": "type",
+                    "value": {
+                        "type": "text",
+                        "restrict": "not-null"
+                    }
+                },
+                {
+                    "name": "target",
+                    "value": {
+                        "type": "text",
+                        "restrict": "not-null"
+                    }
+                },
+                {
+                    "name": "value",
+                    "value": {
+                        "type": "text",
+                        "restrict": "not-null"
+                    }
+                },
+                {
+                    "name": "added_at",
+                    "value": {
+                        "type": "text",
+                        "restrict": "not-null"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Producer_Table",
+            "flag": "if-not-exists",
+            "column": [
+                {
+                    "name": "id",
+                    "mark": "primary-key",
+                    "value": {
+                        "type": "text",
+                        "restrict": [
+                            "not-null",
+                            "unique"
+                        ]
+                    }
+                },
+                {
+                    "name": "name",
+                    "value": {
+                        "type": "text",
+                        "restrict": "not-null"
+                    }
+                },
+                {
+                    "name": "set_at",
+                    "value": {
+                        "type": "text",
+                        "restrict": "not-null"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Synthesizer_Table",
+            "flag": "if-not-exists",
+            "column": [
+                {
+                    "name": "id",
+                    "mark": "primary-key",
+                    "value": {
+                        "type": "text",
+                        "restrict": [
+                            "not-null",
+                            "unique"
+                        ]
+                    }
+                },
+                {
+                    "name": "name",
+                    "value": {
+                        "type": "text",
+                        "restrict": "not-null"
+                    }
+                },
+                {
+                    "name": "set_at",
+                    "value": {
+                        "type": "text",
+                        "restrict": "not-null"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Uploader_Table",
+            "flag": "if-not-exists",
+            "column": [
+                {
+                    "name": "id",
+                    "mark": "primary-key",
+                    "value": {
+                        "type": "text",
+                        "restrict": [
+                            "not-null",
+                            "unique"
+                        ]
+                    }
+                },
+                {
+                    "name": "name",
+                    "value": {
+                        "type": "text",
+                        "restrict": "not-null"
+                    }
+                },
+                {
+                    "name": "set_at",
+                    "value": {
+                        "type": "text",
+                        "restrict": "not-null"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Vocalist_Table",
+            "flag": "if-not-exists",
+            "column": [
+                {
+                    "name": "id",
+                    "mark": "primary-key",
+                    "value": {
+                        "type": "text",
+                        "restrict": [
+                            "not-null",
+                            "unique"
+                        ]
+                    }
+                },
+                {
+                    "name": "name",
+                    "value": {
+                        "type": "text",
+                        "restrict": "not-null"
+                    }
+                },
+                {
+                    "name": "set_at",
+                    "value": {
+                        "type": "text",
+                        "restrict": "not-null"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Snapshot_Table",
+            "flag": "if-not-exists",
+            "column": [
+                {
+                    "name": "id",
+                    "mark": "primary-key",
+                    "value": {
+                        "type": "text",
+                        "restrict": [
+                            "not-null",
+                            "unique"
+                        ]
+                    }
+                },
+                {
+                    "name": "target",
+                    "value": {
+                        "type": "text",
+                        "restrict": "not-null"
+                    }
+                },
+                {
+                    "name": "view",
+                    "value": {
+                        "type": "integer",
+                        "restrict": "not-null"
+                    }
+                },
+                {
+                    "name": "coin",
+                    "value": {
+                        "type": "integer",
+                        "restrict": "not-null"
+                    }
+                },
+                {
+                    "name": "like",
+                    "value": {
+                        "type": "integer",
+                        "restrict": "not-null"
+                    }
+                },
+                {
+                    "name": "favorite",
+                    "value": {
+                        "type": "integer",
+                        "restrict": "not-null"
+                    }
+                },
+                {
+                    "name": "recorded_at",
+                    "value": {
+                        "type": "text",
+                        "restrict": "not-null"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Rank_Table",
+            "flag": "if-not-exists",
+            "column": [
+                {
+                    "name": "id",
+                    "mark": "primary-key",
+                    "value": {
+                        "type": "text",
+                        "restrict": [
+                            "not-null",
+                            "unique"
+                        ]
+                    }
+                },
+                {
+                    "name": "board",
+                    "value": {
+                        "type": "text",
+                        "restrict": "not-null"
+                    }
+                },
+                {
+                    "name": "issue",
+                    "value": {
+                        "type": "integer",
+                        "restrict": "not-null"
+                    }
+                },
+                {
+                    "name": "target",
+                    "value": {
+                        "type": "text",
+                        "restrict": "not-null"
+                    }
+                },
+                {
+                    "name": "rank",
+                    "value": {
+                        "type": "integer",
+                        "restrict": "not-null"
+                    }
+                },
+                {
+                    "name": "view",
+                    "value": {
+                        "type": "integer",
+                        "restrict": "not-null"
+                    }
+                },
+                {
+                    "name": "coin",
+                    "value": {
+                        "type": "integer",
+                        "restrict": "not-null"
+                    }
+                },
+                {
+                    "name": "like",
+                    "value": {
+                        "type": "integer",
+                        "restrict": "not-null"
+                    }
+                },
+                {
+                    "name": "favorite",
+                    "value": {
+                        "type": "integer",
+                        "restrict": "not-null"
+                    }
+                },
+                {
+                    "name": "set_at",
+                    "value": {
+                        "type": "text",
+                        "restrict": "not-null"
+                    }
+                }
+            ]
+        }
+    ]
+}

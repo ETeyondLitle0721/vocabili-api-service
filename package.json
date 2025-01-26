@@ -1,0 +1,50 @@
+{
+  "name": "vocacili-api-service",
+  "version": "1.0.0",
+  "description": "这是一个主要由 NodeJS 开发的 Vocacili 项目的 API 服务源代码储存仓库",
+  "keywords": [
+    "NodeJS",
+    "Node.js",
+    "JavaScript",
+    "JSONL",
+    "ND-JOSN",
+    "VOCALOID",
+    "SQlite3",
+    "Better-SQLite3",
+    "Express",
+    "ETeyondLitle",
+    "API",
+    "HTTP Server"
+  ],
+  "homepage": "https://github.com/ETeyondLitle0721/vocabili-api-service#readme",
+  "bugs": {
+    "url": "https://github.com/ETeyondLitle0721/vocabili-api-service/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ETeyondLitle0721/vocabili-api-service.git"
+  },
+  "license": "MIT",
+  "author": "ETeyondLitle <eteyondlitle@gmail.com>",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "init:database": "node ./source/script/database/init.js",
+    "start:service": "node ./source/script/start.js",
+    "insert:database": "node ./source/script/database/insert.js",
+    "convert:xlsx-to-jsonl": "node ./source/script/converter/xlsx-to-jsonl.js"
+  },
+  "dependencies": {
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.10.10",
+    "@types/xlsx": "^0.0.35",
+    "better-sqlite3": "^11.8.1",
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "node": "^18.20.6",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {}
+}

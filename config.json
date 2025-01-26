@@ -1,0 +1,29 @@
+{
+    "cors": {
+        "origin": "*",
+        "methods": [
+            "GET", "POST"
+        ]
+    },
+    "debug": true,
+    "service": {
+        "default": {
+            "host": "127.0.0.1",
+            "port": 51001
+        }
+    },
+    "default": {
+        "language": "zh-cn"
+    },
+    "language": "./source/define/language/default.json",
+    "database": {
+        "filepath": {
+            "default": "./assets/database/default.db",
+            "problem": "./assets/database/problem.db"
+        },
+        "framework": {
+            "default": "./source/define/database/framework.json",
+            "problem": "./source/define/database/framework.json"
+        }
+    }
+}
