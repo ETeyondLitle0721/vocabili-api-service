@@ -351,7 +351,7 @@ application.get("/get_board/:board/top:top", (request, response) => {
             {
                 "column": "rank",
                 "operator": "<=",
-                "value": top - 1
+                "value": top
             }
         ]
     });
@@ -395,7 +395,7 @@ application.get("/get_board/:board/top:top/by_issue", (request, response) => {
             {
                 "column": "rank",
                 "operator": "<=",
-                "value": top - 1
+                "value": top
             },
             {
                 "column": "issue",

@@ -3,9 +3,9 @@ import url from "url";
 import path from "path";
 import SQLite3 from "better-sqlite3";
 import format_datetime from "../../depend/toolkit/formatter/datetime.js";
-import { compute_hamc, get_type, text_transformer as capitalize, to_string, generate_random_string, split_group } from "../../depend/core.js";
 import DatabaseOperator from "../../depend/operator/database.js";
 import TaskProgressReporter from "../../depend/operator/reporter/task.js";
+import { compute_hamc, get_type, text_transformer as capitalize, to_string, split_group, classification, unique_array } from "../../depend/core.js";
 
 const root = path.resolve(".");
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
@@ -128,12 +128,12 @@ function _insert_base(format, filepath) {
                         memory.mark.set(id, {
                             "id": id, "type": field, "target": song_id,
                             "value": gen_id(capitalize(field), name),
-                            "added_at": new Date().toISOString()
+                            "set_at": new Date().toISOString()
                         });
 
                         memory[field].set(id, {
                             "id": gen_id(capitalize(field), name),
-                            "name": name, "set-at": new Date().toISOString()
+                            "name": name, "added_at": new Date().toISOString()
                         });
                     });
                 }
@@ -175,7 +175,7 @@ function _insert_daily(format, filepath) {
             const id = gen_id("Record", "vocaloid-daily" + to_string(issue) + data.bvid);
 
             memory.rank.set(id, {
-                "id": id, "rank": index, "board": "vocaloid-daily",
+                "id": id, "rank": index + 1, "board": "vocaloid-daily",
                 "like": data.like, "coin": data.coin, "view": data.view,
                 "issue": issue, "favorite": data.favorite,
                 "target": gen_id("Song", data.name),
@@ -204,7 +204,7 @@ function _insert_weekly(format, filepath) {
             const id = gen_id("Record", "vocaloid-weekly" + to_string(issue) + data.bvid);
 
             memory.rank.set(id, {
-                "id": id, "rank": index, "board": "vocaloid-weekly",
+                "id": id, "rank": index + 1, "board": "vocaloid-weekly",
                 "like": data.like, "coin": data.coin, "view": data.view,
                 "issue": issue, "favorite": data.favorite,
                 "target": gen_id("Song", data.name),
@@ -245,7 +245,7 @@ function _insert_weekly(format, filepath) {
                         memory.mark.set(
                             gen_id("Record", Math.random().toString()), {
                                 "id": gen_id("Record", Math.random().toString()), "type": "tag", "target": song_id,
-                                "value": "deleted", "added_at": new Date().toISOString()
+                                "value": "deleted", "set_at": new Date().toISOString()
                             }
                         );
 
@@ -259,12 +259,12 @@ function _insert_weekly(format, filepath) {
                                     memory.mark.set(id, {
                                         "id": id, "type": field, "target": song_id,
                                         "value": gen_id(capitalize(field), name),
-                                        "added_at": new Date().toISOString()
+                                        "set_at": new Date().toISOString()
                                     });
 
                                     memory[field].set(id, {
                                         "id": gen_id(capitalize(field), name),
-                                        "name": name, "set-at": new Date().toISOString()
+                                        "name": name, "added_at": new Date().toISOString()
                                     });
                                 });
                             }
@@ -450,3 +450,35 @@ Object.entries(task).map(entry => {
 });
 
 instance.exec("COMMIT");
+
+console.log("正在尝试更新 ISSUE 定义文件");
+
+const result = classification(
+    operator.select_item("Rank_Table", {
+        "source": {
+            "select": "all"
+        }
+    }), (value) => {
+        return value.board;
+    }
+);
+
+const filepath = path.resolve(
+    __dirname, "../service/define/default.json"
+), content = JSON.parse(
+    fs.readFileSync(filepath, "UTF-8")
+);
+
+Object.entries(result).map(([key, list]) => {
+    content.metadata.board[key].list.issue.default = unique_array(
+        list.map(item => item.issue)
+    );
+});
+
+fs.writeFileSync(
+    filepath, JSON.stringify(
+        content, null, 4
+    )
+);
+
+console.log("成功");

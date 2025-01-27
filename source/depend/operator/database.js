@@ -287,7 +287,7 @@ function _item_select(options = {}) {
 
     part.push("FROM " + quote_string(source.table, "double"));
 
-    part.push("WHERE " + parse_where(where, {
+    if (Object.keys(where).length > 0) part.push("WHERE " + parse_where(where, {
         "parameter": param_setter
     }));
 
@@ -558,7 +558,7 @@ export class DatabaseOperator {
      * @returns {SQLite3.RunResult} 处理结果
      */
     #processer(response) {
-        // console.log(response);
+        console.log(response);
 
         return this.instanse.prepare(response.sentence)[{
             "request": "run",
@@ -576,7 +576,7 @@ export class DatabaseOperator {
      * @param {(value: any)=>any} parser 语句构建结果处理器
      * @returns 执行结果
      */
-    #process(generator, list, options, handler, parser = (value) => value) {
+    #process(generator, list, options, handler, parser = (value) => ({ "table": value })) {
         let result = [];
 
         if (get_type(list).second !== "array") {

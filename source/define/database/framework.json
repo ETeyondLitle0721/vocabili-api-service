@@ -115,7 +115,7 @@
                     }
                 },
                 {
-                    "name": "added_at",
+                    "name": "set_at",
                     "value": {
                         "type": "text",
                         "restrict": "not-null"
@@ -146,7 +146,7 @@
                     }
                 },
                 {
-                    "name": "set_at",
+                    "name": "added_at",
                     "value": {
                         "type": "text",
                         "restrict": "not-null"
@@ -177,7 +177,7 @@
                     }
                 },
                 {
-                    "name": "set_at",
+                    "name": "added_at",
                     "value": {
                         "type": "text",
                         "restrict": "not-null"
@@ -208,7 +208,7 @@
                     }
                 },
                 {
-                    "name": "set_at",
+                    "name": "added_at",
                     "value": {
                         "type": "text",
                         "restrict": "not-null"
@@ -239,7 +239,7 @@
                     }
                 },
                 {
-                    "name": "set_at",
+                    "name": "added_at",
                     "value": {
                         "type": "text",
                         "restrict": "not-null"
