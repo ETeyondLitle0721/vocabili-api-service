@@ -299,6 +299,10 @@ function _item_select(options = {}) {
             part.push("LIMIT " + generate_placeholder(
                 "LIMIT", ++index, limit, seq_id, param_setter
             ));
+
+            if (!offset) {
+                part.push("OFFSET 0");
+            }
         }
 
         if (offset) {

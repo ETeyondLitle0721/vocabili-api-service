@@ -146,8 +146,14 @@ function board_info(issue, board = "vocaoid-weekly", count = 50, index = 1) {
 
     const song_id_list = list.map(item => item.target);
 
-    const target = song_info(song_id_list), result = {
-        "board": list.map((song, index) => ({
+    const target = Object.fromEntries(
+        song_info(song_id_list).map((item => ([
+            item.metadata.id, item
+        ])))
+    );
+    
+    const result = {
+        "board": list.map(song => ({
             "rank": {
                 "view": song.view_rank,
                 "like": song.like_rank,
@@ -163,7 +169,7 @@ function board_info(issue, board = "vocaoid-weekly", count = 50, index = 1) {
                 "board": song.count,
                 "favorite": song.favorite
             },
-            "target": target[index]
+            "target": target[song.target.replace("Song:", "")]
         })),
         "metadata": {
             "id": get_type(board).second === "array" ? board[0] : board,
