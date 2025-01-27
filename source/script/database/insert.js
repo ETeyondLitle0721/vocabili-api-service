@@ -184,7 +184,7 @@ function _insert_daily(format, filepath) {
             memory.rank.set(id, {
                 "id": id, "rank": index + 1, "board": "vocaloid-daily",
                 "like": data.like, "coin": data.coin, "view": data.view,
-                "issue": issue, "favorite": data.favorite,
+                "issue": issue, "favorite": data.favorite, "count": data.count,
                 "like_rank": data.like_rank, "view_rank": data.view_rank,
                 "coin_rank": data.coin_rank, "favorite_rank": data.favorite_rank,
                 "target": gen_id("Song", data.name), "point": data.point,
@@ -216,7 +216,7 @@ function _insert_weekly(format, filepath) {
                 "id": id, "rank": index + 1, "board": "vocaloid-weekly",
                 "like": data.like, "coin": data.coin, "view": data.view,
                 "issue": issue, "favorite": data.favorite,
-                "target": gen_id("Song", data.name),
+                "target": gen_id("Song", data.name), "count": data.count,
                 "like_rank": data.like_rank, "view_rank": data.view_rank,
                 "coin_rank": data.coin_rank, "favorite_rank": data.favorite_rank,
                 "set_at": new Date().toISOString(), "point": data.point

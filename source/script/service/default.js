@@ -147,6 +147,12 @@ function board_info(issue, board = "vocaoid-weekly", count = 50, index = 1) {
     const target = song_info(
         list.map(item => item.target)
     ), result = {
+        "last": {
+            "issue": metadata.list.issue.default[
+                metadata.list.issue.default.indexOf(issue) - 1
+            ] || null,
+            "board": []
+        },
         "board": list.map((song, index) => ({
             "rank": {
                 "view": song.view_rank,
@@ -160,6 +166,7 @@ function board_info(issue, board = "vocaoid-weekly", count = 50, index = 1) {
                 "like": song.like,
                 "coin": song.coin,
                 "point": song.point,
+                "board": song.count,
                 "favorite": song.favorite
             },
             "target": target[index]
@@ -171,11 +178,10 @@ function board_info(issue, board = "vocaoid-weekly", count = 50, index = 1) {
         }
     };
 
-    get_rank_by_song_id({
-        board, "count": count, "issue": [ metadata.list.issue.default[
-            metadata.list.issue.default.indexOf(issue) - 1
-        ] ], "target": result.board.map(item => "Song:" + item.target.metadata.id)
-    }).map((last, index) => result.board[index].last = ({
+    result.last.issue && get_rank_by_song_id({
+        board, "count": count, "issue": [ result.last.issue ],
+        "target": list.map(item => item.target)
+    }).map(last => (result.last.board.push({
         "rank": {
             "view": last.view_rank,
             "like": last.like_rank,
@@ -190,8 +196,8 @@ function board_info(issue, board = "vocaoid-weekly", count = 50, index = 1) {
             "point": last.point,
             "favorite": last.favorite
         },
-        "issue": last.issue
-    }));
+        "target": last.target
+    })));
 
     return result;
 }
@@ -315,6 +321,41 @@ application.get("/get_song_info", (request, response) => {
     return response.send(build_response(instance, {
         param, receive, "data": song_info(
             param.target
+        )
+    }, "OK"));
+});
+
+application.get("/get_board_info", (request, response) => {
+    /**
+     * @type {{ "board": string, "count": number, "index": number, "issue": number[] }}
+     */
+    const param = Object.assign({
+        "count": 50, "index": 1
+    }, parse_parameter(request)), receive = process.uptime(), instance = {
+        response, request
+    };
+    
+    if (!check_parameter(instance, "board", receive, param.board, "count", {
+        "range": { "maximum": 1 }
+    })) return;
+
+    if (!check_parameter(instance, "issue", receive, param.issue, "count", {
+        "range": { "maximum": 1 }
+    })) return;
+
+    if (!check_parameter(instance, "count", receive, param.count, "number", {
+        "type": "integer",
+        "range": { "minimum": 1, "maximum": 200 }
+    })) return;
+
+    if (!check_parameter(instance, "index", receive, param.index, "number", {
+        "type": "integer",
+        "range": { "minimum": 1, "maximum": 131072 }
+    })) return;
+
+    return response.send(build_response(instance, {
+        param, receive, "data": board_info(
+            param.issue, param.board, param.count, param.index
         )
     }, "OK"));
 });

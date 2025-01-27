@@ -364,6 +364,13 @@
                     }
                 },
                 {
+                    "name": "count",
+                    "value": {
+                        "type": "integer",
+                        "restrict": "not-null"
+                    }
+                },
+                {
                     "name": "view",
                     "value": {
                         "type": "integer",
