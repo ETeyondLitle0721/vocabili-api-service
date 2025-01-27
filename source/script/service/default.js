@@ -6,7 +6,7 @@ import path from "path";
 import HTTP from "http";
 import express from "express";
 import template from "../../depend/utilities/template.js";
-import { classification } from "../../depend/core.js";
+import { classification, get_type } from "../../depend/core.js";
 import format_datetime, { datetime } from "../../depend/toolkit/formatter/datetime.js";
 import { parse_parameter, check_parameter, build_response } from "./depend/default.js";
 import { get_board_metadata_info_by_board_id, get_board_song_list, get_mark_info_by_song_id, get_rank_by_song_id, get_song_history_info, get_target_info_by_id } from "./interface.js";
@@ -166,7 +166,7 @@ function board_info(issue, board = "vocaoid-weekly", count = 50, index = 1) {
             "target": target[index]
         })),
         "metadata": {
-            "id": board,
+            "id": get_type(board).second === "array" ? board[0] : board,
             "name": metadata.name,
             "issue": issue
         }
