@@ -558,7 +558,7 @@ export class DatabaseOperator {
      * @returns {SQLite3.RunResult} 处理结果
      */
     #processer(response) {
-        console.log(response);
+        // console.log(response);
 
         return this.instanse.prepare(response.sentence)[{
             "request": "run",

@@ -239,6 +239,13 @@
                     }
                 },
                 {
+                    "name": "color",
+                    "value": {
+                        "type": "integer",
+                        "restrict": "not-null"
+                    }
+                },
+                {
                     "name": "added_at",
                     "value": {
                         "type": "text",
@@ -372,6 +379,34 @@
                 },
                 {
                     "name": "favorite",
+                    "value": {
+                        "type": "integer",
+                        "restrict": "not-null"
+                    }
+                },
+                {
+                    "name": "view_rank",
+                    "value": {
+                        "type": "integer",
+                        "restrict": "not-null"
+                    }
+                },
+                {
+                    "name": "coin_rank",
+                    "value": {
+                        "type": "integer",
+                        "restrict": "not-null"
+                    }
+                },
+                {
+                    "name": "like_rank",
+                    "value": {
+                        "type": "integer",
+                        "restrict": "not-null"
+                    }
+                },
+                {
+                    "name": "favorite_rank",
                     "value": {
                         "type": "integer",
                         "restrict": "not-null"

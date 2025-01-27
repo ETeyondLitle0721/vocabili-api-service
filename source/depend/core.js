@@ -572,14 +572,14 @@ export function classification(list, namer) {
     const result = {};
 
     for (let index = 0; index < list.length; index++) {
-        const name = namer(
-            list[index], index, list
+        const current = list[index], name = namer(
+            current, index, list
         );
 
         if (result[name]) {
-            result[name].push(list[index]);
+            result[name].push(current);
         } else {
-            result[name] = [ list[index] ];
+            result[name] = [ current ];
         }
     }
 

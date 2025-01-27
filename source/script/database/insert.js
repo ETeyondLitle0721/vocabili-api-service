@@ -178,6 +178,8 @@ function _insert_daily(format, filepath) {
                 "id": id, "rank": index + 1, "board": "vocaloid-daily",
                 "like": data.like, "coin": data.coin, "view": data.view,
                 "issue": issue, "favorite": data.favorite,
+                "like_rank": data.like_rank, "view_rank": data.view_rank,
+                "coin_rank": data.coin_rank, "favorite_rank": data.favorite_rank,
                 "target": gen_id("Song", data.name),
                 "set_at": new Date().toISOString()
             });
@@ -208,6 +210,8 @@ function _insert_weekly(format, filepath) {
                 "like": data.like, "coin": data.coin, "view": data.view,
                 "issue": issue, "favorite": data.favorite,
                 "target": gen_id("Song", data.name),
+                "like_rank": data.like_rank, "view_rank": data.view_rank,
+                "coin_rank": data.coin_rank, "favorite_rank": data.favorite_rank,
                 "set_at": new Date().toISOString()
             });
 
@@ -233,7 +237,9 @@ function _insert_weekly(format, filepath) {
 
                         memory.song.set(song_id, {
                             "id": song_id, "name": data.name, "type": data.type,
-                            "page": data.page, "cover": data.image_url, "duration": data.duration.replace("分", ":").replace("秒", ""),
+                            "page": data.page, "cover": data.image_url, "duration": human_duration_to_duration(
+                                data.duration.replace("分", ":").replace("秒", "")
+                            ),
                             "link": "https://www.bilibili.com/video/" + data.bvid,
                             "title": data.title, "copyright": data.copyright,
                             "uploaded_at": format_datetime(
@@ -279,7 +285,7 @@ function _insert_weekly(format, filepath) {
 /**
  * 在数据库中插入周刊数据
  * 
- * @param {("Snapshot-0001")} format 数据文件版本
+ * @param {("Snapshot-0001"|"Snapshot-0002")} format 数据文件版本
  * @param {string} filepath 数据文件路径
  */
 function _insert_snapshot(format, filepath) {
@@ -321,6 +327,36 @@ function _insert_snapshot(format, filepath) {
 }
 
 /**
+ * 在数据库中更新歌手代表色数据
+ * 
+ * @param {("Color-0001")} format 数据文件版本
+ * @param {string} filepath 数据文件路径
+ */
+function _insert_color(format, filepath) {
+    if (format === "Color-0001") {
+        const dataset = JSON.parse(
+            fs.readFileSync(path.resolve(
+                root, filepath
+            ), "UTF-8")
+        );
+
+        console.log("正在为歌手更新代表色数据项");
+
+        dataset.map(data => {
+            const color = Number("0x" + data[0]), id = gen_id("Vocalist", data[1]);
+
+            if (memory.vocalist.has(id)) {
+                memory.vocalist.set(id, Object.assign(
+                    memory.vocalist.has(id), {
+                        "color": color
+                    }
+                ));
+            }
+        });
+    }
+}
+
+/**
  * 获取所有数据条目插入器
  * 
  * @returns 获取到的数据条目插入器
@@ -328,6 +364,7 @@ function _insert_snapshot(format, filepath) {
 function get_inserter() {
     return {
         "base": _insert_base,
+        "color": _insert_color,
         "daily": _insert_daily,
         "weekly": _insert_weekly,
         "snapshot": _insert_snapshot
@@ -336,6 +373,7 @@ function get_inserter() {
 
 const name_mapping = {
     "base": "曲目基础数据",
+    "color": "歌手代表色数据",
     "daily": "日刊数据",
     "weekly": "周刊数据",
     "snapshot": "统计量快照数据"
@@ -344,7 +382,7 @@ const name_mapping = {
 /**
  * 通过配置文件处理插入项目
  * 
- * @param {("base"|"daily"|"weekly"|"snapshot")} type 目标配置文件类别
+ * @param {("base"|"color"|"daily"|"weekly"|"snapshot")} type 目标配置文件类别
  * @param {object} config 配置文件
  */
 function _process(type, config = {}) {
@@ -372,7 +410,7 @@ function _process(type, config = {}) {
 }
 
 const support = [
-    "base", "daily", "weekly", "snapshot"
+    "base", "daily", "weekly", "snapshot", "color"
 ];
 
 const entries = Object.entries(config.manifest);

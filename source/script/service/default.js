@@ -195,6 +195,33 @@ application.get("/get_info/:type/by_id", (request, response) => {
     }, "OK"));
 });
 
+application.get("/get_info/song/by_id", (request, response) => {
+    /**
+     * @type {{ "target": string[] }}
+     */
+    const param = parse_parameter(request);
+
+    const receive = process.uptime(), instance = {
+        response, request
+    };
+
+    if (!check_parameter(instance, "target", receive, param.target, "count", {
+        "range": { "maximum": 5000 }
+    })) return;
+
+    const result = operator.select_item("Song_Table", {
+        "where": {
+            "column": "id",
+            "operator": "within",
+            "value": param.target
+        }
+    });
+
+    return response.send(build_response(instance, {
+        param, receive, "data": result.length === 1 ? result[0] : result
+    }, "OK"));
+});
+
 application.get("/get_mark/by_song", (request, response) => {
     /**
      * @type {{ "target": string[] }}
@@ -304,10 +331,10 @@ application.get("/get_list/meta/board", (request, response) => {
 
 application.get("/get_board/:board/top:top", (request, response) => {
     /**
-     * @type {{ "board": string, "top": number }}
+     * @type {{ "board": string, "top": number, "page": number }}
      */
     const param = parse_parameter(request);
-    const { board, top = 100 } = param;
+    const { board, top = 100, page = 1 } = param;
 
     const receive = process.uptime(), instance = {
         response, request
@@ -317,8 +344,12 @@ application.get("/get_board/:board/top:top", (request, response) => {
         "range": { "maximum": 1 }
     })) return;
 
-    if (!check_parameter(instance, "top", receive, top, "count", {
+    if (!check_parameter(instance, "top", receive, top, "number", {
         "range": { "minimum": 1, "maximum": 500 }
+    })) return;
+
+    if (!check_parameter(instance, "page", receive, page, "number", {
+        "range": { "minimum": 1, "maximum": 131072 }
     })) return;
     
     const result = operator.select_item("Rank_Table", {
@@ -330,8 +361,13 @@ application.get("/get_board/:board/top:top", (request, response) => {
             },
             {
                 "column": "rank",
+                "operator": ">=",
+                "value": top * (page - 1)
+            },
+            {
+                "column": "rank",
                 "operator": "<=",
-                "value": top
+                "value": top * page
             }
         ]
     });
@@ -362,7 +398,7 @@ application.get("/get_board/:board/top:top/by_issue", (request, response) => {
     })) return;
 
     if (!check_parameter(instance, "top", receive, top, "count", {
-        "range": { "minimum": 1, "maximum": 500 }
+        "range": { "minimum": 1, "maximum": 10000 }
     })) return;
     
     const result = operator.select_item("Rank_Table", {
