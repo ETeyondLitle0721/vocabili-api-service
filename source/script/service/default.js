@@ -144,15 +144,9 @@ function board_info(issue, board = "vocaoid-weekly", count = 50, index = 1) {
         issue, count, index, board
     }), metadata = get_board_metadata_info_by_board_id(board);
 
-    const target = song_info(
-        list.map(item => item.target)
-    ), result = {
-        "last": {
-            "issue": metadata.list.issue.default[
-                metadata.list.issue.default.indexOf(issue) - 1
-            ] || null,
-            "board": []
-        },
+    const song_id_list = list.map(item => item.target);
+
+    const target = song_info(song_id_list), result = {
         "board": list.map((song, index) => ({
             "rank": {
                 "view": song.view_rank,
@@ -179,9 +173,10 @@ function board_info(issue, board = "vocaoid-weekly", count = 50, index = 1) {
     };
 
     result.last.issue && get_rank_by_song_id({
-        board, "count": count, "issue": [ result.last.issue ],
-        "target": list.map(item => item.target)
-    }).map(last => (result.last.board.push({
+        board, "count": count, "issue": [ metadata.list.issue.default[
+            metadata.list.issue.default.indexOf(issue) - 1
+        ] ], "target": song_id_list
+    }).map(last => (result.board[song_id_list.indexOf(last.target)].list = {
         "rank": {
             "view": last.view_rank,
             "like": last.like_rank,
@@ -196,8 +191,8 @@ function board_info(issue, board = "vocaoid-weekly", count = 50, index = 1) {
             "point": last.point,
             "favorite": last.favorite
         },
-        "target": last.target
-    })));
+        "target": last.target.replace("Song:", "")
+    }));
 
     return result;
 }
