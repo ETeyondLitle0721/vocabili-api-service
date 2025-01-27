@@ -182,7 +182,7 @@ function board_info(issue, board = "vocaoid-weekly", count = 50, index = 1) {
         board, "count": count, "issue": [ metadata.list.issue.default[
             metadata.list.issue.default.indexOf(issue) - 1
         ] ], "target": song_id_list
-    }).map(last => (result.board[song_id_list.indexOf(last.target)].list = {
+    }).map(last => (result.board[song_id_list.indexOf(last.target)].last = {
         "rank": {
             "view": last.view_rank,
             "like": last.like_rank,
