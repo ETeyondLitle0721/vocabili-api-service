@@ -103,7 +103,7 @@ function _insert_base(format, filepath) {
         dataset.map(data => {
             const song_id = gen_id("Song", data.name);
 
-            if (!data.vocalist) return;
+            if (!data.synthesizer) return;
 
             memory.song.set(song_id, {
                 "id": song_id, "name": data.name, "type": data.type,
@@ -123,18 +123,25 @@ function _insert_base(format, filepath) {
                 
                 if (base.list.includes(key)) {
                     entry[1].toString().split("、").map(name => {
-                        const field = base.map[key], id = gen_id("Record", Math.random().toString());
+                        const field = base.map[key], mark_id = gen_id("Record", Math.random().toString());
+                        const target_id = gen_id(capitalize(field), name);
 
-                        memory.mark.set(id, {
-                            "id": id, "type": field, "target": song_id,
-                            "value": gen_id(capitalize(field), name),
-                            "set_at": new Date().toISOString()
+                        memory.mark.set(mark_id, {
+                            "id": mark_id, "type": field, "target": song_id,
+                            "value": target_id, "set_at": new Date().toISOString()
                         });
 
-                        memory[field].set(id, {
-                            "id": gen_id(capitalize(field), name),
-                            "name": name, "added_at": new Date().toISOString()
-                        });
+                        if (field === "vocalist") {
+                            memory[field].set(target_id, {
+                                "id": target_id, "name": name, "color": -1,
+                                "added_at": new Date().toISOString()
+                            });
+                        } else {
+                            memory[field].set(target_id, {
+                                "id": target_id, "name": name,
+                                "added_at": new Date().toISOString()
+                            });
+                        }
                     });
                 }
             }
@@ -180,7 +187,7 @@ function _insert_daily(format, filepath) {
                 "issue": issue, "favorite": data.favorite,
                 "like_rank": data.like_rank, "view_rank": data.view_rank,
                 "coin_rank": data.coin_rank, "favorite_rank": data.favorite_rank,
-                "target": gen_id("Song", data.name),
+                "target": gen_id("Song", data.name), "point": data.point,
                 "set_at": new Date().toISOString()
             });
         });
@@ -212,18 +219,18 @@ function _insert_weekly(format, filepath) {
                 "target": gen_id("Song", data.name),
                 "like_rank": data.like_rank, "view_rank": data.view_rank,
                 "coin_rank": data.coin_rank, "favorite_rank": data.favorite_rank,
-                "set_at": new Date().toISOString()
+                "set_at": new Date().toISOString(), "point": data.point
             });
 
             if (format === "Weekly-0002") {
-                const id = gen_id("Song", data.name);
+                const song_id = gen_id("Song", data.name);
 
-                if (!completed.includes(id)) {
-                    completed.push(id);
+                if (!completed.includes(song_id)) {
+                    completed.push(song_id);
 
-                    if (memory.song.has(id)) {
-                        memory.song.set(id, Object.assign(
-                            memory.song.get(id), {
+                    if (memory.song.has(song_id)) {
+                        memory.song.set(song_id, Object.assign(
+                            memory.song.get(song_id), {
                                 "page": data.page,
                                 "duration": human_duration_to_duration(
                                     data.duration.replace("分", ":").replace("秒", "")
@@ -232,8 +239,6 @@ function _insert_weekly(format, filepath) {
                         ));
                     } else {
                         const entries = Object.entries(data);
-
-                        const song_id = gen_id("Song", data.name);
 
                         memory.song.set(song_id, {
                             "id": song_id, "name": data.name, "type": data.type,
@@ -248,7 +253,7 @@ function _insert_weekly(format, filepath) {
                             )
                         });
 
-                        memory.mark.set(
+                        if (!data.synthesizer) memory.mark.set(
                             gen_id("Record", Math.random().toString()), {
                                 "id": gen_id("Record", Math.random().toString()), "type": "tag", "target": song_id,
                                 "value": "deleted", "set_at": new Date().toISOString()
@@ -260,18 +265,25 @@ function _insert_weekly(format, filepath) {
                             
                             if (base.list.includes(key)) {
                                 entry[1].toString().split("、").map(name => {
-                                    const field = base.map[key], id = gen_id("Record", Math.random().toString());
+                                    const field = base.map[key], mark_id = gen_id("Record", Math.random().toString());
+                                    const target_id = gen_id(capitalize(field), name);
 
-                                    memory.mark.set(id, {
-                                        "id": id, "type": field, "target": song_id,
-                                        "value": gen_id(capitalize(field), name),
-                                        "set_at": new Date().toISOString()
+                                    memory.mark.set(mark_id, {
+                                        "id": mark_id, "type": field, "target": song_id,
+                                        "value": target_id, "set_at": new Date().toISOString()
                                     });
 
-                                    memory[field].set(id, {
-                                        "id": gen_id(capitalize(field), name),
-                                        "name": name, "added_at": new Date().toISOString()
-                                    });
+                                    if (field === "vocalist") {
+                                        memory[field].set(target_id, {
+                                            "id": target_id, "name": name, "color": -1,
+                                            "added_at": new Date().toISOString()
+                                        });
+                                    } else {
+                                        memory[field].set(target_id, {
+                                            "id": target_id, "name": name,
+                                            "added_at": new Date().toISOString()
+                                        });
+                                    }
                                 });
                             }
                         }
@@ -347,7 +359,7 @@ function _insert_color(format, filepath) {
 
             if (memory.vocalist.has(id)) {
                 memory.vocalist.set(id, Object.assign(
-                    memory.vocalist.has(id), {
+                    memory.vocalist.get(id), {
                         "color": color
                     }
                 ));
@@ -439,6 +451,8 @@ for (let index = 0; index < entries.length; index++) {
         });
     }
 }
+
+// console.log(memory.vocalist);
 
 instance.exec("BEGIN");
 

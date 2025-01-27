@@ -58,7 +58,7 @@
                 {
                     "name": "copyright",
                     "value": {
-                        "type": "text",
+                        "type": "integer",
                         "restrict": "not-null"
                     }
                 },
@@ -337,6 +337,13 @@
                 },
                 {
                     "name": "issue",
+                    "value": {
+                        "type": "integer",
+                        "restrict": "not-null"
+                    }
+                },
+                {
+                    "name": "point",
                     "value": {
                         "type": "integer",
                         "restrict": "not-null"

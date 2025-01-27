@@ -637,7 +637,7 @@ export class DatabaseOperator {
      * @param {ListLike} list 需要读取的表的列表
      * @param {ItemSelectOptions} options 传入的配置
      * @param {ResponseHandler} handler 语句构建结果处理器
-     * @returns {RunResult} 执行结果
+     * @returns {GeneralObject[]} 执行结果
      */
     select_item(list, options = {}, handler = (_options, response) => response) {
         return this.#process(

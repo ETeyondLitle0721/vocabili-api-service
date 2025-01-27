@@ -106,7 +106,7 @@ export function check_parameter(instance, name, receive, target, mode, options) 
         if (options.range) {
             const { maximum } = options.range;
 
-            if (maximum < target) {
+            if (maximum < length) {
                 if (maximum === 1) {
                     result.code = "DISALLOW_MULTIPLE_TARGET";
                     result.message = prefix + `不允许多目标表达式。`;
