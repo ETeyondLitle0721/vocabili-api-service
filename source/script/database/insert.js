@@ -468,7 +468,7 @@ reporter.start("report");
 
 Object.entries(task).map(entry => {
     split_group(
-        entry[1], 3000
+        entry[1], 1024
     ).map(list => {
         operator.insert_item(capitalize(entry[0]) + "_Table", {
             "flag": "if-not-exists",

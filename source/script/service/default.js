@@ -152,6 +152,33 @@ application.get("/get_list/song/by_producer", (request, response) => {
     }, "OK"));
 });
 
+application.get("/get_info/song/by_id", (request, response) => {
+    /**
+     * @type {{ "target": string[] }}
+     */
+    const param = parse_parameter(request);
+
+    const receive = process.uptime(), instance = {
+        response, request
+    };
+
+    if (!check_parameter(instance, "target", receive, param.target, "count", {
+        "range": { "maximum": 5000 }
+    })) return;
+
+    const result = operator.select_item("Song_Table", {
+        "where": {
+            "column": "id",
+            "operator": "within",
+            "value": param.target
+        }
+    });
+
+    return response.send(build_response(instance, {
+        param, receive, "data": result.length === 1 ? result[0] : result
+    }, "OK"));
+});
+
 application.get("/get_info/:type/by_id", (request, response) => {
     /**
      * @type {{ "target": string[], "type": string }}
@@ -188,33 +215,6 @@ application.get("/get_info/:type/by_id", (request, response) => {
                 ]
             })
         });
-    });
-
-    return response.send(build_response(instance, {
-        param, receive, "data": result.length === 1 ? result[0] : result
-    }, "OK"));
-});
-
-application.get("/get_info/song/by_id", (request, response) => {
-    /**
-     * @type {{ "target": string[] }}
-     */
-    const param = parse_parameter(request);
-
-    const receive = process.uptime(), instance = {
-        response, request
-    };
-
-    if (!check_parameter(instance, "target", receive, param.target, "count", {
-        "range": { "maximum": 5000 }
-    })) return;
-
-    const result = operator.select_item("Song_Table", {
-        "where": {
-            "column": "id",
-            "operator": "within",
-            "value": param.target
-        }
     });
 
     return response.send(build_response(instance, {
