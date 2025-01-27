@@ -90,26 +90,6 @@ application.use((req, _res, next) => {
     next();
 });
 
-// instance.application.get("/get_info/song/by_id", (req, res) => {
-    
-// });
-
-// instance.application.get("/get_list/song/by_producer", (req, res) => {
-    
-// });
-
-// instance.application.get("/get_rank/by_song", (req, res) => {
-    
-// });
-
-// instance.application.get("/get_board/:board/top:top", (req, res) => {
-    
-// });
-
-// instance.application.get("/get_board/:board/top:top/by_issue", (req, res) => {
-    
-// });
-
 application.get("/get_list/song/by_producer", (request, response) => {
     /**
      * @type {{ "target": string[], "count": number, "page": number }}
@@ -168,7 +148,7 @@ application.get("/get_list/song/by_producer", (request, response) => {
     });
 
     return response.send(build_response(instance, {
-        param, receive, "data": result
+        param, receive, "data": result.length === 1 ? result[0] : result
     }, "OK"));
 });
 
@@ -211,7 +191,7 @@ application.get("/get_info/:type/by_id", (request, response) => {
     });
 
     return response.send(build_response(instance, {
-        param, receive, "data": result
+        param, receive, "data": result.length === 1 ? result[0] : result
     }, "OK"));
 });
 
@@ -459,7 +439,7 @@ application.get("/get_history/by_song", (request, response) => {
     });
 
     return response.send(build_response(instance, {
-        param, receive, "data": result
+        param, receive, "data": result.length === 1 ? result[0] : result
     }, "OK"));
 });
 
