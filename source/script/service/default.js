@@ -6,7 +6,7 @@ import path from "path";
 import HTTP from "http";
 import express from "express";
 import template from "../../depend/utilities/template.js";
-import { classification, get_type } from "../../depend/core.js";
+import { classification, get_type, unique_array } from "../../depend/core.js";
 import format_datetime, { datetime } from "../../depend/toolkit/formatter/datetime.js";
 import { parse_parameter, check_parameter, build_response } from "./depend/default.js";
 import { get_board_metadata_info_by_board_id, get_board_song_list, get_mark_info_by_song_id, get_rank_by_song_id, get_song_history_info, get_target_info_by_id } from "./interface.js";
@@ -91,7 +91,7 @@ function song_info(list = []) {
         key, Object.fromEntries(Object.entries(
             classification(value, (value) => value.type)
         ).map(([key, value]) => ([
-            key, value.map(item => item.value)
+            key, unique_array(value.map(item => item.value))
         ])))
     ])));
 
@@ -172,7 +172,7 @@ function board_info(issue, board = "vocaoid-weekly", count = 50, index = 1) {
         }
     };
 
-    result.last.issue && get_rank_by_song_id({
+    get_rank_by_song_id({
         board, "count": count, "issue": [ metadata.list.issue.default[
             metadata.list.issue.default.indexOf(issue) - 1
         ] ], "target": song_id_list
