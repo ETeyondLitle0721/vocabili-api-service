@@ -104,19 +104,19 @@ const cmp_video = new Set();
  */
 function insert_platform(data) {
     const target = {
-        "song": gen_id("Song", data.name || data.title),
+        "song": gen_id("Song", data.name ?? data.title),
         "video": gen_id("Platform", data.bvid)
     };
 
     if (cmp_video.has(target.video)) return;
 
     memory.platform.set(target.video, {
-        "id": target.video, "thumbnail": data.image_url, "page": data.page || -1,
+        "id": target.video, "thumbnail": data.image_url, "page": data.page ?? -1,
         "link": "https://www.bilibili.com/video/" + data.bvid,
-        "title": data.title || data.video_title, "copyright": data.copyright,
+        "title": data.title ?? data.video_title, "copyright": data.copyright,
         "duration": (data.duration && human_duration_to_duration(
             data.duration.replace("分", ":").replace("秒", "")
-        )) || -1, "uploaded_at": get_iso_time_text(
+        )) ?? -1, "uploaded_at": get_iso_time_text(
             new Date(data.pubdate)
         ).replace(/\.\d{3}/, ""), "recorded_at": get_iso_time_text()
     });
@@ -155,12 +155,12 @@ function insert_mark(data) {
  * @param {object} data 原始条目数据
  */
 function insert_song(data) {
-    const song_id = gen_id("Song", data.name || data.title), entries = Object.entries(data);
+    const song_id = gen_id("Song", data.name ?? data.title), entries = Object.entries(data);
 
     insert_platform(data);
 
     memory.song.set(song_id, {
-        "name": data.name || data.title, "type": data.type,
+        "name": data.name ?? data.title, "type": data.type,
         "add_at": get_iso_time_text(), "id": song_id
     });
 
@@ -237,7 +237,7 @@ function _insert_daily(format, filepath) {
         console.log("正在载入 " + datetime + " 的日刊信息");
 
         dataset.forEach((data, index) => {
-            const _id = gen_id("Song", data.name || data.title), id = {
+            const _id = gen_id("Song", data.name ?? data.title), id = {
                 "song": _id, "rank": gen_id(
                     "Record", "vocaloid-daily" + datetime + _id
                 )
@@ -245,11 +245,11 @@ function _insert_daily(format, filepath) {
 
             memory.rank.set(id.rank, {
                 "id": id.rank, "rank": index + 1, "board": "vocaloid-daily",
-                "like": -1, "coin": -1, "view": -1, "target": id.song, "count": data.count || -1,
+                "like": -1, "coin": -1, "view": -1, "target": id.song, "count": data.count ?? -1,
                 "issue": Number(datetime), "favorite": -1, "view_change": data.view,
-                "like_rank": data.like_rank || -1, "view_rank": data.view_rank || -1,
-                "coin_rank": data.coin_rank || -1, "favorite_rank": data.favorite_rank || -1,
-                "like_change": data.like, "coin_change": data.coin,
+                "like_rank": data.like_rank ?? -1, "view_rank": data.view_rank ?? -1,
+                "coin_rank": data.coin_rank ?? -1, "favorite_rank": data.favorite_rank ?? -1,
+                "like_change": data.like, "coin_change": data.coin, "platform": gen_id("Platform", data.bvid),
                 "favorite_change": data.favorite, "set_at": get_iso_time_text()
             });
         });
@@ -270,7 +270,7 @@ function _insert_weekly(format, filepath) {
         console.log("正在载入 " + datetime + " 的周刊信息");
 
         dataset.forEach((data, index) => {
-            const _id = gen_id("Song", data.name || data.title), id = {
+            const _id = gen_id("Song", data.name ?? data.title), id = {
                 "song": _id, "rank": gen_id(
                     "Record", "vocaloid-weekly" + datetime + _id
                 )
@@ -278,18 +278,18 @@ function _insert_weekly(format, filepath) {
 
             memory.rank.set(id.rank, {
                 "id": id.rank, "rank": index + 1, "board": "vocaloid-weekly",
-                "like": -1, "coin": -1, "view": -1, "target": id.song, "count": data.count || -1,
+                "like": -1, "coin": -1, "view": -1, "target": id.song, "count": data.count ?? -1,
                 "issue": Number(datetime), "favorite": -1, "view_change": data.view,
-                "like_rank": data.like_rank || -1, "view_rank": data.view_rank || -1,
-                "coin_rank": data.coin_rank || -1, "favorite_rank": data.favorite_rank || -1,
-                "like_change": data.like, "coin_change": data.coin,
+                "like_rank": data.like_rank ?? -1, "view_rank": data.view_rank ?? -1,
+                "coin_rank": data.coin_rank ?? -1, "favorite_rank": data.favorite_rank ?? -1,
+                "like_change": data.like, "coin_change": data.coin, "platform": gen_id("Platform", data.bvid),
                 "favorite_change": data.favorite, "set_at": get_iso_time_text()
             });
 
             if (format === "Weekly-0002") {
                 if (!memory.song.has(id.song)) insert_mark({
                     "type": "tag", "target": id.song,
-                    "value": gen_id("Tag", "deleted")
+                    "value": gen_id("Tag", "not-exists")
                 });
 
                 insert_song(data), insert_platform(data);
@@ -316,7 +316,7 @@ function _insert_snapshot(format, filepath) {
         dataset.forEach(data => {
             if (!data.bvid) return;
 
-            const _id = gen_id("Song", data.name || data.title);
+            const _id = gen_id("Song", data.name ?? data.title);
             const abstract = datetime.replaceAll("-", "") + _id, id = {
                 "song": _id, "record": [
                     gen_id("Record", "vocaloid-daily" + abstract),
@@ -436,15 +436,10 @@ const support = [
 const entries = Object.entries(config.manifest);
 
 const memory = {
-    "song": new Map(),
-    "rank": new Map(),
-    "mark": new Map(),
-    "platform": new Map(),
-    "vocalist": new Map(),
-    "uploader": new Map(),
-    "producer": new Map(),
-    "snapshot": new Map(),
-    "synthesizer": new Map()
+    "song": new Map(), "rank": new Map(), "mark": new Map(),
+    "platform": new Map(), "vocalist": new Map(),
+    "uploader": new Map(), "producer": new Map(),
+    "snapshot": new Map(), "synthesizer": new Map()
 };
 
 for (let index = 0; index < entries.length; index++) {
@@ -540,7 +535,7 @@ const filepath = path.resolve(
 Object.entries(result).map(([key, list]) => {
     content.metadata.board[key].list.issue.default = unique_array(
         list.map(item => item.issue)
-    );
+    ).sort();
 });
 
 fs.writeFileSync(

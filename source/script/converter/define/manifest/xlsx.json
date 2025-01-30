@@ -1,14 +1,18 @@
 [
     {
-        "input": "./source/script/converter/data/journal/weekly/20250127与20250126.xlsx",
-        "output": "./assets/dataset/journal/weekly/20250127与20250126.jsonl"
+        "input": "./source/script/converter/data/snapshot/20250128.xlsx",
+        "output": "./assets/dataset/snapshot/20250128.jsonl"
     },
     {
-        "input": "./source/script/converter/data/journal/weekly/20250128与20250127.xlsx",
-        "output": "./assets/dataset/journal/weekly/20250128与20250127.jsonl"
+        "input": "./source/script/converter/data/snapshot/20250129.xlsx",
+        "output": "./assets/dataset/snapshot/20250129.jsonl"
     },
     {
-        "input": "./source/script/converter/data/journal/weekly/20250129与20250128.xlsx",
-        "output": "./assets/dataset/journal/weekly/20250129与20250128.jsonl"
+        "input": "./source/script/converter/data/snapshot/20250130.xlsx",
+        "output": "./assets/dataset/snapshot/20250130.jsonl"
+    },
+    {
+        "input": "./source/script/converter/data/journal/daily/20250130与20250129.xlsx",
+        "output": "./assets/dataset/journal/daily/20250130与20250129.jsonl"
     }
 ]

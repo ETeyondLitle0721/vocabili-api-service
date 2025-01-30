@@ -423,6 +423,13 @@
                     }
                 },
                 {
+                    "name": "platform",
+                    "value": {
+                        "type": "text",
+                        "restrict": "not-null"
+                    }
+                },
+                {
                     "name": "favorite",
                     "value": {
                         "type": "integer",
