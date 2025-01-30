@@ -112,9 +112,8 @@ function insert_platform(data) {
 
     memory.platform.set(target.video, {
         "id": target.video, "thumbnail": data.image_url, "page": data.page ?? -1,
-        "link": "https://www.bilibili.com/video/" + data.bvid,
-        "title": data.title ?? data.video_title, "copyright": data.copyright,
-        "duration": (data.duration && human_duration_to_duration(
+        "link": "BB://V/" + data.bvid,"title": data.title ?? data.video_title,
+        "copyright": data.copyright, "duration": (data.duration && human_duration_to_duration(
             data.duration.replace("分", ":").replace("秒", "")
         )) ?? -1, "uploaded_at": get_iso_time_text(
             new Date(data.pubdate)

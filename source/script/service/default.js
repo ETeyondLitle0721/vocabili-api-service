@@ -156,23 +156,16 @@ function board_info(issue, board = "vocaoid-weekly", count = 50, index = 1) {
     const result = {
         "board": list.map(song => ({
             "rank": {
-                "view": song.view_rank,
-                "like": song.like_rank,
-                "coin": song.coin_rank,
-                "board": song.rank,
+                "view": song.view_rank, "like": song.like_rank,
+                "coin": song.coin_rank, "board": song.rank,
                 "favorite": song.favorite_rank
             }, "count": {
-                "view": song.view,
-                "like": song.like,
-                "coin": song.coin,
-                "point": song.point,
-                "board": song.count,
-                "favorite": song.favorite
+                "view": song.view, "like": song.like,
+                "coin": song.coin, "point": song.point,
+                "board": song.count, "favorite": song.favorite
             }, "change": {
-                "view": song.view_change,
-                "like": song.like_change,
-                "coin": song.coin_change,
-                "favorite": song.favorite_change
+                "view": song.view_change, "like": song.like_change,
+                "coin": song.coin_change, "favorite": song.favorite_change
             }, "target": Object.fromEntries(
                 Object.entries(target[song.target]).map(([key, value]) => {
                     if (key === "platform") value = value.find(item => item.id === song.platform);
@@ -198,16 +191,12 @@ function board_info(issue, board = "vocaoid-weekly", count = 50, index = 1) {
         ] ], "target": song_id_list
     }).map(last => (result.board[song_id_list.indexOf(last.target)].last = {
         "rank": {
-            "view": last.view_rank,
-            "like": last.like_rank,
-            "coin": last.coin_rank,
-            "board": last.rank,
+            "view": last.view_rank, "like": last.like_rank,
+            "coin": last.coin_rank, "board": last.rank,
             "favorite": last.favorite_rank
         }, "count": {
-            "view": last.view,
-            "like": last.like,
-            "coin": last.coin,
-            "point": last.point,
+            "view": last.view, "like": last.like,
+            "coin": last.coin, "point": last.point,
             "favorite": last.favorite
         }, "target": last.target
     }));
@@ -249,7 +238,7 @@ function song_count_history_info(target, count = 50, index = 1) {
             "view": item.view, "like": item.like,
             "coin": item.coin, "favorite": item.favorite
         }
-    }));
+    })).filter(item => item.count.coin > 0);
 }
 
 /**
@@ -271,11 +260,11 @@ function song_rank_history_info(target, issue, board, count = 50, index = 1) {
         "rank": {
             "view": item.view_rank, "like": item.like_rank, "board": item.rank,
             "coin": item.coin_rank, "favorite": item.favorite_rank
-        }, "target": item.target, "count": {
-            "view": item.view, "like": item.like, "point": item.point,
-            "coin": item.coin, "favorite": item.favorite
+        }, "target": item.target, "point": item.point, "change": {
+            "view": item.view_change, "like": item.like_change,
+            "coin": item.coin_change, "favorite": item.favorite_change
         }, "issue": item.issue, "board": item.board
-    }));
+    })).filter(item => item.rank.coin > 0);
 }
 
 application.get("/get_current_board_info", (request, response) => {
