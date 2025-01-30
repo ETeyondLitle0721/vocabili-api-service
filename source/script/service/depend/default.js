@@ -94,7 +94,7 @@ export function check_parameter(instance, name, receive, target, mode, options) 
             }
         }
     }
-
+                    
     if (mode === "count") {
         const length = target ? target.length : 0;
 

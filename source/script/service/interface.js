@@ -54,7 +54,7 @@ export function get_board_metadata_info_by_board_id(target) {
 /**
  * 通过识别码获取相关信息
  * 
- * @param {("song"|"uploader"|"vocalist"|"producer"|"synthesizer")[]} type 识别码的来源类型列表
+ * @param {("song"|"uploader"|"vocalist"|"producer"|"platform"|"synthesizer")[]} type 识别码的来源类型列表
  * @param {string[]} list 需要获取的识别码列表
  * @returns 获取到的目标信息
  */
@@ -64,23 +64,21 @@ export function get_target_info_by_id(type, list) {
     }) : [ capitalize(type) + "_Table" ];
 
     return operator.select_item(table_list, {
-        "where": [
-            {
-                "column": "id",
-                "operator": "within",
-                "value": list
-            }
-        ]
+        "where": {
+            "column": "id",
+            "operator": "within",
+            "value": list
+        }
     });
 }
 
 /**
- * 通过曲目识别码获取所有的标记信息
+ * 通过目标识别码获取所有的标记信息
  * 
- * @param {string[]} list 需要获取标记信息的曲目识别码列表
- * @returns 获取到的曲目标记信息
+ * @param {string[]} list 需要获取标记信息的目标识别码列表
+ * @returns 获取到的目标标记信息
  */
-export function get_mark_info_by_song_id(list) {
+export function get_mark_info_by_target_id(list) {
     return operator.select_item("Mark_Table", {
         "where": {
             "column": "target",

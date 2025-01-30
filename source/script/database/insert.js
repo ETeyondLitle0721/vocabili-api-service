@@ -1,11 +1,9 @@
-import fs from "fs";
-import url from "url";
-import path from "path";
-import SQLite3 from "better-sqlite3";
-import format_datetime from "../../depend/toolkit/formatter/datetime.js";
+import fs from "fs"; import url from "url"; import path from "path";
+import SQLite3 from "better-sqlite3"; import {
+    compute_hamc, get_type, text_transformer as cap,
+    to_string, classification, unique_array, quote_string
+} from "../../depend/core.js";
 import DatabaseOperator from "../../depend/operator/database.js";
-import TaskProgressReporter from "../../depend/operator/reporter/task.js";
-import { compute_hamc, get_type, text_transformer as capitalize, to_string, split_group, classification, unique_array } from "../../depend/core.js";
 
 const root = path.resolve(".");
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
@@ -36,7 +34,7 @@ const database = {
     "filepath": config.global.database.filepath[field]
 };
 
-const instance = new SQLite3(database.filepath, {
+const instance = new SQLite3(database.filepath, {  // 强制使用内存数据库
     "timeout": 1000,
     "readonly": false
 });
@@ -50,11 +48,13 @@ const instance = new SQLite3(database.filepath, {
 function read_jsonl(filepath) {
     const content = fs.readFileSync(path.resolve(
         root, filepath
-    ), "UTF-8");
-
-    return JSON.parse(
-        "[" + content.split("\n").join(",") + "]"
+    ), "UTF-8"), result = JSON.parse(
+        "[" + content.split("\n").filter(item => item).join(",") + "]"
     );
+
+    console.log(`Read: ${filepath}, Result: ${result.length}`);
+
+    return result;
 }
 
 /**
@@ -91,6 +91,107 @@ const base = {
 };
 
 /**
+ * 获取当前的 ISO 8601 毫秒级时间字符串
+ */
+const get_iso_time_text = (instance = new Date()) => instance.toISOString();
+
+const cmp_video = new Set();
+
+/**
+ * 在数据库中插入关联视频数据并构建关联关系（使用原始条目数据）
+ * 
+ * @param {object} data 原始条目数据
+ */
+function insert_platform(data) {
+    const target = {
+        "song": gen_id("Song", data.name || data.title),
+        "video": gen_id("Platform", data.bvid)
+    };
+
+    if (cmp_video.has(target.video)) return;
+
+    memory.platform.set(target.video, {
+        "id": target.video, "thumbnail": data.image_url, "page": data.page || -1,
+        "link": "https://www.bilibili.com/video/" + data.bvid,
+        "title": data.title || data.video_title, "copyright": data.copyright,
+        "duration": (data.duration && human_duration_to_duration(
+            data.duration.replace("分", ":").replace("秒", "")
+        )) || -1, "uploaded_at": get_iso_time_text(
+            new Date(data.pubdate)
+        ).replace(/\.\d{3}/, ""), "recorded_at": get_iso_time_text()
+    });
+
+    insert_mark({
+        "type": "platform",
+        "value": target.video,
+        "target": target.song
+    });
+
+    if (data.page > 0) return cmp_video.add(target.video);
+}
+
+/**
+ * 在数据库中创建标记关系
+ * 
+ * @param {object} data 决定标记关系的数据
+ */
+function insert_mark(data) {
+    const identifier = gen_id("Record", data.type + data.target + data.value);
+
+    memory.mark.set(
+        identifier, Object.assign(data, {
+            "id": identifier, "set_at": get_iso_time_text()
+        })
+    );
+    
+    return {
+        "_id": identifier, "target": memory.mark
+    };
+}
+
+/**
+ * 在数据库中插入曲目数据（使用原始条目数据）
+ * 
+ * @param {object} data 原始条目数据
+ */
+function insert_song(data) {
+    const song_id = gen_id("Song", data.name || data.title), entries = Object.entries(data);
+
+    insert_platform(data);
+
+    memory.song.set(song_id, {
+        "name": data.name || data.title, "type": data.type,
+        "add_at": get_iso_time_text(), "id": song_id
+    });
+
+    for (let index = 0; index < entries.length; index++) {
+        const entry = entries[index], key = entry[0];
+        
+        if (!base.list.includes(key)) continue;
+
+        entry[1].toString().split("、").map(name => {
+            const field = base.map[key], id = {
+                "video": gen_id("Platform", data.bvid),
+                "target": gen_id(cap(field), name)
+            }, inserted_data = {
+                "id": id.target, "name": name,
+                "add_at": get_iso_time_text()
+            }, marked_data = {
+                "type": field,
+                "value": id.target,
+                "target": song_id
+            };
+
+            if (field === "vocalist") inserted_data.color = -1;
+            if (field === "uploader") marked_data.target = id.video;
+
+            insert_mark(marked_data);
+            memory[field].set(id.target, inserted_data);
+        });
+    }
+}
+
+/**
  * 在数据库中插入基础曲目数据
  * 
  * @param {("Base-0001")} format 数据文件版本
@@ -101,50 +202,7 @@ function _insert_base(format, filepath) {
         const dataset = read_jsonl(filepath);
 
         dataset.map(data => {
-            const song_id = gen_id("Song", data.name);
-
-            if (!data.synthesizer) return;
-
-            memory.song.set(song_id, {
-                "id": song_id, "name": data.name, "type": data.type,
-                "page": 1, "cover": data.image_url, "duration": -1,
-                "link": "https://www.bilibili.com/video/" + data.bvid,
-                "title": data.title, "copyright": data.copyright,
-                "uploaded_at": format_datetime(
-                    "{{year, 4}}-{{month, 2}}-{{day, 2}}T{{hour, 2}}:{{minute, 2}}:{{second, 2}}Z",
-                    new Date(data.pubdate), "UTC"
-                )
-            });
-
-            const entries = Object.entries(data);
-
-            for (let index = 0; index < entries.length; index++) {
-                const entry = entries[index], key = entry[0];
-                
-                if (base.list.includes(key)) {
-                    entry[1].toString().split("、").map(name => {
-                        const field = base.map[key], mark_id = gen_id("Record", Math.random().toString());
-                        const target_id = gen_id(capitalize(field), name);
-
-                        memory.mark.set(mark_id, {
-                            "id": mark_id, "type": field, "target": song_id,
-                            "value": target_id, "set_at": new Date().toISOString()
-                        });
-
-                        if (field === "vocalist") {
-                            memory[field].set(target_id, {
-                                "id": target_id, "name": name, "color": -1,
-                                "added_at": new Date().toISOString()
-                            });
-                        } else {
-                            memory[field].set(target_id, {
-                                "id": target_id, "name": name,
-                                "added_at": new Date().toISOString()
-                            });
-                        }
-                    });
-                }
-            }
+            if (data.synthesizer) insert_song(data);
         });
     }
 }
@@ -174,27 +232,29 @@ function human_duration_to_duration(human_duration) {
 function _insert_daily(format, filepath) {
     if (format === "Daily-0001") {
         const dataset = read_jsonl(filepath), filename = path.basename(filepath);
-        const issue = Number(filename.slice(0, 8));
+        const datetime = filename.slice(0, 8); // YYYYMMDD
 
-        console.log("正在载入 " + issue + " 的日刊信息");
+        console.log("正在载入 " + datetime + " 的日刊信息");
 
-        dataset.map((data, index) => {
-            const id = gen_id("Record", "vocaloid-daily" + to_string(issue) + data.bvid);
+        dataset.forEach((data, index) => {
+            const _id = gen_id("Song", data.name || data.title), id = {
+                "song": _id, "rank": gen_id(
+                    "Record", "vocaloid-daily" + datetime + _id
+                )
+            };
 
-            memory.rank.set(id, {
-                "id": id, "rank": index + 1, "board": "vocaloid-daily",
-                "like": data.like, "coin": data.coin, "view": data.view,
-                "issue": issue, "favorite": data.favorite, "count": data.count,
-                "like_rank": data.like_rank, "view_rank": data.view_rank,
-                "coin_rank": data.coin_rank, "favorite_rank": data.favorite_rank,
-                "target": gen_id("Song", data.name), "point": data.point,
-                "set_at": new Date().toISOString()
+            memory.rank.set(id.rank, {
+                "id": id.rank, "rank": index + 1, "board": "vocaloid-daily",
+                "like": -1, "coin": -1, "view": -1, "target": id.song, "count": data.count || -1,
+                "issue": Number(datetime), "favorite": -1, "view_change": data.view,
+                "like_rank": data.like_rank || -1, "view_rank": data.view_rank || -1,
+                "coin_rank": data.coin_rank || -1, "favorite_rank": data.favorite_rank || -1,
+                "like_change": data.like, "coin_change": data.coin,
+                "favorite_change": data.favorite, "set_at": get_iso_time_text()
             });
         });
     }
 }
-
-const completed = [];
 
 /**
  * 在数据库中插入周刊数据
@@ -205,90 +265,34 @@ const completed = [];
 function _insert_weekly(format, filepath) {
     if ([ "Weekly-0001", "Weekly-0002" ].includes(format)) {
         const dataset = read_jsonl(filepath), filename = path.basename(filepath);
-        const issue = Number(filename.replaceAll("-", "").replaceAll(".jsonl", ""));
+        const datetime = filename.replaceAll("-", "").replaceAll(".jsonl", ""); // YYYYMMDD
 
-        console.log("正在载入 " + issue + " 的周刊信息");
+        console.log("正在载入 " + datetime + " 的周刊信息");
 
-        dataset.map((data, index) => {
-            const id = gen_id("Record", "vocaloid-weekly" + to_string(issue) + data.bvid);
+        dataset.forEach((data, index) => {
+            const _id = gen_id("Song", data.name || data.title), id = {
+                "song": _id, "rank": gen_id(
+                    "Record", "vocaloid-weekly" + datetime + _id
+                )
+            };
 
-            memory.rank.set(id, {
-                "id": id, "rank": index + 1, "board": "vocaloid-weekly",
-                "like": data.like, "coin": data.coin, "view": data.view,
-                "issue": issue, "favorite": data.favorite,
-                "target": gen_id("Song", data.name), "count": data.count,
-                "like_rank": data.like_rank, "view_rank": data.view_rank,
-                "coin_rank": data.coin_rank, "favorite_rank": data.favorite_rank,
-                "set_at": new Date().toISOString(), "point": data.point
+            memory.rank.set(id.rank, {
+                "id": id.rank, "rank": index + 1, "board": "vocaloid-weekly",
+                "like": -1, "coin": -1, "view": -1, "target": id.song, "count": data.count || -1,
+                "issue": Number(datetime), "favorite": -1, "view_change": data.view,
+                "like_rank": data.like_rank || -1, "view_rank": data.view_rank || -1,
+                "coin_rank": data.coin_rank || -1, "favorite_rank": data.favorite_rank || -1,
+                "like_change": data.like, "coin_change": data.coin,
+                "favorite_change": data.favorite, "set_at": get_iso_time_text()
             });
 
             if (format === "Weekly-0002") {
-                const song_id = gen_id("Song", data.name);
+                if (!memory.song.has(id.song)) insert_mark({
+                    "type": "tag", "target": id.song,
+                    "value": gen_id("Tag", "deleted")
+                });
 
-                if (!completed.includes(song_id)) {
-                    completed.push(song_id);
-
-                    if (memory.song.has(song_id)) {
-                        memory.song.set(song_id, Object.assign(
-                            memory.song.get(song_id), {
-                                "page": data.page,
-                                "duration": human_duration_to_duration(
-                                    data.duration.replace("分", ":").replace("秒", "")
-                                )
-                            }
-                        ));
-                    } else {
-                        const entries = Object.entries(data);
-
-                        memory.song.set(song_id, {
-                            "id": song_id, "name": data.name, "type": data.type,
-                            "page": data.page, "cover": data.image_url, "duration": human_duration_to_duration(
-                                data.duration.replace("分", ":").replace("秒", "")
-                            ),
-                            "link": "https://www.bilibili.com/video/" + data.bvid,
-                            "title": data.title, "copyright": data.copyright,
-                            "uploaded_at": format_datetime(
-                                "{{year, 4}}-{{month, 2}}-{{day, 2}}T{{hour, 2}}:{{minute, 2}}:{{second, 2}}Z",
-                                new Date(data.pubdate), "UTC"
-                            )
-                        });
-
-                        if (!data.synthesizer) memory.mark.set(
-                            gen_id("Record", Math.random().toString()), {
-                                "id": gen_id("Record", Math.random().toString()), "type": "tag", "target": song_id,
-                                "value": "deleted", "set_at": new Date().toISOString()
-                            }
-                        );
-
-                        for (let index = 0; index < entries.length; index++) {
-                            const entry = entries[index], key = entry[0];
-                            
-                            if (base.list.includes(key)) {
-                                entry[1].toString().split("、").map(name => {
-                                    const field = base.map[key], mark_id = gen_id("Record", Math.random().toString());
-                                    const target_id = gen_id(capitalize(field), name);
-
-                                    memory.mark.set(mark_id, {
-                                        "id": mark_id, "type": field, "target": song_id,
-                                        "value": target_id, "set_at": new Date().toISOString()
-                                    });
-
-                                    if (field === "vocalist") {
-                                        memory[field].set(target_id, {
-                                            "id": target_id, "name": name, "color": -1,
-                                            "added_at": new Date().toISOString()
-                                        });
-                                    } else {
-                                        memory[field].set(target_id, {
-                                            "id": target_id, "name": name,
-                                            "added_at": new Date().toISOString()
-                                        });
-                                    }
-                                });
-                            }
-                        }
-                    }
-                }
+                insert_song(data), insert_platform(data);
             }
         });
     }
@@ -303,37 +307,41 @@ function _insert_weekly(format, filepath) {
 function _insert_snapshot(format, filepath) {
     if ([ "Snapshot-0001", "Snapshot-0002" ].includes(format)) {
         const dataset = read_jsonl(filepath), filename = path.basename(filepath);
+
         const match = filename.match(/(\d{4})(\d{2})(\d{2})/);
-        const date = `${match[1]}-${match[2]}-${match[3]}`;
+        const datetime = `${match[1]}-${match[2]}-${match[3]}`; // YYYY-MM-DD
 
-        console.log("正在载入 " + filename.slice(0, 8) + " 的快照信息");
+        console.log("正在载入 " + datetime + " 的快照信息");
 
-        dataset.map(data => {
-            if (!data.name) return;
+        dataset.forEach(data => {
+            if (!data.bvid) return;
 
-            if (data.bvid) {
-                const id = gen_id("Record", data.bvid + filename.slice(0, 8));
+            const _id = gen_id("Song", data.name || data.title);
+            const abstract = datetime.replaceAll("-", "") + _id, id = {
+                "song": _id, "record": [
+                    gen_id("Record", "vocaloid-daily" + abstract),
+                    gen_id("Record", "vocaloid-weekly" + abstract)
+                ], "snapshot": gen_id("Record", abstract)
+            };
 
-                memory.snapshot.set(id, {
-                    "id": id, "recorded_at": date, "favorite": data.favorite,
-                    "like": data.like, "coin": data.coin, "view": data.view,
-                    "target": gen_id("Song", data.name)
-                });
+            memory.snapshot.set(id.snapshot, {
+                "id": id.snapshot, "snapshot_at": datetime, "favorite": data.favorite,
+                "like": data.like, "coin": data.coin, "view": data.view, "target": id.song,
+                "recorded_at": get_iso_time_text()
+            });
 
-                ([
-                    gen_id("Record", "vocaloid-daily" + filename.slice(0, 8) + data.bvid),
-                    gen_id("Record", "vocaloid-weekly" + filename.slice(0, 8) + data.bvid)
-                ]).map(current => {
-                    if (memory.rank.has(current)) {
-                        memory.rank.set(current, Object.assign(
-                            memory.rank.get(current), {
-                                "favorite": data.favorite, "like": data.like,
-                                "coin": data.coin, "view": data.view
-                            }
-                        ));
+            id.record.map(current => {
+                const temp = memory.rank.get(current);
+
+                if (!temp || temp.like >= 0) return;
+
+                memory.rank.set(current, Object.assign(
+                    temp, {
+                        "like": data.like, "view": data.view,
+                        "coin": data.coin, "favorite": data.favorite,
                     }
-                });
-            }
+                ));
+            });
         });
     }
 }
@@ -355,15 +363,15 @@ function _insert_color(format, filepath) {
         console.log("正在为歌手更新代表色数据项");
 
         dataset.map(data => {
-            const color = Number("0x" + data[0]), id = gen_id("Vocalist", data[1]);
+            const identifier = gen_id("Vocalist", data[1]);
 
-            if (memory.vocalist.has(id)) {
-                memory.vocalist.set(id, Object.assign(
-                    memory.vocalist.get(id), {
-                        "color": color
-                    }
-                ));
-            }
+            if (!memory.vocalist.has(identifier)) return;
+
+            memory.vocalist.set(identifier, Object.assign(
+                memory.vocalist.get(identifier), {
+                    "color": Number("0x" + data[0])
+                }
+            ));
         });
     }
 }
@@ -431,6 +439,7 @@ const memory = {
     "song": new Map(),
     "rank": new Map(),
     "mark": new Map(),
+    "platform": new Map(),
     "vocalist": new Map(),
     "uploader": new Map(),
     "producer": new Map(),
@@ -452,12 +461,6 @@ for (let index = 0; index < entries.length; index++) {
     }
 }
 
-// console.log(memory.vocalist);
-
-instance.exec("BEGIN");
-
-const operator = new DatabaseOperator(instance);
-
 const m_entries = Object.entries(memory);
 
 let total = 0, task = {};
@@ -470,39 +473,52 @@ for (let index = 0; index < m_entries.length; index++) {
 
 console.log("一共生成了 " + total + " 个条目，正在准备插入数据库");
 
-const reporter = new TaskProgressReporter(total, 32, 500, (text, task) => {
-    if (task.task.complete === task.task.total) {
-        return process.stdout.write(text);
-    }
+/**
+ * 批量插入数据
+ * 
+ * @typedef {import("../../depend/operator/database.js").GeneralObject} GeneralObject
+ * 
+ * @param {string} table_name 需要插入数据的表单的名称
+ * @param {GeneralObject[]} data_list 需要插入的数据
+ * @param {SQLite3.Database} instance 数据库实例化对象
+ */
+function bulk_insert(table_name, data_list, instance) {
+    const table = quote_string(table_name, "double");
+    const sample = Object.keys(data_list[0]);
+    const columns = sample.map(item => quote_string(item, "double")).join(", ");
+    const placeholders = sample.fill("?").join(", ");
 
-    return process.stdout.write(text + "\r");
-});
+    const statement = instance.prepare(
+        `INSERT OR REPLACE INTO ${table} ( ${columns} ) VALUES ( ${placeholders} )`
+    );
 
-reporter.start("report");
-
-Object.entries(task).map(entry => {
-    split_group(
-        entry[1], 1024
-    ).map(list => {
-        operator.insert_item(capitalize(entry[0]) + "_Table", {
-            "flag": "if-not-exists",
-            "target": list
-        });
-
-        reporter.task.complete += list.length - 1;
-
-        reporter.tick("success", "auto-stop");
-
-        if (reporter.task.complete !== reporter.task.total) {
-            reporter.printer(
-                reporter.report(), reporter
+    instance.transaction((list) => {
+        for (const target of list) {
+            statement.run(
+                Object.values(target)
             );
         }
-    });
+    })(data_list);
+}
+
+instance.pragma("synchronous = OFF");
+instance.pragma("journal_mode = WAL");
+
+const operator = new DatabaseOperator(instance);
+
+Object.entries(task).forEach(entry => {
+    const table_name = cap(entry[0]) + "_Table";
+
+    console.log(table_name + " 表单正在准备开始插入");
+
+    bulk_insert(
+        table_name, entry[1], instance
+    );
+
+    console.log(table_name + " 表单插入完毕");
 });
 
-instance.exec("COMMIT");
-
+console.log("数据条目全部插入完毕");
 console.log("正在尝试更新 ISSUE 定义文件");
 
 const result = classification(
@@ -533,4 +549,4 @@ fs.writeFileSync(
     )
 );
 
-console.log("成功");
+console.log("成功更新 ISSUE 定义文件");

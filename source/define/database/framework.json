@@ -23,6 +23,37 @@
                     }
                 },
                 {
+                    "name": "type",
+                    "value": {
+                        "type": "text",
+                        "restrict": "not-null"
+                    }
+                },
+                {
+                    "name": "add_at",
+                    "value": {
+                        "type": "text",
+                        "restrict": "not-null"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Platform_Table",
+            "flag": "if-not-exists",
+            "column": [
+                {
+                    "name": "id",
+                    "mark": "primary-key",
+                    "value": {
+                        "type": "text",
+                        "restrict": [
+                            "not-null",
+                            "unique"
+                        ]
+                    }
+                },
+                {
                     "name": "title",
                     "value": {
                         "type": "text",
@@ -31,13 +62,6 @@
                 },
                 {
                     "name": "link",
-                    "value": {
-                        "type": "text",
-                        "restrict": "not-null"
-                    }
-                },
-                {
-                    "name": "type",
                     "value": {
                         "type": "text",
                         "restrict": "not-null"
@@ -63,7 +87,7 @@
                     }
                 },
                 {
-                    "name": "cover",
+                    "name": "thumbnail",
                     "value": {
                         "type": "text",
                         "restrict": "not-null"
@@ -71,6 +95,13 @@
                 },
                 {
                     "name": "uploaded_at",
+                    "value": {
+                        "type": "text",
+                        "restrict": "not-null"
+                    }
+                },
+                {
+                    "name": "recorded_at",
                     "value": {
                         "type": "text",
                         "restrict": "not-null"
@@ -146,7 +177,7 @@
                     }
                 },
                 {
-                    "name": "added_at",
+                    "name": "add_at",
                     "value": {
                         "type": "text",
                         "restrict": "not-null"
@@ -177,7 +208,7 @@
                     }
                 },
                 {
-                    "name": "added_at",
+                    "name": "add_at",
                     "value": {
                         "type": "text",
                         "restrict": "not-null"
@@ -208,7 +239,7 @@
                     }
                 },
                 {
-                    "name": "added_at",
+                    "name": "add_at",
                     "value": {
                         "type": "text",
                         "restrict": "not-null"
@@ -246,7 +277,7 @@
                     }
                 },
                 {
-                    "name": "added_at",
+                    "name": "add_at",
                     "value": {
                         "type": "text",
                         "restrict": "not-null"
@@ -310,6 +341,13 @@
                         "type": "text",
                         "restrict": "not-null"
                     }
+                },
+                {
+                    "name": "snapshot_at",
+                    "value": {
+                        "type": "text",
+                        "restrict": "not-null"
+                    }
                 }
             ]
         },
@@ -343,13 +381,6 @@
                     }
                 },
                 {
-                    "name": "point",
-                    "value": {
-                        "type": "integer",
-                        "restrict": "not-null"
-                    }
-                },
-                {
                     "name": "target",
                     "value": {
                         "type": "text",
@@ -358,13 +389,6 @@
                 },
                 {
                     "name": "rank",
-                    "value": {
-                        "type": "integer",
-                        "restrict": "not-null"
-                    }
-                },
-                {
-                    "name": "count",
                     "value": {
                         "type": "integer",
                         "restrict": "not-null"
@@ -386,6 +410,13 @@
                 },
                 {
                     "name": "like",
+                    "value": {
+                        "type": "integer",
+                        "restrict": "not-null"
+                    }
+                },
+                {
+                    "name": "count",
                     "value": {
                         "type": "integer",
                         "restrict": "not-null"
@@ -421,6 +452,34 @@
                 },
                 {
                     "name": "favorite_rank",
+                    "value": {
+                        "type": "integer",
+                        "restrict": "not-null"
+                    }
+                },
+                {
+                    "name": "view_change",
+                    "value": {
+                        "type": "integer",
+                        "restrict": "not-null"
+                    }
+                },
+                {
+                    "name": "coin_change",
+                    "value": {
+                        "type": "integer",
+                        "restrict": "not-null"
+                    }
+                },
+                {
+                    "name": "like_change",
+                    "value": {
+                        "type": "integer",
+                        "restrict": "not-null"
+                    }
+                },
+                {
+                    "name": "favorite_change",
                     "value": {
                         "type": "integer",
                         "restrict": "not-null"

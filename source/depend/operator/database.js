@@ -86,7 +86,6 @@ import { quote_string, unique_array, generate_random_string as generate, repair_
  * @param {NormalType} value 真实值
  * @param {string} sequence 用于区别不同子序列的顺序码
  * @param {ParameterCallback} setter 添加映射对象的回调方法
- * 
  * @returns {string} 生成的 Nickname 字符串
  */
 function generate_placeholder(column_name, index, value, sequence, setter) {
@@ -101,7 +100,6 @@ function generate_placeholder(column_name, index, value, sequence, setter) {
 
 /**
  * 生成随机的顺序码
- * 
  * @returns {string} 随机生成的顺序码
  */
 function generate_sequence() {
@@ -115,7 +113,6 @@ function generate_sequence() {
  * @property {ParameterCallback} parameter 添加参数映射关系的回调方法
  * 
  * @param {ItemSelectWhereOptions} options 需要解析的 Where 语句配置信息
- * 
  * @param {ParseWhereCallbackOptions} callback 回调方法
  * @returns {string} 解析出来的 SQL 语句
  */
@@ -194,7 +191,6 @@ function parse_where(options = {}, callback = {}) {
  * 
  * @param {[string, NormalType][]} tuple 需要解析的元组信息
  * @param {ParameterCallback} callback 回调方法
- * 
  * @returns {string} 解析出来的 SQL 元组
  */
 function parse_tuple(tuple = {}, callback = {}) {
@@ -209,7 +205,6 @@ function parse_tuple(tuple = {}, callback = {}) {
  * 构建用于向数据库中的表单之中插入项目的 SQL 语句
  * 
  * @param {ItemInsertOptions} options 构建插入语句时的构建参数
- * 
  * @returns {GeneralGeneratorResponse} 构建器响应结果
  */
 function _item_insert(options = {}) {
@@ -264,7 +259,6 @@ function _item_insert(options = {}) {
  * 构建可以在数据库中的表单之中索引符合目标要求的项目的 SQL 语句
  * 
  * @param {ItemSelectOptions} options 构建检索语句时的构建参数
- * 
  * @returns {GeneralGeneratorResponse} 构建器响应结果
  */
 function _item_select(options = {}) {
@@ -323,7 +317,6 @@ function _item_select(options = {}) {
  * 构建可以在数据库中的表单之中索引符合目标要求的项目的 SQL 语句
  * 
  * @param {ItemCountOptions} options 构建检索语句时的构建参数
- * 
  * @returns {GeneralGeneratorResponse} 构建器响应结果
  */
 function _item_count(options = {}) {
@@ -520,7 +513,6 @@ function _table_create(options = {}) {
 
 /**
  * 获取目前支持的生成器列表
- * 
  * @returns 目前支持的生成器列表
  */
 export function get_generator() {

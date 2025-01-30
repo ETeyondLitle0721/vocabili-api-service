@@ -220,7 +220,10 @@
                 "./assets/dataset/journal/daily/20250119与20250118.jsonl",
                 "./assets/dataset/journal/daily/20250120与20250119.jsonl",
                 "./assets/dataset/journal/daily/20250121与20250120.jsonl",
-                "./assets/dataset/journal/daily/20250122与20250121.jsonl"
+                "./assets/dataset/journal/daily/20250122与20250121.jsonl",
+                "./assets/dataset/journal/daily/20250127与20250126.jsonl",
+                "./assets/dataset/journal/daily/20250128与20250127.jsonl",
+                "./assets/dataset/journal/daily/20250129与20250128.jsonl"
             ]
         }
     ],
@@ -546,7 +549,10 @@
                 "./assets/dataset/snapshot/20250104.jsonl",
                 "./assets/dataset/snapshot/20250103.jsonl",
                 "./assets/dataset/snapshot/20250102.jsonl",
-                "./assets/dataset/snapshot/20250101.jsonl"
+                "./assets/dataset/snapshot/20250101.jsonl",
+                "./assets/dataset/snapshot/20250125.jsonl",
+                "./assets/dataset/snapshot/20250126.jsonl",
+                "./assets/dataset/snapshot/20250127.jsonl"
             ]
         }
     ],

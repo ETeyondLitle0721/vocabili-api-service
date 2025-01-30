@@ -5,7 +5,7 @@ import path from "path";
 import { check_path_accessible, get_type } from "../../depend/core.js";
 import TaskProgressReporter from "../../depend/operator/reporter/task.js";
 
-const __dirname = path.filename(url.fileURLToPath(import.meta.url));
+const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 
 /**
  * @callback ReadXlsxTargetCallback

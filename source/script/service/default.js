@@ -9,7 +9,7 @@ import template from "../../depend/utilities/template.js";
 import { classification, get_type, unique_array } from "../../depend/core.js";
 import format_datetime, { datetime } from "../../depend/toolkit/formatter/datetime.js";
 import { parse_parameter, check_parameter, build_response } from "./depend/default.js";
-import { get_board_metadata_info_by_board_id, get_board_song_list, get_mark_info_by_song_id, get_rank_by_song_id, get_song_history_info, get_target_info_by_id } from "./interface.js";
+import { get_board_metadata_info_by_board_id, get_board_song_list, get_mark_info_by_target_id, get_rank_by_song_id, get_song_history_info, get_target_info_by_id } from "./interface.js";
 
 const root = path.resolve(".");
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
@@ -83,7 +83,7 @@ function song_info(list = []) {
 
     const mark = Object.fromEntries(Object.entries(
         classification(
-            get_mark_info_by_song_id(list), (value) => {
+            get_mark_info_by_target_id(list), (value) => {
                 return value.target;
             }
         )
@@ -97,20 +97,29 @@ function song_info(list = []) {
 
     const target = Object.fromEntries(
         get_target_info_by_id(
-            [ "producer", "uploader", "vocalist", "synthesizer" ],
+            [ "producer", "vocalist", "synthesizer", "platform" ],
             Object.values(mark).flat().map(item => Object.values(item)).flat(2)
         ).map(item => item.response).flat().map(item => ([
             item.id, item
         ]))
     );
 
+    const uploader = classification(
+        get_mark_info_by_target_id(
+            Object.values(mark).map(item => Object.values(item)).flat(2).filter(item => item.startsWith("Platform:"))
+        ), (value) => value.target
+    );
+
+    get_target_info_by_id(
+        "uploader",  Object.values(uploader).flat().map(item => item.value)
+    ).map(temp => target[temp.id] = temp);
+
     return song.map(song => ({
         "metadata": {
-            "id": song.id.replace("Song:", ""),
+            "id": song.id,
             "name": song.name,
             "type": song.type,
             "target": {
-                "uploader": mark[song.id].producer.map(id => target[id].name),
                 "vocalist": mark[song.id].vocalist.map(id => ({
                     "name": target[id].name, "color": target[id].color
                 })),
@@ -118,15 +127,20 @@ function song_info(list = []) {
                 "synthesizer": mark[song.id].synthesizer.map(id => target[id].name)
             }
         },
-        "platform": {
-            "link": song.link,
-            "page": song.page,
-            "title": song.title,
-            "cover": song.cover,
-            "length": song.duration,
-            "upload": song.uploaded_at
-        },
-        "copyright": song.copyright
+        "platform": mark[song.id].platform.map(id => {
+            const info = target[id];
+
+            return {
+                "link": info.link,
+                "page": info.page,
+                "title": info.title,
+                "publish": info.uploaded_at, // 数据库列名错误，实际上是 publish date
+                "uploader": uploader[id].map(item => target[item.value].name),
+                "duration": info.duration,
+                "thumbnail": info.cover,
+                "copyright": info.copyright
+            };
+        })
     }));
 }
 
@@ -169,7 +183,13 @@ function board_info(issue, board = "vocaoid-weekly", count = 50, index = 1) {
                 "board": song.count,
                 "favorite": song.favorite
             },
-            "target": target[song.target.replace("Song:", "")]
+            "change": {
+                "view": song.view_change,
+                "like": song.like_change,
+                "coin": song.coin_change,
+                "favorite": song.favorite_change
+            },
+            "target": target[song.target]
         })),
         "metadata": {
             "id": get_type(board).second === "array" ? board[0] : board,
@@ -197,7 +217,7 @@ function board_info(issue, board = "vocaoid-weekly", count = 50, index = 1) {
             "point": last.point,
             "favorite": last.favorite
         },
-        "target": last.target.replace("Song:", "")
+        "target": last.target
     }));
 
     return result;
@@ -258,8 +278,8 @@ function song_rank_history_info(target, issue, board, count = 50, index = 1) {
 
     return rank.map(item => ({
         "rank": {
-            "view": item.view, "like": item.like, "board": item.rank,
-            "coin": item.coin, "favorite": item.favorite
+            "view": item.view_rank, "like": item.like_rank, "board": item.rank,
+            "coin": item.coin_rank, "favorite": item.favorite_rank
         },
         "count": {
             "view": item.view, "like": item.like, "point": item.point,
@@ -422,7 +442,7 @@ application.get("/get_song_count_history_info", (request, response) => {
      * @type {{ "count": number, "index": number, "target": string }}
      */
     const param = Object.assign({
-        "count": 50, "index": 1
+        "count": 300, "index": 1
     }, parse_parameter(request));
     const receive = process.uptime(), instance = {
         response, request
@@ -434,7 +454,7 @@ application.get("/get_song_count_history_info", (request, response) => {
 
     if (!check_parameter(instance, "count", receive, param.count, "number", {
         "type": "integer",
-        "range": { "minimum": 1, "maximum": 50 }
+        "range": { "minimum": -1, "maximum": 300 }
     })) return;
 
     if (!check_parameter(instance, "index", receive, param.index, "number", {
