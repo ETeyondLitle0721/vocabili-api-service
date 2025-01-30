@@ -422,7 +422,7 @@ application.get("/get_song_rank_history_info", (request, response) => {
 
     if (!check_parameter(instance, "count", receive, param.count, "number", {
         "type": "integer",
-        "range": { "minimum": 1, "maximum": 200 }
+        "range": { "minimum": -1, "maximum": 300 }
     })) return;
 
     if (!check_parameter(instance, "index", receive, param.index, "number", {
