@@ -121,7 +121,7 @@ function song_info(list = []) {
             const info = target[id];
 
             return {
-                "link": info.link, "page": info.page, "title": info.title,
+                "link": info.link.replace("BB://V/", "https://www.bilibili.com/video/"), "page": info.page, "title": info.title,
                 "publish": info.uploaded_at, // 数据库列名错误，实际上是 publish date
                 "uploader": uploader[id].map(item => target[item.value].name),
                 "duration": info.duration, "thumbnail": info.thumbnail,
@@ -171,11 +171,7 @@ function board_info(issue, board = "vocaoid-weekly", count = 50, index = 1) {
                     if (key === "platform") value = value.find(item => item.id === song.platform);
 
                     return [
-                        key, Object.fromEntries(
-                            Object.entries(value).map(entry => {
-                                if (entry[0] !== "id") return entry;
-                            }).filter(item => item)
-                        )
+                        key, value
                     ];
                 })
             )
@@ -196,9 +192,13 @@ function board_info(issue, board = "vocaoid-weekly", count = 50, index = 1) {
             "favorite": last.favorite_rank
         }, "count": {
             "view": last.view, "like": last.like,
-            "coin": last.coin, "point": last.point,
-            "favorite": last.favorite
-        }, "target": last.target
+            "coin": last.coin, "favorite": last.favorite
+        }, "change": {
+            "view": last.view_change, "like": last.like_change,
+            "coin": last.coin_change, "favorite": last.favorite_change
+        }, "issue": metadata.list.issue.default[
+            metadata.list.issue.default.indexOf(issue) - 1
+        ]
     }));
 
     return result;
