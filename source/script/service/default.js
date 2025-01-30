@@ -186,19 +186,7 @@ function board_info(issue, board = "vocaoid-weekly", count = 50, index = 1) {
             metadata.list.issue.default.indexOf(issue) - 1
         ] ], "target": song_id_list
     }).map(last => (result.board[song_id_list.indexOf(last.target)].last = {
-        "rank": {
-            "view": last.view_rank, "like": last.like_rank,
-            "coin": last.coin_rank, "board": last.rank,
-            "favorite": last.favorite_rank
-        }, "count": {
-            "view": last.view, "like": last.like,
-            "coin": last.coin, "favorite": last.favorite
-        }, "change": {
-            "view": last.view_change, "like": last.like_change,
-            "coin": last.coin_change, "favorite": last.favorite_change
-        }, "issue": metadata.list.issue.default[
-            metadata.list.issue.default.indexOf(issue) - 1
-        ]
+        "rank": last.rank, "point": last.point
     }));
 
     return result;

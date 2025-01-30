@@ -423,6 +423,13 @@
                     }
                 },
                 {
+                    "name": "point",
+                    "value": {
+                        "type": "integer",
+                        "restrict": "not-null"
+                    }
+                },
+                {
                     "name": "platform",
                     "value": {
                         "type": "text",

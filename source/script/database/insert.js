@@ -245,7 +245,7 @@ function _insert_daily(format, filepath) {
             memory.rank.set(id.rank, {
                 "id": id.rank, "rank": index + 1, "board": "vocaloid-daily",
                 "like": -1, "coin": -1, "view": -1, "target": id.song, "count": data.count ?? -1,
-                "issue": Number(datetime), "favorite": -1, "view_change": data.view,
+                "issue": Number(datetime), "favorite": -1, "view_change": data.view, "point": data.point,
                 "like_rank": data.like_rank ?? -1, "view_rank": data.view_rank ?? -1,
                 "coin_rank": data.coin_rank ?? -1, "favorite_rank": data.favorite_rank ?? -1,
                 "like_change": data.like, "coin_change": data.coin, "platform": gen_id("Platform", data.bvid),
@@ -278,7 +278,7 @@ function _insert_weekly(format, filepath) {
             memory.rank.set(id.rank, {
                 "id": id.rank, "rank": index + 1, "board": "vocaloid-weekly",
                 "like": -1, "coin": -1, "view": -1, "target": id.song, "count": data.count ?? -1,
-                "issue": Number(datetime), "favorite": -1, "view_change": data.view,
+                "issue": Number(datetime), "favorite": -1, "view_change": data.view, "point": data.point,
                 "like_rank": data.like_rank ?? -1, "view_rank": data.view_rank ?? -1,
                 "coin_rank": data.coin_rank ?? -1, "favorite_rank": data.favorite_rank ?? -1,
                 "like_change": data.like, "coin_change": data.coin, "platform": gen_id("Platform", data.bvid),
