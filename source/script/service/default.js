@@ -124,7 +124,7 @@ function song_info(list = []) {
                 "link": info.link, "page": info.page, "title": info.title,
                 "publish": info.uploaded_at, // 数据库列名错误，实际上是 publish date
                 "uploader": uploader[id].map(item => target[item.value].name),
-                "duration": info.duration, "thumbnail": info.cover,
+                "duration": info.duration, "thumbnail": info.thumbnail,
                 "copyright": info.copyright, "id": id
             };
         })
