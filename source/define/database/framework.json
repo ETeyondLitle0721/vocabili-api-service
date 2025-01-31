@@ -375,7 +375,7 @@
                 {
                     "name": "issue",
                     "value": {
-                        "type": "integer",
+                        "type": "text",
                         "restrict": "not-null"
                     }
                 },

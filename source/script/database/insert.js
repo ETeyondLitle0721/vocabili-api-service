@@ -547,7 +547,7 @@ const filepath = path.resolve(
 Object.entries(result).map(([key, list]) => {
     content.metadata.board[key].list.issue.default = unique_array(
         list.map(item => item.issue)
-    ).sort();
+    ).sort((a, b) => a - b);
 });
 
 fs.writeFileSync(
