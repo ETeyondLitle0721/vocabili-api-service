@@ -115,7 +115,7 @@ function insert_platform(data) {
         "link": "BB://V/" + data.bvid, "title": data.title ?? data.video_title,
         "copyright": data.copyright ?? -1, "duration": (data.duration && human_duration_to_duration(
             data.duration.replace("分", ":").replace("秒", "")
-        )) ?? -1, "uploaded_at": get_iso_time_text(
+        )) ?? -1, "published_at": get_iso_time_text(
             new Date(data.pubdate || 0)
         ).replace(/\.\d{3}/, ""), "recorded_at": get_iso_time_text()
     });
@@ -237,7 +237,9 @@ function human_duration_to_duration(human_duration) {
 function _insert_daily(format, filepath) {
     if (format === "Daily-0001") {
         const dataset = read_jsonl(filepath), filename = path.basename(filepath);
-        const datetime = filename.slice(0, 8); // YYYYMMDD
+
+        const match = filename.match(/(\d{4})(\d{2})(\d{2})/);
+        const datetime = `${match[1]}-${match[2]}-${match[3]}`;
 
         console.log("正在载入 " + datetime + " 的日刊信息");
 
@@ -251,7 +253,7 @@ function _insert_daily(format, filepath) {
             memory.rank.set(id.rank, {
                 "id": id.rank, "rank": index + 1, "board": "vocaloid-daily",
                 "like": -1, "coin": -1, "view": -1, "target": id.song, "count": data.count ?? -1,
-                "issue": Number(datetime), "favorite": -1, "view_change": data.view, "point": data.point,
+                "issue": datetime, "favorite": -1, "view_change": data.view, "point": data.point,
                 "like_rank": data.like_rank ?? -1, "view_rank": data.view_rank ?? -1,
                 "coin_rank": data.coin_rank ?? -1, "favorite_rank": data.favorite_rank ?? -1,
                 "like_change": data.like, "coin_change": data.coin, "platform": gen_id("Platform", data.bvid),
@@ -277,7 +279,9 @@ function _insert_daily(format, filepath) {
 function _insert_weekly(format, filepath) {
     if ([ "Weekly-0001", "Weekly-0002" ].includes(format)) {
         const dataset = read_jsonl(filepath), filename = path.basename(filepath);
-        const datetime = filename.replaceAll("-", "").replaceAll(".jsonl", ""); // YYYYMMDD
+
+        const match = filename.replaceAll("-", "").match(/(\d{4})(\d{2})(\d{2})/);
+        const datetime = `${match[1]}-${match[2]}-${match[3]}`; // YYYY-MM-DD
 
         console.log("正在载入 " + datetime + " 的周刊信息");
 
@@ -291,7 +295,7 @@ function _insert_weekly(format, filepath) {
             memory.rank.set(id.rank, {
                 "id": id.rank, "rank": index + 1, "board": "vocaloid-weekly",
                 "like": -1, "coin": -1, "view": -1, "target": id.song, "count": data.count ?? -1,
-                "issue": Number(datetime), "favorite": -1, "view_change": data.view, "point": data.point,
+                "issue": datetime, "favorite": -1, "view_change": data.view, "point": data.point,
                 "like_rank": data.like_rank ?? -1, "view_rank": data.view_rank ?? -1,
                 "coin_rank": data.coin_rank ?? -1, "favorite_rank": data.favorite_rank ?? -1,
                 "like_change": data.like, "coin_change": data.coin, "platform": gen_id("Platform", data.bvid),
@@ -329,7 +333,7 @@ function _insert_snapshot(format, filepath) {
             if (!data.bvid) return;
 
             const _id = gen_id("Song", data.name ?? data.title);
-            const abstract = datetime.replaceAll("-", "") + _id, id = {
+            const abstract = datetime + _id, id = {
                 "song": _id, "record": [
                     gen_id("Record", "vocaloid-daily" + abstract),
                     gen_id("Record", "vocaloid-weekly" + abstract)
@@ -545,9 +549,9 @@ const filepath = path.resolve(
 );
 
 Object.entries(result).map(([key, list]) => {
-    content.metadata.board[key].list.issue.default = unique_array(
+    content.metadata.board[key].issue = unique_array(
         list.map(item => item.issue)
-    ).sort((a, b) => a - b);
+    );
 });
 
 fs.writeFileSync(

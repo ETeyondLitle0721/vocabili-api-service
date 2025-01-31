@@ -78,13 +78,13 @@ function song_info(list = []) {
 
     const mark = Object.fromEntries(Object.entries(
         classification(
-            get_mark_info_by_target_id(list), (value) => {
+            get_mark_info_by_target_id(list), value => {
                 return value.target;
             }
         )
     ).map(([key, value]) => ([
         key, Object.fromEntries(Object.entries(
-            classification(value, (value) => value.type)
+            classification(value, value => value.type)
         ).map(([key, value]) => ([
             key, unique_array(value.map(item => item.value))
         ])))
@@ -117,12 +117,12 @@ function song_info(list = []) {
                 })), "producer": mark[song.id].producer.map(id => target[id].name),
                 "synthesizer": mark[song.id].synthesizer.map(id => target[id].name)
             }
-        }, "platform": mark[song.id].platform.map(id => {
+        }, "platform": (mark[song.id].platform || []).map(id => {
             const info = target[id];
 
             return {
                 "link": info.link.replace("BB://V/", "https://www.bilibili.com/video/"), "page": info.page, "title": info.title,
-                "publish": info.uploaded_at, // 数据库列名错误，实际上是 publish date
+                "publish": info.published_at,
                 "uploader": uploader[id] ? uploader[id].map(item => target[item.value].name) : [],
                 "duration": info.duration, "thumbnail": info.thumbnail,
                 "copyright": info.copyright, "id": id
@@ -147,6 +147,8 @@ function board_info(issue, board = "vocaoid-weekly", count = 50, index = 1) {
 
     const song_id_list = list.map(item => item.target);
 
+    console.log(song_info(song_id_list))
+
     const target = Object.fromEntries(
         song_info(song_id_list).map(item => ([
             item.metadata.id, item
@@ -168,7 +170,11 @@ function board_info(issue, board = "vocaoid-weekly", count = 50, index = 1) {
                 "coin": song.coin_change, "favorite": song.favorite_change
             }, "target": Object.fromEntries(
                 Object.entries(target[song.target]).map(([key, value]) => {
-                    if (key === "platform") value = value.find(item => item.id === song.platform);
+                    if (key === "platform") {
+                        value = value.find(item => item.id === song.platform);
+
+                        value && delete value.id;
+                    };
 
                     return [
                         key, value
@@ -182,8 +188,8 @@ function board_info(issue, board = "vocaoid-weekly", count = 50, index = 1) {
     };
 
     get_rank_by_song_id({
-        board, "count": count, "issue": [ metadata.list.issue.default[
-            metadata.list.issue.default.indexOf(issue) - 1
+        board, "count": count, "issue": [ metadata.issue[
+            metadata.issue.indexOf(issue) - 1
         ] ], "target": song_id_list
     }).map(last => (result.board[song_id_list.indexOf(last.target)].last = {
         "rank": last.rank, "point": last.point
@@ -204,7 +210,7 @@ function current_board_info(board = "vocaoid-weekly", count = 50, index = 1) {
     const metadata = get_board_metadata_info_by_board_id(board);
 
     return board_info(
-        metadata.list.issue.default.at(-1), board, count, index
+        metadata.issue.at(-1), board, count, index
     );
 }
 

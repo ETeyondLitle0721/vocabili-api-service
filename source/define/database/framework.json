@@ -93,7 +93,7 @@
                     }
                 },
                 {
-                    "name": "uploaded_at",
+                    "name": "published_at",
                     "value": {
                         "type": "text",
                         "restrict": "not-null"
