@@ -108,15 +108,15 @@ function insert_platform(data) {
         "video": gen_id("Platform", data.bvid)
     };
 
-    if (cmp_video.has(target.video)) return;
+    if (cmp_video.has(target.video) || !data.bvid) return;
 
     memory.platform.set(target.video, {
-        "id": target.video, "thumbnail": data.image_url, "page": data.page ?? -1,
-        "link": "BB://V/" + data.bvid,"title": data.title ?? data.video_title,
-        "copyright": data.copyright, "duration": (data.duration && human_duration_to_duration(
+        "id": target.video, "thumbnail": data.image_url || "没有封面", "page": Math.floor(data.page ?? -1),
+        "link": "BB://V/" + data.bvid, "title": data.title ?? data.video_title,
+        "copyright": data.copyright ?? -1, "duration": (data.duration && human_duration_to_duration(
             data.duration.replace("分", ":").replace("秒", "")
         )) ?? -1, "uploaded_at": get_iso_time_text(
-            new Date(data.pubdate)
+            new Date(data.pubdate || 0)
         ).replace(/\.\d{3}/, ""), "recorded_at": get_iso_time_text()
     });
 
@@ -126,7 +126,7 @@ function insert_platform(data) {
         "target": target.song
     });
 
-    if (data.page > 0) return cmp_video.add(target.video);
+    if (data.page > 0 && data.pubdate) return cmp_video.add(target.video);
 }
 
 /**
@@ -137,7 +137,7 @@ function insert_platform(data) {
 function insert_mark(data) {
     const identifier = gen_id("Record", data.type + data.target + data.value);
 
-    memory.mark.set(
+    if (!memory.mark.has(identifier)) memory.mark.set(
         identifier, Object.assign(data, {
             "id": identifier, "set_at": get_iso_time_text()
         })
@@ -148,6 +148,8 @@ function insert_mark(data) {
     };
 }
 
+const cmp_song = new Set();
+
 /**
  * 在数据库中插入曲目数据（使用原始条目数据）
  * 
@@ -156,10 +158,12 @@ function insert_mark(data) {
 function insert_song(data) {
     const song_id = gen_id("Song", data.name ?? data.title), entries = Object.entries(data);
 
+    if (cmp_song.has(song_id)) return;
+
     insert_platform(data);
 
     memory.song.set(song_id, {
-        "name": data.name ?? data.title, "type": data.type,
+        "name": data.name ?? data.title, "type": data.type || "未标记",
         "add_at": get_iso_time_text(), "id": song_id
     });
 
@@ -188,6 +192,8 @@ function insert_song(data) {
             memory[field].set(id.target, inserted_data);
         });
     }
+
+    cmp_song.add(song_id)
 }
 
 /**
@@ -251,6 +257,13 @@ function _insert_daily(format, filepath) {
                 "like_change": data.like, "coin_change": data.coin, "platform": gen_id("Platform", data.bvid),
                 "favorite_change": data.favorite, "set_at": get_iso_time_text()
             });
+
+            if (!memory.song.has(id.song)) insert_mark({
+                "type": "tag", "target": id.song,
+                "value": gen_id("Tag", "not-exists")
+            });
+
+            insert_song(data), insert_platform(data);
         });
     }
 }

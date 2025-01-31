@@ -56,8 +56,7 @@
                 {
                     "name": "title",
                     "value": {
-                        "type": "text",
-                        "restrict": "not-null"
+                        "type": "text"
                     }
                 },
                 {
