@@ -348,7 +348,7 @@ application.get("/get_board_info", (request, response) => {
 
     return response.send(build_response(instance, {
         param, receive, "data": board_info(
-            param.issue, param.board, param.count, param.index
+            param.issue[0], param.board, param.count, param.index
         )
     }, "OK"));
 });
