@@ -147,8 +147,6 @@ function board_info(issue, board = "vocaoid-weekly", count = 50, index = 1) {
 
     const song_id_list = list.map(item => item.target);
 
-    console.log(song_info(song_id_list))
-
     const target = Object.fromEntries(
         song_info(song_id_list).map(item => ([
             item.metadata.id, item
