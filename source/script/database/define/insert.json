@@ -1,0 +1,28 @@
+{
+    "data": {
+        "song_summa": "./assets/dataset/summa.json",
+        "singer_color": "./assets/dataset/color.json"
+    },
+    "history": {
+        "add": "./assets/dataset/新曲/",
+        "total": "./assets/dataset/总量/",
+        "change": "./assets/dataset/增量/"
+    },
+    "standard": {
+        "vocaloid-daily": {
+            "mode": "daily",
+            "date": "2024-07-03",
+            "issue": 1
+        },
+        "vocaloid-weekly": {
+            "mode": "weekly",
+            "date": "2024-09-07",
+            "issue": 1
+        },
+        "vocaloid-monthly": {
+            "mode": "monthly",
+            "date": "2024-07-01",
+            "issue": 1
+        }
+    }
+}

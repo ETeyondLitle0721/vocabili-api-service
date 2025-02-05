@@ -73,7 +73,10 @@ export function check_parameter(instance, name, receive, target, mode, options) 
     const prefix = `目标参数(Name=${name.toUpperCase()})所传递的参数`;
 
     if (mode === "number") {
-        if (!isFinite(target)) {
+        if (!target) {
+            result.code = "TARGET_NOT_EXISTS";
+            result.message = prefix + `被要求必须指定，但是实际上没有传递参数。`;
+        } else if (!isFinite(target)) {
             result.code = "TARGET_NOT_NUMBER";
             result.message = prefix + "不是一个合法的数字（允许二、八、十、十六进制数值）。";
         } else {
@@ -138,35 +141,34 @@ export function check_parameter(instance, name, receive, target, mode, options) 
  */
 export function build_response(instance, data = {}, code = "OK", message = "一切正常") {
     const { request } = instance, result = {
-        "code": code, "time": new Date().toISOString(), "data": data.data,
+        "code": code, "time": new Date(), "data": data.data,
         "status": code === "OK" ? "success" : "failed", "message": message
     };
 
     if (data.extra) result.extra = data.extra;
     if (data.param) result.param = data.param;
 
-    if (config.global.debug) {
-        const consume = process.uptime() - data.receive;
+    if (!config.global.debug) return result;
 
-        result.extra = Object.assign(
-            result.extra || {}, {
-                "debug": {
-                    "timing": {
-                        "receive": new Date((performance.timeOrigin + data.receive * 1000)),
-                        "current": new Date(),
-                        "consume": 
-                            consume * 1000 < 1 ? parseInt(consume * 1000000) + "us" : parseInt(consume * 1000000) / 1000 + "ms"
-                    },
-                    "request": {
-                        "parmas": parse_parameter(request),
-                        "headers": request.headers,
-                        "address": request.ip,
-                        "resource": request.path
-                    }
+    const consume = process.uptime() - data.receive;
+
+    result.extra = Object.assign(
+        result.extra || {}, {
+            "debug": {
+                "timing": {
+                    "receive": new Date(performance.timeOrigin + data.receive * 1000),
+                    "current": new Date(), "consume": 
+                        consume * 1000 < 1 ? parseInt(consume * 1000000) + "us" : parseInt(consume * 1000000) / 1000 + "ms"
+                },
+                "request": {
+                    "parmas": parse_parameter(request),
+                    "headers": request.headers,
+                    "address": request.ip,
+                    "resource": request.path
                 }
             }
-        );
-    }
+        }
+    );
 
     return result;
 }

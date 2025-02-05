@@ -12,18 +12,14 @@
             "port": 51001
         }
     },
-    "default": {
-        "language": "zh-cn"
-    },
-    "language": "./source/define/language/default.json",
     "database": {
         "filepath": {
             "default": "./assets/database/default.db",
             "problem": "./assets/database/problem.db"
         },
         "framework": {
-            "default": "./source/define/database/framework.json",
-            "problem": "./source/define/database/framework.json"
+            "default": "./source/define/framework.json",
+            "problem": "./source/define/framework.json"
         }
     }
 }

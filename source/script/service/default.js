@@ -4,7 +4,8 @@ import express from "express"; import template from "../../depend/utilities/temp
 import { classification, get_type, unique_array } from "../../depend/core.js";
 import format_datetime, { datetime } from "../../depend/toolkit/formatter/datetime.js";
 import { parse_parameter, check_parameter, build_response } from "./depend/default.js";
-import { get_board_metadata_info_by_board_id, get_board_song_list, get_mark_info_by_target_id, get_rank_by_song_id, get_song_history_info, get_target_info_by_id } from "./interface.js";
+import { get_board_metadata_info_by_board_id as get_board_metadata_info_by_id, get_board_song_list, get_mark_info_by_target_id, get_rank_by_song_id, get_song_history_info, get_target_info_by_id } from "./interface.js";
+import { command_parser } from "../depend/parse.js";
 
 const root = path.resolve(".");
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
@@ -13,23 +14,16 @@ const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
  * @typedef {import("../../depend/operator/database.js").GeneralObject} GeneralObject
  */
 
-const config = {
-    "init": JSON.parse(
-        fs.readFileSync(path.resolve(
-            __dirname, "../database/define/init.json"
-        ))
-    ),
-    "global": JSON.parse(
-        fs.readFileSync(path.resolve(
-            root, "./config.json"
-        ), "UTF-8")
-    )
-};
+const config = JSON.parse(
+    fs.readFileSync(path.resolve(
+        root, "./config.json"
+    ), "UTF-8")
+);
 
 const application = express();
 
 application.use(cors(
-    config.global.cors
+    config.cors
 ));
 
 application.use((req, _res, next) => {
@@ -121,10 +115,10 @@ function song_info(list = []) {
             const info = target[id];
 
             return {
-                "link": info.link.replace("BB://V/", "https://www.bilibili.com/video/"), "page": info.page, "title": info.title,
-                "publish": info.published_at,
+                "link": info.link.replace("BB://V/", "https://b23.tv/"),
+                "publish": info.published_at, "page": info.page, "title": info.title,
                 "uploader": uploader[id] ? uploader[id].map(item => target[item.value].name) : [],
-                "duration": info.duration, "thumbnail": info.thumbnail,
+                "duration": info.duration, "thumbnail": info.thumbnail.replace("BB://I/", "https://i0.hdslb.com/bfs/archive/") + ".jpg",
                 "copyright": info.copyright, "id": id
             };
         })
@@ -135,15 +129,15 @@ function song_info(list = []) {
  * 获取排行榜数据
  * 
  * @param {number} issue 需要获取数据的期数
- * @param {("vocaloid-weekly"|"voclaoid-daily")} board 需要获取的排行榜
+ * @param {("vocaloid-weekly-main"|"voclaoid-daily-main")} board 需要获取的排行榜
  * @param {number} count 要获取多少个
  * @param {number} index 页索引
  * @returns 获取到的排行榜信息
  */
-function board_info(issue, board = "vocaoid-weekly", count = 50, index = 1) {
+function board_info(issue, board = "vocaoid-weekly-main", count = 50, index = 1) {
     const list = get_board_song_list({
         issue, count, index, board
-    }), metadata = get_board_metadata_info_by_board_id(board);
+    }), metadata = get_board_metadata_info_by_id(board);
 
     const song_id_list = list.map(item => item.target);
 
@@ -159,11 +153,7 @@ function board_info(issue, board = "vocaoid-weekly", count = 50, index = 1) {
                 "view": song.view_rank, "like": song.like_rank,
                 "coin": song.coin_rank, "board": song.rank,
                 "favorite": song.favorite_rank
-            }, "count": {
-                "view": song.view, "like": song.like,
-                "coin": song.coin, "point": song.point,
-                "board": song.count, "favorite": song.favorite
-            }, "change": {
+            }, "count": song.count, "change": {
                 "view": song.view_change, "like": song.like_change,
                 "coin": song.coin_change, "favorite": song.favorite_change
             }, "target": Object.fromEntries(
@@ -186,9 +176,7 @@ function board_info(issue, board = "vocaoid-weekly", count = 50, index = 1) {
     };
 
     get_rank_by_song_id({
-        board, "count": count, "issue": [ metadata.issue[
-            metadata.issue.indexOf(issue) - 1
-        ] ], "target": song_id_list
+        board, "count": count, "issue": [ issue - 1 ], "target": song_id_list
     }).map(last => (result.board[song_id_list.indexOf(last.target)].last = {
         "rank": last.rank, "point": last.point
     }));
@@ -205,10 +193,10 @@ function board_info(issue, board = "vocaoid-weekly", count = 50, index = 1) {
  * @returns 获取到的排行榜信息
  */
 function current_board_info(board = "vocaoid-weekly", count = 50, index = 1) {
-    const metadata = get_board_metadata_info_by_board_id(board);
+    const metadata = get_board_metadata_info_by_id(board);
 
     return board_info(
-        metadata.issue.at(-1), board, count, index
+        metadata.catalog.at(-1).issue, board, count, index
     );
 }
 
@@ -283,7 +271,7 @@ application.get("/get_current_board_info", (request, response) => {
         "range": { "minimum": 1, "maximum": 131072 }
     })) return;
 
-    if (get_board_metadata_info_by_board_id(param.board)) {
+    if (get_board_metadata_info_by_id(param.board)) {
         return response.send(build_response(instance, {
             param, receive, "data": current_board_info(
                 param.board, param.count, param.index
@@ -293,7 +281,7 @@ application.get("/get_current_board_info", (request, response) => {
 
     return response.send(build_response(instance, {
         param, receive, "data": null
-    }, "BOARD_NOT_EXISTS", "目标榜单不存在"));
+    }, "BOARD_NOT_EXISTS", "目标榜单不存在。"));
 });
 
 application.get("/get_song_info", (request, response) => {
@@ -330,8 +318,9 @@ application.get("/get_board_info", (request, response) => {
         "range": { "maximum": 1 }
     })) return;
 
-    if (!check_parameter(instance, "issue", receive, param.issue, "count", {
-        "range": { "maximum": 1 }
+    if (!check_parameter(instance, "issue", receive, param.issue, "number", {
+        "type": "integer",
+        "range": { "minimum": -131072, "maximum": 131072 }
     })) return;
 
     if (!check_parameter(instance, "count", receive, param.count, "number", {
@@ -344,9 +333,15 @@ application.get("/get_board_info", (request, response) => {
         "range": { "minimum": 1, "maximum": 131072 }
     })) return;
 
+    if (!get_board_metadata_info_by_id(param.board)) return response.send(
+        build_response(instance, {
+            param, receive, "data": null
+        }, "BOARD_NOT_EXISTS", "目标榜单不存在。")
+    );
+
     return response.send(build_response(instance, {
         param, receive, "data": board_info(
-            param.issue[0], param.board, param.count, param.index
+            param.issue, param.board, param.count, param.index
         )
     }, "OK"));
 });
@@ -364,9 +359,9 @@ application.get("/get_board_metadata_info", (request, response) => {
         "range": { "maximum": 1 }
     })) return;
 
-    if (get_board_metadata_info_by_board_id(param.target[0])) {
+    if (get_board_metadata_info_by_id(param.target[0])) {
         return response.send(build_response(instance, {
-            param, receive, "data": get_board_metadata_info_by_board_id(param.target[0])
+            param, receive, "data": get_board_metadata_info_by_id(param.target[0])
         }, "OK"));
     }
 

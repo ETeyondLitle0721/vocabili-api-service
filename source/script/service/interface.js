@@ -13,11 +13,6 @@ const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
  */
 
 const config = {
-    "init": JSON.parse(
-        fs.readFileSync(path.resolve(
-            __dirname, "../database/define/init.json"
-        ))
-    ),
     "global": JSON.parse(
         fs.readFileSync(path.resolve(
             root, "./config.json"
@@ -30,7 +25,7 @@ const config = {
     )
 };
 
-const field = config.init.field;
+const field = "default";
 const database = {
     /** @type {string} */
     "filepath": config.global.database.filepath[field]

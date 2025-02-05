@@ -46,13 +46,6 @@ const instance = new SQLite3(database.filepath, {
  * @returns {(Object<string, (number|string)>)[]} 读取出来的数据
  */
 function read_xlsx(filepath, target = 0) {
-
-    if (filepath.endsWith(".json")) return JSON.parse(
-        fs.readFileSync(
-            filepath, "UTF-8"
-        )
-    );
-
     const workbook = xlsx.readFile(filepath), type = get_type(target);
 
     if (type.first !== "function") {
@@ -69,17 +62,11 @@ function read_xlsx(filepath, target = 0) {
         }
     }
 
-    const result = xlsx.utils.sheet_to_json(
+    return xlsx.utils.sheet_to_json(
         workbook.Sheets[target(
             workbook.SheetNames
         )]
-    ), new_filepath = filepath.replace(/\.xlsx$/, ".json");
-
-    fs.renameSync(filepath, new_filepath);
-
-    fs.writeFileSync(new_filepath, JSON.stringify(result));
-
-    return result;
+    );
 }
 
 /**
@@ -232,14 +219,6 @@ function gen_id(branch, text) {
     return branch + ":" + output.slice(0, 10);
 }
 
-const memory = {
-    "color": new Map(), "issue": new Map(), "data": {
-        "platform": new Map(), "vocalist": new Map(), "snapshot": new Map(),
-        "synthesizer": new Map(), "uploader": new Map(), "song": new Map(),
-        "producer": new Map(), "rank": new Map(), "mark": new Map()
-    },
-};
-
 /**
  * 在内存中插入榜单数据
  * 
@@ -282,36 +261,6 @@ function insert_board_rank(type, source, filepath, filename, adder) {
     });
 }
 
-const { data, history, standard } = config.manifest;
-
-const journal_mapping = {
-    "日刊": "daily",
-    "周刊": "weekly",
-    "月刊": "monthly"
-};
-
-if (standard) {
-    const entries = Object.entries(standard);
-
-    for (let index = 0; index < entries.length; index++) {
-        const entry = entries[index], result = lister(entry[1], [
-            new Date("2024-06-23"), new Date()
-        ]);
-        
-        memory.issue.set(entry[0], Object.assign(
-            Object.fromEntries(
-                result.map(item => ([
-                    item.range.finish, item.issue
-                ]))
-            ), Object.fromEntries(
-                result.map(item => ([
-                    item.issue, item.range.finish
-                ]))
-            )
-        ));
-    }
-}
-
 /**
  * 获取当前的 ISO 8601 毫秒级时间字符串
  * 
@@ -321,68 +270,6 @@ if (standard) {
  */
 function get_iso_time_text(instance = new Date(), handler = text => text) {
     return handler(instance.toISOString());
-}
-
-/**
- * 获取指定目录的子集列表
- * 
- * @param {string} dirpath 目录路径
- * @param {object} options 配置信息
- * @param {boolean} options.include_directory 是否包含目录
- * @param {boolean} options.recursive 是否递归获取
- * @param {boolean} options.with_type 是否包含文件类型的知名符号（Symbol(type)）
- * @param {BufferEncoding} options.encoding 目标名称的编码
- * @returns {(Dirent & { "filepath": string })[]} 获取到的目标的列表
- */
-function get_dirpath_children(dirpath, options) {
-    const { include_directory = false, encoding = "UTF-8", recursive = true, with_type: withFileTypes = true } = options;
-
-    return fs.readdirSync(
-        dirpath, {
-           encoding, recursive, withFileTypes
-        }
-    ).filter(dirent => {
-        return dirent.isFile() ? true : include_directory;
-    }).map(dirent => {
-        dirent.filepath = path.join(dirent.path, dirent.name);
-
-        return dirent;
-    }).sort((a, b) => {
-        return a.filepath.localeCompare(b.filepath);
-    });
-}
-
-/**
- * 插入表单数据
- * 
- * @param {("new"|"main")} type 表单类型
- * @param {string} target_dirpath 表单数据目录地址
- * @param {(count: number) => number} adder 给 counter 自增的回调方法
- */
-function insert_board(type, target_dirpath, adder) {
-    const dirpath = path.resolve(
-        root, target_dirpath
-    ), dirent_list = get_dirpath_children(
-        dirpath, {
-            "include_directory": false
-        }
-    );
-
-    console.log(`正在开始分析 ${target_dirpath} 目录下的曲目列表文件（共有 ${dirent_list.length} 个文件）`);
-
-    for (let index = 0; index < dirent_list.length; index++) {
-        const dirent = dirent_list[index];
-
-        console.log(`目前正在处理 ./${path.relative(
-            root, dirent.filepath
-        ).split(path.sep).filter(item => item !== "..").join("/")} 文件`);
-        
-        insert_board_rank(
-            type, journal_mapping[
-                path.basename(dirent.parentPath)
-            ], dirent.filepath, dirent.name, adder
-        );
-    }
 }
 
 /**
@@ -416,51 +303,6 @@ function insert_snapshot_list(filepath, filename, adder) {
             }
         );
     })
-}
-
-/**
- * 插入每日快照数据
- * 
- * @param {string} target_dirpath 目标表单数据目录地址
- * @param {(count: number) => number} adder 给 counter 自增的回调方法
- */
-function insert_snapshot(target_dirpath, adder) {
-    const dirpath = path.resolve(
-        root, target_dirpath
-    ), dirent_list = get_dirpath_children(
-        dirpath, {
-            "include_directory": false
-        }
-    );
-
-    console.log(`正在开始分析 ${target_dirpath} 目录下的曲目列表文件（共有 ${dirent_list.length} 个文件）`);
-
-    for (let index = 0; index < dirent_list.length; index++) {
-        const dirent = dirent_list[index];
-
-        console.log(`目前正在处理 ./${path.relative(
-            root, dirent.filepath
-        ).split(path.sep).filter(item => item !== "..").join("/")} 文件`);
-        
-        insert_snapshot_list(
-            dirent.filepath, dirent.name, adder
-        );
-    }
-}
-
-if (history) {
-    let counter = 0;
-
-    const adder = (count = 1) => counter += count;
-
-    const { add, total, change } = history;
-
-    if (change) insert_board("main", change, adder);
-    if (add) insert_board("new", add, adder);
-
-    if (total) insert_snapshot(total, adder);
-
-    console.log(`目标文件已经全部分析完毕，共构建了 ${counter} 个有效映射关系`);
 }
 
 /**
@@ -591,76 +433,6 @@ function insert_song(data, adder) {
     }
 }
 
-if (data) {
-    const { singer_color: singer_color_filepath, song_summa: song_summa_filepath } = data;
-
-    let counter = 0;
-
-    const adder = (amount = 1) => counter += amount;
-
-    console.log(`正在开始分析数据定义文件文件`);
-
-    if (singer_color_filepath) {
-        const filepath = path.resolve(
-            root, singer_color_filepath
-        ), content = JSON.parse(
-            fs.readFileSync(
-                filepath, "UTF-8"
-            )
-        );
-    
-        console.log(`正在开始分析 ${singer_color_filepath} 歌手代表色定义文件`);
-    
-        for (let index = 0, color_number = -1; index < content.length; index++) {
-            const target = content[index];
-            
-            for (let sequence = 0; sequence < target.length; sequence++) {
-                const data = target[sequence];
-                
-                if (sequence === 0) {
-                    color_number = Number("0xFF" + data);
-
-                    continue;
-                }
-                
-                memory.color.set(
-                    data, color_number
-                ), adder();
-            }
-        }
-    }
-
-    if (song_summa_filepath) {
-        const filepath = path.resolve(
-            root, song_summa_filepath
-        ), content = read_xlsx(filepath);
-    
-        console.log(`正在开始分析 ${song_summa_filepath} 历史收录曲目数据定义文件`);
-    
-        for (let index = 0; index < content.length; index++) {
-            const song_data = content[index];
-
-            insert_song(song_data, adder);
-        }
-    }
-
-    console.log(`目标文件已经全部分析完毕，共构建了 ${counter} 个有效映射关系`);
-}
-
-const memory_entries = Object.entries(memory.data);
-
-let total = 0, task = {};
-
-for (let index = 0; index < memory_entries.length; index++) {
-    const entry = memory_entries[index], list = Array.from(entry[1]).map(item => Object.assign(
-        item[1], { "id": item[0] }
-    ));
-
-    total += list.length, task[entry[0]] = list;
-}
-
-console.log("一共生成了 " + total + " 个条目，正在准备插入数据库");
-
 /**
  * 批量插入数据
  * 
@@ -692,6 +464,101 @@ function bulk_insert(table_name, data_list, instance) {
         }
     })(data_list);
 }
+
+const memory = {
+    "issue": new Map(), "data": {
+        "platform": new Map(), "vocalist": new Map(), "snapshot": new Map(),
+        "synthesizer": new Map(), "uploader": new Map(), "song": new Map(),
+        "producer": new Map(), "rank": new Map(), "mark": new Map()
+    }
+};
+
+const { standard } = config.manifest;
+
+const journal_mapping = {
+    "日刊": "daily",
+    "周刊": "weekly",
+    "月刊": "monthly"
+};
+
+if (standard) {
+    const entries = Object.entries(standard);
+
+    for (let index = 0; index < entries.length; index++) {
+        const entry = entries[index], result = lister(entry[1], [
+            new Date("2024-06-23"), new Date()
+        ]);
+        
+        memory.issue.set(entry[0], Object.assign(
+            Object.fromEntries(
+                result.map(item => ([
+                    item.range.finish, item.issue
+                ]))
+            ), Object.fromEntries(
+                result.map(item => ([
+                    item.issue, item.range.finish
+                ]))
+            )
+        ));
+    }
+}
+
+if (shell) {
+    const { new: add, main, total, summa, mode } = shell;
+
+    let counter = 0;
+
+    const adder = (count = 1) => counter += count;
+
+    if (add) insert_board_rank(
+        "new", mode, path.resolve(
+            root, add
+        ), path.basename(add), adder
+    );
+
+    if (total) insert_snapshot_list(
+        path.resolve(
+            root, total
+        ), path.basename(total), adder
+    );
+
+    if (main) insert_board_rank(
+        "main", mode, path.resolve(
+            root, main
+        ), path.basename(add), adder
+    );;
+
+    if (summa) {
+        const filepath = path.resolve(
+            root, summa
+        ), content = read_xlsx(filepath);
+    
+        console.log(`正在开始分析 ${summa} 历史收录曲目数据定义文件`);
+    
+        for (let index = 0; index < content.length; index++) {
+            const song_data = content[index];
+
+            insert_song(song_data, adder);
+        }
+    }
+
+    console.log(`目标文件已经全部分析完毕，共构建了 ${counter} 个有效映射关系`);
+}
+
+
+const memory_entries = Object.entries(memory.data);
+
+let total = 0, task = {};
+
+for (let index = 0; index < memory_entries.length; index++) {
+    const entry = memory_entries[index], list = Array.from(entry[1]).map(item => Object.assign(
+        item[1], { "id": item[0] }
+    ));
+
+    total += list.length, task[entry[0]] = list;
+}
+
+console.log("一共生成了 " + total + " 个条目，正在准备插入数据库");
 
 instance.pragma("synchronous = OFF");
 instance.pragma("journal_mode = WAL");

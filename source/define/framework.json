@@ -73,6 +73,13 @@
                     }
                 },
                 {
+                    "name": "thumbnail",
+                    "value": {
+                        "type": "text",
+                        "restrict": "not-null"
+                    }
+                },
+                {
                     "name": "duration",
                     "value": {
                         "type": "integer"
@@ -82,13 +89,6 @@
                     "name": "copyright",
                     "value": {
                         "type": "integer",
-                        "restrict": "not-null"
-                    }
-                },
-                {
-                    "name": "thumbnail",
-                    "value": {
-                        "type": "text",
                         "restrict": "not-null"
                     }
                 },
@@ -335,14 +335,14 @@
                     }
                 },
                 {
-                    "name": "recorded_at",
+                    "name": "snapshot_at",
                     "value": {
                         "type": "text",
                         "restrict": "not-null"
                     }
                 },
                 {
-                    "name": "snapshot_at",
+                    "name": "recorded_at",
                     "value": {
                         "type": "text",
                         "restrict": "not-null"
@@ -375,7 +375,7 @@
                 {
                     "name": "issue",
                     "value": {
-                        "type": "text",
+                        "type": "integer",
                         "restrict": "not-null"
                     }
                 },
@@ -394,31 +394,9 @@
                     }
                 },
                 {
-                    "name": "view",
-                    "value": {
-                        "type": "integer",
-                        "restrict": "not-null"
-                    }
-                },
-                {
-                    "name": "coin",
-                    "value": {
-                        "type": "integer",
-                        "restrict": "not-null"
-                    }
-                },
-                {
-                    "name": "like",
-                    "value": {
-                        "type": "integer",
-                        "restrict": "not-null"
-                    }
-                },
-                {
                     "name": "count",
                     "value": {
-                        "type": "integer",
-                        "restrict": "not-null"
+                        "type": "integer"
                     }
                 },
                 {
@@ -432,13 +410,6 @@
                     "name": "platform",
                     "value": {
                         "type": "text",
-                        "restrict": "not-null"
-                    }
-                },
-                {
-                    "name": "favorite",
-                    "value": {
-                        "type": "integer",
                         "restrict": "not-null"
                     }
                 },
@@ -499,7 +470,7 @@
                     }
                 },
                 {
-                    "name": "set_at",
+                    "name": "recorded_at",
                     "value": {
                         "type": "text",
                         "restrict": "not-null"

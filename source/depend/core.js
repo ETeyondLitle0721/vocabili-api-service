@@ -26,7 +26,6 @@ export function text_transformer(text, length = 1, transformer = (text) => text.
  * @param {string} text 一段文本
  * @param {("UTF-8"|"Base64"|"ASCII"|"HEX")} charset 计算的时候使用的文本编码
  * @param {("MD5"|"SHA-1"|"SHA-3"|"SHA-256"|"SHA-512")} algorithm 计算的时候使用的摘要算法
- * 
  * @returns {string} 这段文本对应的SHA256摘要值
  */
 export function compute_hash(text, charset = "UTF-8", algorithm = "SHA-256") {
@@ -43,7 +42,6 @@ export function compute_hash(text, charset = "UTF-8", algorithm = "SHA-256") {
  * @param {string} text 需要计算哈希值的文本
  * @param {("MD5"|"SHA-1"|"SHA-3"|"SHA-256"|"SHA-512")} algorithm 计算哈希值时的使用的算法
  * @param {"default-secret"} secret 计算哈希值时的密钥
- * 
  * @returns {string} 文本的哈希值
  */
 export function compute_hamc(text, algorithm = "SHA-256", secret = "default-secret") {
@@ -61,7 +59,6 @@ export function compute_hamc(text, algorithm = "SHA-256", secret = "default-secr
  * @param {number} length 期望转换成的字符串的长度
  * @param {string} character 补全字符串时使用的字符
  * @param {("start"|"end")} direction 追加字符的时候追加的方向
- * 
  * @returns {string} 处理好的字符串
  */
 export function repair_character(string, length, character = " ", direction = "start") {
@@ -87,7 +84,6 @@ export function repair_character(string, length, character = " ", direction = "s
  * @param {string} template 生成随机的格式
  * @param {string} character 用到的随机字符
  * @param {string} placeholder 表达随机的字符
- * 
  * @returns {string} 生成的随机字符串
  */
 export function generate_random_string(template = "?".repeat(16), character = "0123456789ABCDEF", placeholder = "?") {
@@ -106,7 +102,6 @@ export function generate_random_string(template = "?".repeat(16), character = "0
  * 将任意一个数据转换成字符串
  * 
  * @param {any} value 需要进行转换的数据
- * 
  * @returns {string} 转换出来的字符串
  */
 export function to_string(value) {
@@ -124,7 +119,6 @@ export function to_string(value) {
  * 
  * @param {string} host 需要检查的host
  * @param {number} port 需要检查的端口
- * 
  * @returns {Promise<boolean>} 是否可用
  */
 export async function check_service_accessible(host, port) {
@@ -149,7 +143,6 @@ export async function check_service_accessible(host, port) {
  * 检查一个目录或者文件是否可以被访问
  * 
  * @param {string} path 需要检查是的目标路径
- * 
  * @returns {Promise<boolean>} 是否可以被访问
  */
 export async function check_path_accessible(path) {
@@ -168,7 +161,6 @@ export async function check_path_accessible(path) {
  * @param {number} number 需要转换的目标数字（零或者正数）
  * @param {number} length 转换成的字符串的目标长度
  * @param {number} precision 字符串表达数字的期望精度
- * 
  * @returns {string} 转换出来的字符串
  */
 export function number_to_string(number, length = 8) {
@@ -202,37 +194,58 @@ export function number_to_string(number, length = 8) {
 /**
  * 对字符串或者数组分组
  * 
- * @param {(string|array)} value 需要分组的目标
- * @param {number} scale 分组的规模
+ * @param {(string|object[])} value 需要分组的目标
+ * @param {(((index: number, list: string[][]) => number)|string|number[])} judger 取得分组规模的回调方法
  * @param {("start"|"end")} direction 分组的方向
  * @param {("lost-remain"|"reserve-remain")} remain 对于剩余不足矣分成一组的部分的处理方法
- * 
  * @returns {(string|object)[][]} 分组的结果
  */
-export function split_group(value, scale, direction = "start", remain = "reserve-remain") {
-    let result = [];
+export function split_group(value, judger, direction = "start", remain = "reserve-remain") {
+    let result = [], offset = 0;
+
+    if (!Array.isArray(value) && value[Symbol.iterator] !== undefined) {
+        result = Array.from(result);
+    }
+
+    const get_offset = (getter, ...arg) => {
+        if (typeof getter === "number") return getter;
+
+        if (Array.isArray(getter)) return get_offset(
+            getter[Symbol.iterator](), ...arg
+        );
+
+        if (getter[Symbol.iterator] !== undefined) {
+            return getter.next(...arg).value;
+        }
+
+        return getter(...arg);
+    }
 
     if (direction === "start") {
-        for (let index = 0; index < value.length; index += scale) {
+        for (let index = 0; index < value.length; index += offset) {
+            offset = get_offset(judger, result.length, result);
+
             result.push(
                 value.slice(
-                    index, index + scale
+                    index, index + offset
                 )
             );
         }
     } else {
-        for (let index = value.length; index >= 0; index -= scale) {
+        for (let index = value.length; index >= 0; index -= offset) {
+            offset = get_offset(judger, result.length, result);
+
             result.push(
                 value.slice(
                     Math.max(
-                        index - scale, 0
+                        index - offset, 0
                     ), index
                 )
             );
         }
     }
 
-    if (remain === "lost-remain" && result.at(-1).length < scale) {
+    if (remain === "lost-remain" && result.at(-1).length < offset) {
         result.pop();
     }
 
@@ -246,7 +259,6 @@ export function split_group(value, scale, direction = "start", remain = "reserve
  * 
  * @template T
  * @param {T} target 需要深度冻结的目标对象
- * 
  * @returns {Readonly<T>} 被深度冻结了的对象
  */
 export function deep_freeze(target) {
@@ -268,7 +280,6 @@ export function deep_freeze(target) {
  * 
  * @template T
  * @param {T} target 需要深度克隆的对象
- * 
  * @returns {T} 深度克隆的结果
  */
 export function deep_clone(target) {
@@ -295,7 +306,6 @@ export function deep_clone(target) {
  * 反转对象的键值何键名（键值和键名对调，出现重复的保留最后一个）
  * 
  * @param {Record<string, (string|number|boolean)>} target 需要反转的对象
- * 
  * @returns {Record<(string|number|boolean), string>} 反转后的对象
  */
 export function invert_object(target) {
@@ -315,7 +325,6 @@ export function invert_object(target) {
  * 
  * @param {string} target 需要引用的原始字符串
  * @param {("single"|"double")} type 引用字符串使用的引号类型
- * 
  * @returns {string} 被引用的字符串
  */
 export function quote_string(target, type = "double") {
@@ -343,7 +352,6 @@ export function quote_string(target, type = "double") {
  * 
  * @param {Object} obj1 第一个对象
  * @param {Object} obj2 第二个对象
- * 
  * @returns {boolean} 是否相等
  */
 export function compare_object(obj1, obj2) {
@@ -389,7 +397,6 @@ export function compare_object(obj1, obj2) {
  * @property {ThirdType} third 第三类型
  * 
  * @param {any} value 需要获取数据类型的目标
- * 
  * @returns {GenTypeReturn} 目标的数据类型的
  */
 export function get_type(value) {
@@ -483,7 +490,6 @@ export function get_type(value) {
  * 
  * @template T
  * @param {T} arr 输入的数组
- * 
  * @returns {T} 去重后的数组
  */
 export function unique_array(arr = []) {
@@ -503,7 +509,6 @@ export function unique_array(arr = []) {
  * 
  * @template T
  * @param {T} arr 输入的数组
- * 
  * @returns {T} 打乱顺序后的数组
  */
 export function upset_array(arr = []) {
@@ -516,7 +521,6 @@ export function upset_array(arr = []) {
  * @template T
  * @param {T} arr 输入的数组
  * @param {number} amount 需要选取的元素数量
- * 
  * @returns {T} 随机选择后的数组
  */
 export function pick_array(arr = [], amount = 1) {
@@ -530,15 +534,18 @@ export function pick_array(arr = [], amount = 1) {
 }
 
 /**
- * 等待一段时间
+ * 等待一段时间返回一个数据
  * 
- * @param {number} millisecond 需要等待的毫秒数
+ * @template T
+ * @param {number} count 需要等待的毫秒数
+ * @param {T} result 等待之后返回的数据
+ * @returns {Promise<T>} 等待一段时间后会返回响应数据的 Promise 实例
  */
-export async function waiting(millisecond) {
+export async function waiting(count, result = null) {
     return new Promise((resolve, _reject) => {
         setTimeout(() => {
-            resolve();
-        }, millisecond);
+            resolve(result);
+        }, count);
     })
 }
 
@@ -586,38 +593,39 @@ export function classification(list, namer) {
     return result;
 }
 
-export default {
-    "compute": {
-        "hamc": compute_hamc,
-        "hash": compute_hash
-    },
-    "object": {
-        "clone": deep_clone,
-        "freeze": deep_freeze,
-        "invert": invert_object,
-        "compare": compare_object
-    },
-    "array": {
-        "pick": pick_array,
-        "upset": upset_array,
-        "unique": unique_array
-    },
-    "string": {
-        "split": split_group,
-        "quote": quote_string,
-        "repair": repair_character,
-        "random": generate_random_string
-    },
-    "convert": {
-        "any": {
-            "string": to_string
-        },
-        "number": number_to_string
-    },
-    "check": {
-        "accessible": {
-            "path": check_path_accessible,
-            "service": check_service_accessible
-        }
+/**
+ * 为数组中的对象添加基于指定字段排序后的排名（rank）字段。
+ * 
+ * 该方法通过给定字段进行排序，为每个对象添加一个 `_rank` 属性，表示其在排序后的位置。
+ * 排序是根据多个字段按顺序进行的，排名会根据字段值的比较结果逐步确定。
+ * 
+ * @param {object[]} array 需要添加排名字段的对象数组。
+ * @param {string[]} fields 用于排序的字段数组。会按字段顺序逐一进行排序。
+ * @param {(a: any, b: any) => number} judger 排序比较函数。默认使用降序数字比较。
+ * @param {(field: string, object: object) => any} getter 获取字段值的函数。默认通过对象的字段直接获取值。
+ * @param {(rank: number, object: object) => object} setter 设置排名的函数。默认将排名 `rank` 添加到对象中。
+ * @returns {object[]} 返回添加了排名字段（rank）的对象数组。
+ */
+export function append_rank_field(
+    array, fields, judger = (a, b) => b - a,
+    getter = (field, object) => object[field],
+    setter = (rank, object) => Object.assign(object, { "_rank": rank })
+) {
+    const uuid_list = array.map(_ => crypto.randomUUID()), rank = Object.fromEntries(
+        uuid_list.map(uuid => ([
+            uuid, {}
+        ]))
+    );
+
+    for (let index = 0; index < fields.length; index++) {
+        const field = fields[index], tuples = array.map((item, index) => ({
+            "uuid": uuid_list[index], "value": getter(field, item)
+        })).sort((a, b) => judger(a.value, b.value));
+
+        tuples.forEach((item, index) => rank[item.uuid][field] = index);
     }
-};
+
+    return uuid_list.map((uuid, index) => setter(
+        rank[uuid], array[index]
+    ));
+}

@@ -1,38 +1,28 @@
-import fs from "fs";
-import url from "url";
-import path from "path";
+import fs from "fs"; import path from "path";
 import SQLite3 from "better-sqlite3";
 import DatabaseOperator from "../../depend/operator/database.js";
 
 const root = path.resolve(".");
-const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 
 /**
- * @typedef {import("../../depend/operator/database").TableCreateOptions} TableCreateOptions
+ * @typedef {import("../../depend/operator/database.js").TableCreateOptions} TableCreateOptions
  */
 
-const config = {
-    "global": JSON.parse(
-        fs.readFileSync(path.resolve(
-            root, "./config.json"
-        ), "UTF-8")
-    ),
-    "current": JSON.parse(
-        fs.readFileSync(path.resolve(
-            __dirname, "./define/init.json"
-        ), "UTF-8")
-    )
-};
+const config = JSON.parse(
+    fs.readFileSync(path.resolve(
+        root, "./config.json"
+    ), "UTF-8")
+);
 
-const field = config.current.field;
+const field = process.argv[2] || "default";
 
 const database = {
     /** @type {string} */
-    "filepath": config.global.database.filepath[field],
+    "filepath": config.database.filepath[field],
     /** @type { { "table": TableCreateOptions[] } } */
     "framework": JSON.parse(
         fs.readFileSync(path.resolve(
-            root, config.global.database.framework[field]
+            root, config.database.framework[field]
         ), "UTF-8")
     )
 };
@@ -43,8 +33,6 @@ const operator = new DatabaseOperator(
         "readonly": false
     })
 );
-
-// console.log(database);
 
 for (let index = 0; index < database.framework.table.length; index++) {
     const options = database.framework.table[index];
