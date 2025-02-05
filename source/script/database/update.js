@@ -377,18 +377,6 @@ function insert_platform(data, adder) {
     }, adder);
 }
 
-const base = {
-    "map": {
-        "vocal": "vocalist",
-        "author": "producer",
-        "uploader": "uploader",
-        "synthesizer": "synthesizer"
-    },
-    "list": [
-        "vocal", "author", "uploader", "synthesizer"
-    ]
-};
-
 /**
  * 在数据库中插入曲目数据（使用原始条目数据）
  * 
@@ -470,6 +458,18 @@ function bulk_insert(table_name, data_list, instance) {
     })(data_list);
 }
 
+const base = {
+    "map": {
+        "vocal": "vocalist",
+        "author": "producer",
+        "uploader": "uploader",
+        "synthesizer": "synthesizer"
+    },
+    "list": [
+        "vocal", "author", "uploader", "synthesizer"
+    ]
+};
+
 const memory = {
     "issue": new Map(), "video": new Map(), "data": {
         "platform": new Map(), "vocalist": new Map(), "snapshot": new Map(),
@@ -502,14 +502,31 @@ if (standard) {
     }
 }
 
-console.log(memory.issue.get("vocaloid-daily"))
-
 if (shell) {
     const { new: add, main, total, summa, mode } = shell;
 
     let counter = 0;
 
     const adder = (count = 1) => counter += count;
+
+    if (summa) {
+        const filepath = path.resolve(
+            root, summa
+        ), content = read_xlsx(filepath);
+    
+        console.log(`正在开始分析 ${summa} 历史收录曲目数据定义文件`);
+    
+        for (let index = 0; index < content.length; index++) {
+            const song_data = content[index];
+
+            adder();
+            memory.video.set(
+                song_data.bvid, song_data.name
+            );
+
+            insert_song(song_data, adder);
+        }
+    }
 
     if (add) insert_board_rank(
         "new", mode, path.resolve(
@@ -527,29 +544,10 @@ if (shell) {
         "main", mode, path.resolve(
             root, main
         ), path.basename(add), adder
-    );;
-
-    if (summa) {
-        const filepath = path.resolve(
-            root, summa
-        ), content = read_xlsx(filepath);
-    
-        console.log(`正在开始分析 ${summa} 历史收录曲目数据定义文件`);
-    
-        for (let index = 0; index < content.length; index++) {
-            const song_data = content[index];
-
-            memory.video.set(
-                song_data.bvid, song_data.name
-            );
-
-            insert_song(song_data, adder);
-        }
-    }
+    );
 
     console.log(`目标文件已经全部分析完毕，共构建了 ${counter} 个有效映射关系`);
 }
-
 
 const memory_entries = Object.entries(memory.data);
 

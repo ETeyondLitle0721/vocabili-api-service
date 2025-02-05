@@ -308,6 +308,7 @@ if (data) {
         for (let index = 0; index < content.length; index++) {
             const song_data = content[index];
 
+            adder();
             memory.video.set(
                 song_data.bvid, song_data.name
             );
