@@ -157,7 +157,7 @@ function board_info(issue, board = "vocaoid-weekly-main", count = 50, index = 1)
                 "view": song.view_change, "like": song.like_change,
                 "coin": song.coin_change, "favorite": song.favorite_change
             }, "target": Object.fromEntries(
-                Object.entries(target[song.target]).map(([key, value]) => {
+                Object.entries(target[song.target] || {}).map(([key, value]) => {
                     if (key === "platform") {
                         value = value.find(item => item.id === song.platform);
 
