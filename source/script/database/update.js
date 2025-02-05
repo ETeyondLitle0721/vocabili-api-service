@@ -247,7 +247,7 @@ function insert_board_rank(type, source, filepath, filename, adder) {
         ]
     ).forEach(data => {
         const id = {
-            "song": gen_id("Song", data.name)
+            "song": gen_id("Song", memory.video.get(data.bvid) || data.name || data.title)
         };
 
         // console.log(source + ": " + datetime + " => " + memory.issue.get(board_name[0])[datetime]);
@@ -296,7 +296,7 @@ function insert_snapshot_list(filepath, filename, adder) {
         if (!data.bvid) return;
 
         const id = {
-            "song": gen_id("Song", data.name || data.title)
+            "song": gen_id("Song", memory.video.get(data.bvid) || data.name || data.title)
         };
 
         memory.data.snapshot.set(
@@ -353,7 +353,7 @@ function human_duration_to_duration(human_duration) {
  */
 function insert_platform(data, adder) {
     const target = {
-        "song": gen_id("Song", data.name),
+        "song": gen_id("Song", memory.video.get(data.bvid) || data.name),
         "video": gen_id("Platform", data.bvid)
     };
 
@@ -396,13 +396,14 @@ const base = {
  * @param {(count: number) => number} adder 给 counter 自增的回调方法
  */
 function insert_song(data, adder) {
-    const song_id = gen_id("Song", data.name), entries = Object.entries(data);
+    const song_name = memory.video.get(data.bvid) || data.name;
+    const song_id = gen_id("Song", song_name), entries = Object.entries(data);
 
     insert_platform(data, adder);
 
     adder();
     memory.data.song.set(song_id, {
-        "name": data.name, "type": data.type || "未标记",
+        "name": song_name, "type": data.type || "未标记",
         "add_at": get_iso_time_text(), "id": song_id
     });
 
@@ -470,7 +471,7 @@ function bulk_insert(table_name, data_list, instance) {
 }
 
 const memory = {
-    "issue": new Map(), "data": {
+    "issue": new Map(), "video": new Map(), "data": {
         "platform": new Map(), "vocalist": new Map(), "snapshot": new Map(),
         "synthesizer": new Map(), "uploader": new Map(), "song": new Map(),
         "producer": new Map(), "rank": new Map(), "mark": new Map()
@@ -537,6 +538,10 @@ if (shell) {
     
         for (let index = 0; index < content.length; index++) {
             const song_data = content[index];
+
+            memory.video.set(
+                song_data.bvid, song_data.name
+            );
 
             insert_song(song_data, adder);
         }
