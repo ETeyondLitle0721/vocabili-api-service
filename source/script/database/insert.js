@@ -595,7 +595,7 @@ function insert_platform(data, adder) {
         "video": gen_id("Platform", data.bvid)
     };
 
-    const shortener = url => path.basename(new URL(url).pathname).replace(".jpg", "");
+    const shortener = url => path.basename(new URL(url).pathname);
 
     adder();
     memory.data.platform.set(target.video, {

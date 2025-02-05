@@ -118,7 +118,7 @@ function song_info(list = []) {
                 "link": info.link.replace("BB://V/", "https://b23.tv/"),
                 "publish": info.published_at, "page": info.page, "title": info.title,
                 "uploader": uploader[id] ? uploader[id].map(item => target[item.value].name) : [],
-                "duration": info.duration, "thumbnail": info.thumbnail.replace("BB://I/", "https://i0.hdslb.com/bfs/archive/") + ".jpg",
+                "duration": info.duration, "thumbnail": info.thumbnail.replace("BB://I/", "https://i0.hdslb.com/bfs/archive/"),
                 "copyright": info.copyright, "id": id
             };
         })
