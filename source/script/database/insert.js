@@ -103,7 +103,7 @@ function get_singer_color_by_name(singer_nickname) {
 function get_date_string(date_string, joiner = "-", date_format = [ 4, 2, 2 ]) {
     const part = date_string.split("-");
 
-    if (part.length === 1) date_string = date_string.match(/\d{8}/);
+    if (part.length === 1) date_string = date_string.match(/(\d{8})\.(?:xlsx|json)/)[1];
     if (part.length === 2) return date_string.match(/(\d{4}-\d{2})/)[1] + "-01";
     if (part.length === 3) return date_string.match(/(\d{4}-\d{2}-\d{2})/)[1];
 
@@ -118,8 +118,13 @@ function get_date_string(date_string, joiner = "-", date_format = [ 4, 2, 2 ]) {
  * 克隆时间对象
  */
 Date.prototype.clone = function () {
-    return new Date(this.getTime());
+    const result = new Date(this.getTime());
+
+    result.setHours(0, 0, 0, 0);
+
+    return result;
 };
+
 
 /**
  * 获取接下来的时间节点
@@ -233,12 +238,86 @@ function gen_id(branch, text) {
 }
 
 const memory = {
-    "color": new Map(), "issue": new Map(), "data": {
+    "color": new Map(), "issue": new Map(), "video": new Map(), "data": {
         "platform": new Map(), "vocalist": new Map(), "snapshot": new Map(),
         "synthesizer": new Map(), "uploader": new Map(), "song": new Map(),
         "producer": new Map(), "rank": new Map(), "mark": new Map()
-    },
+    }
 };
+
+const base = {
+    "map": {
+        "vocal": "vocalist",
+        "author": "producer",
+        "uploader": "uploader",
+        "synthesizer": "synthesizer"
+    },
+    "list": [
+        "vocal", "author", "uploader", "synthesizer"
+    ]
+};
+
+const { data, history, standard } = config.manifest;
+
+if (data) {
+    const { singer_color: singer_color_filepath, song_summa: song_summa_filepath } = data;
+
+    let counter = 0;
+
+    const adder = (amount = 1) => counter += amount;
+
+    console.log(`正在开始分析数据定义文件文件`);
+
+    if (singer_color_filepath) {
+        const filepath = path.resolve(
+            root, singer_color_filepath
+        ), content = JSON.parse(
+            fs.readFileSync(
+                filepath, "UTF-8"
+            )
+        );
+    
+        console.log(`正在开始分析 ${singer_color_filepath} 歌手代表色定义文件`);
+    
+        for (let index = 0, color_number = -1; index < content.length; index++) {
+            const target = content[index];
+            
+            for (let sequence = 0; sequence < target.length; sequence++) {
+                const data = target[sequence];
+                
+                if (sequence === 0) {
+                    color_number = Number("0x" + data);
+
+                    continue;
+                }
+                
+                memory.color.set(
+                    data, color_number
+                ), adder();
+            }
+        }
+    }
+
+    if (song_summa_filepath) {
+        const filepath = path.resolve(
+            root, song_summa_filepath
+        ), content = read_xlsx(filepath);
+    
+        console.log(`正在开始分析 ${song_summa_filepath} 历史收录曲目数据定义文件`);
+    
+        for (let index = 0; index < content.length; index++) {
+            const song_data = content[index];
+
+            memory.video.set(
+                song_data.bvid, song_data.name
+            );
+
+            insert_song(song_data, adder);
+        }
+    }
+
+    console.log(`目标文件已经全部分析完毕，共构建了 ${counter} 个有效映射关系`);
+}
 
 /**
  * 在内存中插入榜单数据
@@ -264,8 +343,14 @@ function insert_board_rank(type, source, filepath, filename, adder) {
         ]
     ).forEach(data => {
         const id = {
-            "song": gen_id("Song", data.name)
+            "song": gen_id("Song", memory.video.get(data.bvid) || data.name)
         };
+
+        // if (!memory.data.song.has(id.song)) {
+        //     console.log(data);
+
+        //     insert_song(data, adder);
+        // }
 
         // console.log(source + ": " + datetime + " => " + memory.issue.get(board_name[0])[datetime]);
 
@@ -281,8 +366,6 @@ function insert_board_rank(type, source, filepath, filename, adder) {
         );
     });
 }
-
-const { data, history, standard } = config.manifest;
 
 const journal_mapping = {
     "日刊": "daily",
@@ -405,7 +488,7 @@ function insert_snapshot_list(filepath, filename, adder) {
         if (!data.bvid) return;
 
         const id = {
-            "song": gen_id("Song", data.name || data.title)
+            "song": gen_id("Song", memory.video.get(data.bvid) || data.name || data.title)
         };
 
         memory.data.snapshot.set(
@@ -507,7 +590,7 @@ function human_duration_to_duration(human_duration) {
  */
 function insert_platform(data, adder) {
     const target = {
-        "song": gen_id("Song", data.name),
+        "song": gen_id("Song", memory.video.get(data.bvid) || data.name),
         "video": gen_id("Platform", data.bvid)
     };
 
@@ -531,18 +614,6 @@ function insert_platform(data, adder) {
     }, adder);
 }
 
-const base = {
-    "map": {
-        "vocal": "vocalist",
-        "author": "producer",
-        "uploader": "uploader",
-        "synthesizer": "synthesizer"
-    },
-    "list": [
-        "vocal", "author", "uploader", "synthesizer"
-    ]
-};
-
 /**
  * 在数据库中插入曲目数据（使用原始条目数据）
  * 
@@ -550,13 +621,14 @@ const base = {
  * @param {(count: number) => number} adder 给 counter 自增的回调方法
  */
 function insert_song(data, adder) {
-    const song_id = gen_id("Song", data.name), entries = Object.entries(data);
+    const song_name = memory.video.get(data.bvid) || data.name;
+    const song_id = gen_id("Song", song_name), entries = Object.entries(data);
 
     insert_platform(data, adder);
 
     adder();
     memory.data.song.set(song_id, {
-        "name": data.name, "type": data.type || "未标记",
+        "name": song_name, "type": data.type || "未标记",
         "add_at": get_iso_time_text(), "id": song_id
     });
 
@@ -589,62 +661,6 @@ function insert_song(data, adder) {
             insert_mark(marked_data, adder), memory.data[field].set(id.target, inserted_data);
         });
     }
-}
-
-if (data) {
-    const { singer_color: singer_color_filepath, song_summa: song_summa_filepath } = data;
-
-    let counter = 0;
-
-    const adder = (amount = 1) => counter += amount;
-
-    console.log(`正在开始分析数据定义文件文件`);
-
-    if (singer_color_filepath) {
-        const filepath = path.resolve(
-            root, singer_color_filepath
-        ), content = JSON.parse(
-            fs.readFileSync(
-                filepath, "UTF-8"
-            )
-        );
-    
-        console.log(`正在开始分析 ${singer_color_filepath} 歌手代表色定义文件`);
-    
-        for (let index = 0, color_number = -1; index < content.length; index++) {
-            const target = content[index];
-            
-            for (let sequence = 0; sequence < target.length; sequence++) {
-                const data = target[sequence];
-                
-                if (sequence === 0) {
-                    color_number = Number("0xFF" + data);
-
-                    continue;
-                }
-                
-                memory.color.set(
-                    data, color_number
-                ), adder();
-            }
-        }
-    }
-
-    if (song_summa_filepath) {
-        const filepath = path.resolve(
-            root, song_summa_filepath
-        ), content = read_xlsx(filepath);
-    
-        console.log(`正在开始分析 ${song_summa_filepath} 历史收录曲目数据定义文件`);
-    
-        for (let index = 0; index < content.length; index++) {
-            const song_data = content[index];
-
-            insert_song(song_data, adder);
-        }
-    }
-
-    console.log(`目标文件已经全部分析完毕，共构建了 ${counter} 个有效映射关系`);
 }
 
 const memory_entries = Object.entries(memory.data);

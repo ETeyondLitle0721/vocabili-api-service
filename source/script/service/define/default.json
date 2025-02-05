@@ -5,6 +5,10 @@
                 "name": "VOCALOID 每日新曲榜",
                 "catalog": [
                     {
+                        "date": "2024-07-07",
+                        "issue": 5
+                    },
+                    {
                         "date": "2024-07-08",
                         "issue": 6
                     },
@@ -851,16 +855,16 @@
                     {
                         "date": "2025-02-04",
                         "issue": 217
-                    },
-                    {
-                        "date": "2025-02-05",
-                        "issue": 219
                     }
                 ]
             },
             "vocaloid-daily-main": {
                 "name": "VOCALOID 每日主榜",
                 "catalog": [
+                    {
+                        "date": "2024-07-02",
+                        "issue": 0
+                    },
                     {
                         "date": "2024-07-03",
                         "issue": 1
@@ -1728,10 +1732,6 @@
                     {
                         "date": "2025-02-04",
                         "issue": 217
-                    },
-                    {
-                        "date": "2025-02-05",
-                        "issue": 219
                     }
                 ]
             },

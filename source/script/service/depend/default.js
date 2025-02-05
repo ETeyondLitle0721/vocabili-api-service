@@ -73,7 +73,7 @@ export function check_parameter(instance, name, receive, target, mode, options) 
     const prefix = `目标参数(Name=${name.toUpperCase()})所传递的参数`;
 
     if (mode === "number") {
-        if (!target) {
+        if (target === undefined) {
             result.code = "TARGET_NOT_EXISTS";
             result.message = prefix + `被要求必须指定，但是实际上没有传递参数。`;
         } else if (!isFinite(target)) {

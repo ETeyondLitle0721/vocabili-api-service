@@ -5,7 +5,6 @@ import { classification, get_type, unique_array } from "../../depend/core.js";
 import format_datetime, { datetime } from "../../depend/toolkit/formatter/datetime.js";
 import { parse_parameter, check_parameter, build_response } from "./depend/default.js";
 import { get_board_metadata_info_by_board_id as get_board_metadata_info_by_id, get_board_song_list, get_mark_info_by_target_id, get_rank_by_song_id, get_song_history_info, get_target_info_by_id } from "./interface.js";
-import { command_parser } from "../depend/parse.js";
 
 const root = path.resolve(".");
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
@@ -106,10 +105,11 @@ function song_info(list = []) {
     return song.map(song => ({
         "metadata": {
             "id": song.id, "name": song.name, "type": song.type, "target": {
-                "vocalist": mark[song.id].vocalist.map(id => ({
+                "vocalist": mark[song.id].vocalist ? mark[song.id].vocalist.map(id => ({
                     "name": target[id].name, "color": target[id].color
-                })), "producer": mark[song.id].producer.map(id => target[id].name),
-                "synthesizer": mark[song.id].synthesizer.map(id => target[id].name)
+                })) : [],
+                "producer": mark[song.id].producer.map(id => target[id].name),
+                "synthesizer": mark[song.id].vocalist ? mark[song.id].synthesizer.map(id => target[id].name) : []
             }
         }, "platform": (mark[song.id].platform || []).map(id => {
             const info = target[id];
@@ -153,7 +153,7 @@ function board_info(issue, board = "vocaoid-weekly-main", count = 50, index = 1)
                 "view": song.view_rank, "like": song.like_rank,
                 "coin": song.coin_rank, "board": song.rank,
                 "favorite": song.favorite_rank
-            }, "count": song.count, "change": {
+            }, "count": song.count || 0, "change": {
                 "view": song.view_change, "like": song.like_change,
                 "coin": song.coin_change, "favorite": song.favorite_change
             }, "target": Object.fromEntries(
@@ -333,10 +333,18 @@ application.get("/get_board_info", (request, response) => {
         "range": { "minimum": 1, "maximum": 131072 }
     })) return;
 
-    if (!get_board_metadata_info_by_id(param.board)) return response.send(
+    const metadata = get_board_metadata_info_by_id(param.board);
+
+    if (!metadata) return response.send(
         build_response(instance, {
             param, receive, "data": null
         }, "BOARD_NOT_EXISTS", "目标榜单不存在。")
+    );
+
+    if (!metadata.catalog.some(item => item.issue === param.issue)) return response.send(
+        build_response(instance, {
+            param, receive, "data": null
+        }, "ISSUE_NOT_EXISTS", "目标刊目不存在。")
     );
 
     return response.send(build_response(instance, {

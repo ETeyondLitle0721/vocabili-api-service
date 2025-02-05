@@ -1,6 +1,6 @@
 {
     "data": {
-        "song_summa": "./assets/dataset/summa.xlsx",
+        "song_summa": "./assets/dataset/summa.json",
         "singer_color": "./assets/dataset/color.json"
     },
     "history": {

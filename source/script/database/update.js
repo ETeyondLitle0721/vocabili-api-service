@@ -90,7 +90,7 @@ function get_singer_color_by_name(singer_nickname) {
 function get_date_string(date_string, joiner = "-", date_format = [ 4, 2, 2 ]) {
     const part = date_string.split("-");
 
-    if (part.length === 1) date_string = date_string.match(/\d{8}/);
+    if (part.length === 1) date_string = date_string.match(/与(\d{8})/)[1];
     if (part.length === 2) return date_string.match(/(\d{4}-\d{2})/)[1] + "-01";
     if (part.length === 3) return date_string.match(/(\d{4}-\d{2}-\d{2})/)[1];
 
@@ -105,7 +105,11 @@ function get_date_string(date_string, joiner = "-", date_format = [ 4, 2, 2 ]) {
  * 克隆时间对象
  */
 Date.prototype.clone = function () {
-    return new Date(this.getTime());
+    const result = new Date(this.getTime());
+
+    result.setHours(0, 0, 0, 0);
+
+    return result;
 };
 
 /**
@@ -475,12 +479,6 @@ const memory = {
 
 const { standard } = config.manifest;
 
-const journal_mapping = {
-    "日刊": "daily",
-    "周刊": "weekly",
-    "月刊": "monthly"
-};
-
 if (standard) {
     const entries = Object.entries(standard);
 
@@ -502,6 +500,8 @@ if (standard) {
         ));
     }
 }
+
+console.log(memory.issue.get("vocaloid-daily"))
 
 if (shell) {
     const { new: add, main, total, summa, mode } = shell;
