@@ -129,7 +129,7 @@ export function get_rank_by_song_id(config) {
         select_options.control = {
             "result": {
                 "limit": options.count,
-                "offset": options.index - 1
+                "offset": options.count * (options.index - 1)
             }
         };
     }
@@ -170,7 +170,7 @@ export function get_board_song_list(config) {
         "control": {
             "result": {
                 "limit": options.count,
-                "offset": options.index - 1
+                "offset": options.count * (options.index - 1)
             }
         }
     });
@@ -199,7 +199,7 @@ export function get_song_history_info(config) {
         "control": {
             "result": {
                 "limit": options.count,
-                "offset": options.index - 1
+                "offset": options.count * (options.index - 1)
             }
         }
     });
