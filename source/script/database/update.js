@@ -262,6 +262,8 @@ function insert_board_rank(type, source, filepath, filename, adder) {
                 "recorded_at": get_iso_time_text(), "platform": gen_id("Platform", data.bvid), "count": data.count ?? -1
             }
         );
+
+        if (type === "new") insert_song(data);
     });
 }
 
