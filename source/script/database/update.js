@@ -80,7 +80,7 @@ function read_xlsx(filepath, target = 0) {
 function get_date_string(date_string, joiner = "-", date_format = [ 4, 2, 2 ]) {
     const part = date_string.split("-");
 
-    if (part.length === 1) date_string = date_string.match(/与(\d{8})/)[1];
+    if (part.length === 1) date_string = date_string.match(/(\d{8})\.(?:xlsx|json)/)[1];
     if (part.length === 2) return date_string.match(/(\d{4}-\d{2})/)[1] + "-01";
     if (part.length === 3) return date_string.match(/(\d{4}-\d{2}-\d{2})/)[1];
 
