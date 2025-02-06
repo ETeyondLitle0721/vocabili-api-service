@@ -657,9 +657,12 @@ function insert_song(data, adder) {
 
             if (field === "uploader") marked_data.target = id.video;
             if (field === "vocalist") inserted_data.color = get_singer_color_by_name(name);
-
-            adder();
-            insert_mark(marked_data, adder), memory.data[field].set(id.target, inserted_data);
+            
+            if (!memory.data[field].get(id.target)) memory.data[field].set(
+                id.target, inserted_data
+            ), adder();
+            
+            insert_mark(marked_data, adder);
         });
     }
 }

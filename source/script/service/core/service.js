@@ -12,6 +12,10 @@ const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
  * @typedef {import("../../../depend/operator/database.js").GeneralObject} GeneralObject
  */
 
+const define_filepath = path.resolve(
+    __dirname, "../define/default.json"
+);
+
 const config = {
     "global": JSON.parse(
         fs.readFileSync(path.resolve(
@@ -19,11 +23,52 @@ const config = {
         ), "UTF-8")
     ),
     "current": JSON.parse(
-        fs.readFileSync(path.resolve(
-            __dirname, "../define/default.json"
-        ), "UTF-8")
+        fs.readFileSync(
+            define_filepath, "UTF-8"
+        )
     )
 };
+
+/**
+ * 函数防抖
+ * 
+ * @param {Function} fn 需要防抖的方法
+ * @param {number} delay 延时时间（毫秒）
+ * @returns {Function} 防抖过后的函数
+ */
+function debounce(fn, delay) {
+    let timer = null;
+
+    return function (...args) {
+        if (timer) clearTimeout(timer);
+
+        timer = setTimeout(() => {
+            fn.apply(this, args);
+        }, delay);
+    };
+}
+
+const update_define = debounce(
+    (_event_type, _filename) => {
+        console.log(`监听到 ${define_filepath} 文件发生变化，正在尝试更新.....`);
+
+        try {
+            config.current = JSON.parse(
+                fs.readFileSync(
+                    define_filepath, "UTF-8"
+                )
+            );
+
+            console.log("目标文件更新完毕，当前的时间为 " + get_iso_time_text());
+        } catch (error) {
+            console.log("目标文件更新失败，原始错误对象为:", error);
+        }
+    }, 100
+);
+
+fs.watch(
+    define_filepath, update_define
+);
 
 const field = "default";
 const database = {
@@ -35,6 +80,17 @@ const operator = new DatabaseOperator(new SQLite3(database.filepath, {
     "timeout": 1000,
     "readonly": false
 }));
+
+/**
+ * 获取当前的 ISO 8601 毫秒级时间字符串
+ * 
+ * @param {Date} instance 需要转换的 Date 实例
+ * @param {(text: string) => string} handler 结构处理器
+ * @returns {string} 转换出来的结果
+ */
+function get_iso_time_text(instance = new Date(), handler = text => text) {
+    return handler(instance.toISOString());
+}
 
 /**
  * 获取排行榜元信息

@@ -410,14 +410,13 @@ function insert_song(data, adder) {
             };
 
             if (field === "uploader") marked_data.target = id.video;
+            if (field === "vocalist") inserted_data.color = -1;
 
-            if (!id.target) memory.data[field].set(id.target, Object.assign(
-                inserted_data, {
-                    "color": -1
-                }
-            ));
+            if (!memory.data[field].get(id.target)) memory.data[field].set(
+                id.target, inserted_data
+            ), adder();
 
-            adder(), insert_mark(marked_data, adder);
+            insert_mark(marked_data, adder);
         });
     }
 }
@@ -438,7 +437,7 @@ function bulk_insert(table_name, data_list, instance) {
     const placeholders = sample.fill("?").join(", ");
 
     const statement = instance.prepare(
-        `INSERT OR REPLACE INTO ${table} ( ${columns} ) VALUES ( ${placeholders} )`
+        `INSERT OR IGNORE INTO ${table} ( ${columns} ) VALUES ( ${placeholders} )`
     );
 
     instance.transaction((list) => {
@@ -524,23 +523,27 @@ if (shell) {
         }
     }
 
-    if (add) insert_board_rank(
+    String.prototype.my_split = function () {
+        return this.split(",").map(item => item.trim());
+    }
+
+    if (add) add.my_split().map(filepath => insert_board_rank(
         "new", mode, path.resolve(
-            root, add
-        ), path.basename(add), adder
-    );
+            root, filepath
+        ), path.basename(filepath), adder
+    ));
 
-    if (total) insert_snapshot_list(
-        path.resolve(
-            root, total
-        ), path.basename(total), adder
-    );
-
-    if (main) insert_board_rank(
+    if (main) main.my_split().map(filepath => insert_board_rank(
         "main", mode, path.resolve(
-            root, main
-        ), path.basename(add), adder
-    );
+            root, filepath
+        ), path.basename(filepath), adder
+    ));
+
+    if (total) total.my_split().map(filepath => insert_snapshot_list(
+        path.resolve(
+            root, filepath
+        ), path.basename(filepath), adder
+    ));
 
     console.log(`目标文件已经全部分析完毕，共构建了 ${counter} 个有效映射关系`);
 }
@@ -579,7 +582,7 @@ Object.entries(task).forEach(entry => {
 });
 
 console.log("数据条目全部插入完毕");
-console.log("正在尝试更新 ISSUE 定义文件");
+console.log("正在尝试更新 ISSUE 定义文件（一般需要较长时间，请耐心等待）");
 
 const result = classification(
     operator.select_item("Rank_Table", {

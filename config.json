@@ -1,5 +1,5 @@
 {
-    "debug": false,
+    "debug": true,
     "service": {
         "index": "./source/define/service.json",
         "options": {
