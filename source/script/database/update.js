@@ -70,16 +70,6 @@ function read_xlsx(filepath, target = 0) {
 }
 
 /**
- * 通过一个歌手的名称取得代表色
- * 
- * @param {string} singer_nickname 要取得代表色的歌手名称
- * @returns {number} 歌手代表色（-1为获取不到）
- */
-function get_singer_color_by_name(singer_nickname) {
-    return memory.color.get(singer_nickname) || -1;
-}
-
-/**
  * 将不包含分隔符的 YYYYMMDD 变成 YYYY分隔符MM分隔符DD 的形式
  * 
  * @param {(string|number)} date_string 需要转换的日期字符串
@@ -420,10 +410,14 @@ function insert_song(data, adder) {
             };
 
             if (field === "uploader") marked_data.target = id.video;
-            if (field === "vocalist") inserted_data.color = get_singer_color_by_name(name);
 
-            adder();
-            insert_mark(marked_data, adder), memory.data[field].set(id.target, inserted_data);
+            if (!id.target) memory.data[field].set(id.target, Object.assign(
+                inserted_data, {
+                    "color": -1
+                }
+            ));
+
+            adder(), insert_mark(marked_data, adder);
         });
     }
 }
