@@ -139,6 +139,8 @@ function board_info(issue, board = "vocaoid-weekly-main", count = 50, index = 1)
         issue, count, index, board
     }), metadata = get_board_metadata_info_by_id(board);
 
+    const issue_metadata = metadata.catalog.find(item => item.issue === issue);
+
     const song_id_list = list.map(item => item.target);
 
     const target = Object.fromEntries(
@@ -171,7 +173,8 @@ function board_info(issue, board = "vocaoid-weekly-main", count = 50, index = 1)
             )
         })), "metadata": {
             "id": get_type(board).second === "array" ? board[0] : board,
-            "name": metadata.name, "issue": issue
+            "name": metadata.name, "date": issue_metadata.date,
+            "issue": issue, "count": issue_metadata.count
         }
     };
 
@@ -401,7 +404,7 @@ application.get("/get_song_rank_history_info", (request, response) => {
 
     if (!Array.isArray(param.issue)) param.issue = [ param.issue ];
 
-    if (!check_parameter(instance, "issue", receive, param.issue, "count", {
+    if  (param.issue.length > 1 && !check_parameter(instance, "issue", receive, param.issue, "count", {
         "range": { "maximum": 128 }
     })) return;
 
