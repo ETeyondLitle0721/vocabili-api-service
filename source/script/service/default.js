@@ -129,7 +129,7 @@ function song_info(list = []) {
  * 获取排行榜数据
  * 
  * @param {number} issue 需要获取数据的期数
- * @param {("vocaloid-weekly-main"|"voclaoid-daily-main")} board 需要获取的排行榜
+ * @param {string} board 需要获取的排行榜
  * @param {number} count 要获取多少个
  * @param {number} index 页索引
  * @returns 获取到的排行榜信息
@@ -187,12 +187,12 @@ function board_info(issue, board = "vocaoid-weekly-main", count = 50, index = 1)
 /**
  * 获取最新的排行榜
  * 
- * @param {("vocaloid-weekly"|"voclaoid-daily")} board 需要获取的排行榜
+ * @param {string} board 需要获取的排行榜
  * @param {number} count 要获取多少个
  * @param {number} index 当前的页数
  * @returns 获取到的排行榜信息
  */
-function current_board_info(board = "vocaoid-weekly", count = 50, index = 1) {
+function current_board_info(board = "vocaoid-weekly-main", count = 50, index = 1) {
     const metadata = get_board_metadata_info_by_id(board);
 
     return board_info(
@@ -356,12 +356,18 @@ application.get("/get_board_info", (request, response) => {
 
 application.get("/get_board_metadata_info", (request, response) => {
     /**
-     * @type {{ "target": string }}
+     * @type {{ "target": string, "set-cache": number }}
      */
-    const param = parse_parameter(request);
+    const param = Object.assign({
+        "set-cache": 0
+    }, parse_parameter(request));
     const receive = process.uptime(), instance = {
         response, request
     };
+
+    if (!check_parameter(instance, "set-cache", receive, param["set-cache"], "number", {
+        "range": { "minimum": 0, "maximum": 131072 }
+    })) return;
 
     if (!check_parameter(instance, "target", receive, param.target, "count", {
         "range": { "maximum": 1 }
@@ -371,6 +377,10 @@ application.get("/get_board_metadata_info", (request, response) => {
         return response.send(build_response(instance, {
             param, receive, "data": get_board_metadata_info_by_id(param.target[0])
         }, "OK"));
+    }
+
+    if (param["set-cache"] !== 0) {
+        response.setHeaders("Cache-Control", "public, max-age=" + param["set-cache"]);
     }
 
     return response.send(build_response(instance, {
@@ -388,6 +398,12 @@ application.get("/get_song_rank_history_info", (request, response) => {
     const receive = process.uptime(), instance = {
         response, request
     };
+
+    if (!Array.isArray(param.issue)) param.issue = [ param.issue ];
+
+    if (!check_parameter(instance, "issue", receive, param.issue, "count", {
+        "range": { "maximum": 128 }
+    })) return;
 
     if (!check_parameter(instance, "target", receive, param.target, "count", {
         "range": { "maximum": 5 }

@@ -755,7 +755,7 @@ Object.entries(result).map(([key, list]) => {
         list.map(item => item.issue)
     ).map(issue => ({
         "date": memory.issue.get(key.replace(/-(?:new|main)/, ""))[issue],
-        "issue": issue
+        "issue": issue, "count": list.filter(item => item.issue === issue).length
     })).sort((a, b) => a.issue - b.issue);
 });
 
