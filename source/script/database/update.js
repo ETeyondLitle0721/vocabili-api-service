@@ -263,7 +263,7 @@ function insert_board_rank(type, source, filepath, filename, adder) {
             }
         );
 
-        if (type === "new") insert_song(data);
+        if (type === "new") insert_song(data, adder);
     });
 }
 
