@@ -26,7 +26,7 @@ const config = {
 };
 
 const database = {
-    "filepath": config.global.database.filepath[field]
+    "filepath": config.global.database[field].filepath
 };
 const charset = "0123456789qazwsxedcrfvtgbyhnujmikolpQAZWSXEDCRFVTGBYHNUJMIKOLP-_";
 

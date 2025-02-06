@@ -1,25 +1,33 @@
 {
-    "cors": {
-        "origin": "*",
-        "methods": [
-            "GET", "POST"
-        ]
-    },
     "debug": false,
     "service": {
-        "default": {
-            "host": "127.0.0.1",
-            "port": 51001
+        "index": "./source/define/service.json",
+        "options": {
+            "website": {
+                "host": "127.0.0.1",
+                "port": 51000,
+                "public": "./source/website/"
+            },
+            "interface": {
+                "host": "127.0.0.1",
+                "port": 51001,
+                "cors": {
+                    "origin": "*",
+                    "methods": [
+                        "GET", "POST"
+                    ]
+                }
+            }
         }
     },
     "database": {
-        "filepath": {
-            "default": "./assets/database/default.db",
-            "problem": "./assets/database/problem.db"
+        "default": {
+            "filepath": "./assets/database/default.db",
+            "framework": "./source/define/framework.json"
         },
-        "framework": {
-            "default": "./source/define/framework.json",
-            "problem": "./source/define/framework.json"
+        "problem": {
+            "filepath": "./assets/database/problem.db",
+            "framework": "./source/define/framework.json"
         }
     }
 }

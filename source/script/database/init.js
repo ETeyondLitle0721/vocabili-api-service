@@ -18,11 +18,11 @@ const field = process.argv[2] || "default";
 
 const database = {
     /** @type {string} */
-    "filepath": config.database.filepath[field],
+    "filepath": config.database[field].filepath,
     /** @type { { "table": TableCreateOptions[] } } */
     "framework": JSON.parse(
         fs.readFileSync(path.resolve(
-            root, config.database.framework[field]
+            root, config.database[field].framework
         ), "UTF-8")
     )
 };

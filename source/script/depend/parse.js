@@ -1,3 +1,13 @@
+/**
+ * @typedef {import("../service/core/service.js").GeneralObject} GeneralObject
+ */
+
+/**
+ * 解析 Process.argv 里面的参数
+ * 
+ * @param {string[]} content 参数列表
+ * @returns {GeneralObject} 解析结果
+ */
 export function command_parser(content) {
     const result = {};
 

@@ -1,4 +1,4 @@
-import fs, { Dirent } from "fs"; import url from "url"; import xlsx from "xlsx"; import path from "path";
+import fs from "fs"; import url from "url"; import xlsx from "xlsx"; import path from "path";
 import SQLite3 from "better-sqlite3"; import { command_parser } from "../depend/parse.js";
 import { compute_hamc, get_type, quote_string, split_group, text_transformer as cap, append_rank_field, classification, unique_array } from "../../depend/core.js";
 import DatabaseOperator from "../../depend/operator/database.js";
@@ -26,7 +26,7 @@ const config = {
 };
 
 const database = {
-    "filepath": config.global.database.filepath[field]
+    "filepath": config.global.database[field].filepath
 };
 const charset = "0123456789qazwsxedcrfvtgbyhnujmikolpQAZWSXEDCRFVTGBYHNUJMIKOLP-_";
 

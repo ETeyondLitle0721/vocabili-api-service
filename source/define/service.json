@@ -1,0 +1,8 @@
+{
+    "website": {
+        "script": "./source/script/service/website.js"
+    },
+    "interface": {
+        "script": "./source/script/service/interface.js"
+    }
+}
