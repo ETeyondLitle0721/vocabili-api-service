@@ -63,11 +63,14 @@ const update_define = debounce(
         } catch (error) {
             console.log("目标文件更新失败，原始错误对象为:", error);
         }
-    }, 100
-);
 
-fs.watch(
-    define_filepath, update_define
+        instance.close();
+        
+        instance = new SQLite3(database.filepath, {
+            "timeout": 1000,
+            "readonly": false
+        });
+    }, 100
 );
 
 const field = "default";
@@ -76,10 +79,15 @@ const database = {
     "filepath": config.global.database[field].filepath
 };
 
-const operator = new DatabaseOperator(new SQLite3(database.filepath, {
+let instance = new SQLite3(database.filepath, {
     "timeout": 1000,
     "readonly": false
-}));
+});
+const operator = new DatabaseOperator(instance);
+
+fs.watch(
+    define_filepath, update_define
+);
 
 /**
  * 获取当前的 ISO 8601 毫秒级时间字符串
