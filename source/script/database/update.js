@@ -437,7 +437,7 @@ function bulk_insert(table_name, data_list, instance) {
     const placeholders = sample.fill("?").join(", ");
 
     const statement = instance.prepare(
-        `INSERT OR ${table === "Vocalist_Table" ? "IGNORE" : "REPLACE" } INTO ${table} ( ${columns} ) VALUES ( ${placeholders} )`
+        `INSERT OR ${table_name === "Vocalist_Table" ? "IGNORE" : "REPLACE" } INTO ${table} ( ${columns} ) VALUES ( ${placeholders} )`
     );
 
     instance.transaction((list) => {
