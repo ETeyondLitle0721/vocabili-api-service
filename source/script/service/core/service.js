@@ -70,6 +70,8 @@ const update_define = debounce(
             "timeout": 1000,
             "readonly": false
         });
+
+        operator.instanse = instance;
     }, 100
 );
 
