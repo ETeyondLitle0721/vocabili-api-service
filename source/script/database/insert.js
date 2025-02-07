@@ -629,7 +629,7 @@ function insert_song(data, adder) {
 
     adder();
     memory.data.song.set(song_id, {
-        "name": song_name, "type": data.type || "未标记",
+        "name": song_name, "type": data.type || "Unmarked",
         "add_at": get_iso_time_text(), "id": song_id
     });
 

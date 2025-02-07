@@ -20,7 +20,7 @@ const service = {
 };
 
 if (!service.config) {
-    console.log(`无法再定义文件当中找到 ${service_name} 服务的定义信息`);
+    console.log(`无法在定义文件当中找到 ${service_name} 服务的定义信息`);
 
     process.exit(1);
 }
