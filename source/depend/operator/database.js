@@ -35,6 +35,9 @@ import { quote_string, unique_array, generate_random_string as generate, repair_
  * @property {string} source.table 需要查询的表
  * @property {ItemSelectWhereOptions} where 选中项目所需达成的条件
  * @property {object} control 控制配置项
+ * @property {object} control.order 排序控制项
+ * @property {string} control.order.column 依据字段
+ * @property {("ascending"|"descending")} control.order.method 排序方法
  * @property {object} control.result 结果控制项
  * @property {number} control.result.limit 单页最大返回项目数
  * @property {number} control.result.offset 页索引偏移量
@@ -76,6 +79,17 @@ import { quote_string, unique_array, generate_random_string as generate, repair_
  * @typedef TableDropOptions
  * @param {("if-exists"|"direct-drop")} flag 构建 SQL 语句的时候的标记
  * @param {string} table 需要删除的表单的名称
+ * 
+ * @typedef IndexDropOptions
+ * @property {string} name 出要撤销索引的名称
+ * @property {string} table 需要撤销的目标索引的
+ * @property {(("if-exists")[]|"if-exists")} flag 撤销的时候传递的标记信息
+ * 
+ * @typedef IndexCreateOptions
+ * @property {string} name 需要创建的索引名称
+ * @property {string} table 需要创建索引的表单
+ * @property {(("unique"|"if-not-exists")[]|"unique"|"if-not-exists")} flag 创建的时候传递的标记信息
+ * @property {string[]} 需要创建索引的列名称
  */
 
 /**
@@ -155,14 +169,10 @@ function parse_where(options = {}, callback = {}) {
         result = part.join(", ");
     }
 
-    if (operator === "within") {
-        if (get_type(value).second !== "array") {
-            value = [value];
-        }
-
-        result = `${quote_string(column, "double")} IN ( ${value.map((item, index) => generate_placeholder(
-            column, index, item, seq_id, callback.parameter
-        )).join(", ")} )`;
+    if (operator === "like") {
+        result = `${quote_string(column, "double")} LIKE ${generate_placeholder(
+            column, 0, value, seq_id, callback.parameter
+        )}`;
     }
 
     if (operator === "range") {
@@ -171,6 +181,16 @@ function parse_where(options = {}, callback = {}) {
         )} AND ${generate_placeholder(
             column, 1, value.maximum, seq_id, callback.parameter
         )}`;
+    }
+
+    if (operator === "within") {
+        if (get_type(value).second !== "array") {
+            value = [value];
+        }
+
+        result = `${quote_string(column, "double")} IN ( ${value.map((item, index) => generate_placeholder(
+            column, index, item, seq_id, callback.parameter
+        )).join(", ")} )`;
     }
 
     if ([">", ">=", "<", "<=", "<>"].includes(operator)) {
@@ -262,8 +282,6 @@ function _item_insert(options = {}) {
  * @returns {GeneralGeneratorResponse} 构建器响应结果
  */
 function _item_select(options = {}) {
-    // console.log(options);
-    
     let { where = {}, source = {}, control = {} } = options;
     let part = [], parameter = {};
 
@@ -284,6 +302,14 @@ function _item_select(options = {}) {
     if (Object.keys(where).length > 0) part.push("WHERE " + parse_where(where, {
         "parameter": param_setter
     }));
+
+    if (control.order) {
+        let { column, method } = control.order;
+
+        part.push("ORDER BY " + quote_string(column, "double") + " " + {
+            "ascending": "asc", "descending": "desc"
+        } [ method ]);
+    }
 
     if (control.result) {
         let { limit, offset } = control.result;
@@ -512,6 +538,79 @@ function _table_create(options = {}) {
 }
 
 /**
+ * 构建可以在数据库中创建索引的 SQL 语句
+ * 
+ * @param {TableCreateOptions} options 构建 SQL 语句的配置
+ * @returns {GeneralGeneratorResponse} 构建器响应结果
+ */
+function _index_create(options = {}) {
+    let { name, flag, table, column: column_list } = options;
+    let statement = "CREATE";
+
+    if (flag) {
+        if (!Array.isArray(flag)) flag = [ flag ];
+
+        if (flag.includes("unique")) statement += " UNIQUE";
+
+        statement += " INDEX";
+
+        if (flag.includes("if-not-exists")) statement += " IF NOT EXISTS";
+    } else {
+        statement += " INDEX";
+    }
+
+    let sentence = template.replace(
+        "{{statement}} {{name}} ON {{table}} (\n{{column}}\n)", {
+            "name": quote_string(name, "double"),
+            "table": quote_string(table, "double"),
+            "column": column_list.map(name => "    " + name).join(",\n"),
+            "statement": statement
+        }
+    );
+
+    return {
+        "action": "request",
+        "sentence": sentence,
+        "parameter": {}
+    };
+}
+
+/**
+ * 构建可以在数据库中删除现有索引的 SQL 语句
+ * 
+ * @param {IndexDropOptions} options 构建 SQL 语句的配置
+ * @returns {GeneralGeneratorResponse} 构建器响应结果
+ */
+function _index_drop(options = {}) {
+    let { name, flag, table } = options;
+    let statement = "DROP";
+
+    if (flag) {
+        if (!Array.isArray(flag)) flag = [ flag ];
+
+        statement += " INDEX";
+
+        if (flag.includes("if-exists")) statement += " IF EXISTS";
+    } else {
+        statement += " INDEX";
+    }
+
+    let sentence = template.replace(
+        "{{statement}} {{name}} ON {{table}}", {
+            "name": quote_string(name, "double"),
+            "table": quote_string(table, "double"),
+            "statement": statement
+        }
+    );
+
+    return {
+        "action": "request",
+        "sentence": sentence,
+        "parameter": {}
+    };
+}
+
+/**
  * 获取目前支持的生成器列表
  * @returns 目前支持的生成器列表
  */
@@ -523,6 +622,10 @@ export function get_generator() {
             "select": _item_select,
             "delete": _item_delete,
             "update": _item_update
+        },
+        "index": {
+            "drop": _index_drop,
+            "create": _index_create
         },
         "table": {
             "drop": _table_drop,
@@ -586,14 +689,11 @@ export class DatabaseOperator {
                 config, generator(config)
             );
 
-            if (response) {
-                result.push({
-                    "target": current,
-                    "response": this.#processer(
-                        response
-                    )
-                });
-            }
+            if (response) result.push({
+                "target": current, "response": this.#processer(
+                    response
+                )
+            });
         }
 
         return result.length === 1 ? result[0].response : result;
@@ -637,7 +737,7 @@ export class DatabaseOperator {
      */
     select_item(list, options = {}, handler = (_options, response) => response) {
         return this.#process(
-            this.generator.item.select, list, options, handler, (name) => ({
+            this.generator.item.select, list, options, handler, name => ({
                 "source": {
                     "table": name,
                     "select": "all"
@@ -677,8 +777,7 @@ export class DatabaseOperator {
     /**
      * 在当前数据库中删除表单
      * 
-     * @param {RunResult} list 删除的表单的名称
-     * @param {Drop} [options={}] 
+     * @param {ListLike} list 删除的表单的名称
      * @param {ResponseHandler} handler 语句构建结果处理器
      * @returns {RunResult} 执行结果
      */
@@ -691,7 +790,7 @@ export class DatabaseOperator {
     /**
      * 在当前数据库中创建表单
      * 
-     * @param {RunResult} table 创建的表单的名称
+     * @param {ListLike} table 创建的表单的名称
      * @param {TableCreateOptions} options 创建时传递的配置
      * @param {ResponseHandler} handler 语句构建结果处理器
      * @returns {RunResult} 执行结果
@@ -699,6 +798,38 @@ export class DatabaseOperator {
     create_table(list, options = {}, handler = (_options, response) => response) {
         return this.#process(
             this.generator.table.create, list, options, handler
+        );
+    }
+
+    /**
+     * 在当前数据库中删除索引
+     * 
+     * @param {ListLike} list 删除的索引的名称
+     * @param {IndexDropOptions} options 创建时传递的配置
+     * @param {ResponseHandler} handler 语句构建结果处理器
+     * @returns {RunResult} 执行结果
+     */
+    drop_index(list, options = {}, handler = (_options, response) => response) {
+        return this.#process(
+            this.generator.index.drop, list, options, handler, value => ({
+                "name": value
+            })
+        );
+    }
+
+    /**
+     * 在当前数据库中创建索引
+     * 
+     * @param {ListLike} table 创建的索引的名称
+     * @param {IndexCreateOptions} options 创建时传递的配置
+     * @param {ResponseHandler} handler 语句构建结果处理器
+     * @returns {RunResult} 执行结果
+     */
+    create_index(list, options = {}, handler = (_options, response) => response) {
+        return this.#process(
+            this.generator.index.create, list, options, handler, value => ({
+                "name": value
+            })
         );
     }
 }

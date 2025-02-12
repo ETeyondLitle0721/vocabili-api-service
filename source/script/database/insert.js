@@ -257,7 +257,7 @@ const base = {
     ]
 };
 
-const { data, history, standard } = config.manifest;
+const { data, history, standard, specially } = config.manifest;
 
 if (data) {
     const { singer_color: singer_color_filepath, song_summa: song_summa_filepath } = data;
@@ -321,7 +321,7 @@ if (data) {
 }
 
 /**
- * 在内存中插入榜单数据
+ * 在内存中插入普通榜单数据
  * 
  * @param {("new"|"main")} type 榜单类别
  * @param {("daily"|"weekly"|"monthly")} source 目标文件来源
@@ -329,7 +329,7 @@ if (data) {
  * @param {string} filename 文件名名称
  * @param {(count: number) => number} adder 给 counter 自增的回调方法
  */
-function insert_board_rank(type, source, filepath, filename, adder) {
+function insert_normal_board_rank(type, source, filepath, filename, adder) {
     const content = read_xlsx(filepath), datetime = get_date_string(
         filename
     ), board_name = [ "vocaloid-" + source, "vocaloid-" + source + "-" + type ];
@@ -367,6 +367,51 @@ function insert_board_rank(type, source, filepath, filename, adder) {
         );
     });
 }
+
+// /**
+//  * 在内存中插入特殊榜单数据
+//  * 
+//  * @param {string} filepath 文件绝对路径
+//  * @param {(count: number) => number} adder 给 counter 自增的回调方法
+//  */
+// function insert_specially_board_rank(filepath, datetime, issue, adder) {
+//     const content = read_xlsx(filepath);
+
+//     adder(content.length);
+
+//     append_rank_field(
+//         content, [
+//             "point", "view", "coin", "like", "favorite"
+//         ]
+//     ).forEach(data => {
+//         const id = {
+//             "song": gen_id("Song", memory.video.get(data.bvid) || data.name)
+//         };
+
+//         memory.data.rank.set(
+//             gen_id("Record", "vocaloid-specially" + id.song + datetime), {
+//                 "board": "vocaloid-specially", "issue": issue, "target": id.song,
+//                 "rank": data.rank || data._rank.point + 1, "view_rank": data.view_rank || data._rank.view + 1,
+//                 "like_rank": data.like_rank || data._rank.like + 1, "coin_rank": data.coin_rank || data._rank.coin + 1, "point": data.point,
+//                 "favorite_rank": data.favorite_rank || data._rank.favorite + 1, "like_change": data.like,
+//                 "coin_change": data.coin, "view_change": data.view, "favorite_change": data.favorite,
+//                 "recorded_at": get_iso_time_text(), "platform": gen_id("Platform", data.bvid), "count": data.count ?? -1
+//             }
+//         );
+//     });
+// }
+
+// if (specially) {
+//     console.log("正在开始分析特刊文件");
+
+//     let counter = 0;
+
+//     const adder = (amount = 1) => counter += amount;
+
+    
+
+//     console.log(`目标文件已经全部分析完毕，共构建了 ${counter} 个有效映射关系`);
+// }
 
 const journal_mapping = {
     "日刊": "daily",
@@ -461,7 +506,7 @@ function insert_board(type, target_dirpath, adder) {
             root, dirent.filepath
         ).split(path.sep).filter(item => item !== "..").join("/")} 文件`);
         
-        insert_board_rank(
+        insert_normal_board_rank(
             type, journal_mapping[
                 path.basename(dirent.parentPath)
             ], dirent.filepath, dirent.name, adder
@@ -641,7 +686,7 @@ function insert_song(data, adder) {
         entry[1].toString().split("、").map(name => {
             let field = base.map[key];
 
-            name = name.trim();
+            name = name.trim() || "Unknown";
 
             const id = {
                 "video": gen_id("Platform", data.bvid),
@@ -735,15 +780,26 @@ Object.entries(task).forEach(entry => {
 console.log("数据条目全部插入完毕");
 console.log("正在尝试更新 ISSUE 定义文件");
 
-const result = classification(
-    operator.select_item("Rank_Table", {
-        "source": {
-            "select": "all"
+const result = {
+    "rank": classification(
+        operator.select_item("Rank_Table", {
+            "source": {
+                "select": "all"
+            }
+        }), (value) => {
+            return value.board;
         }
-    }), (value) => {
-        return value.board;
-    }
-);
+    ),
+    "snapshot": classification(
+        operator.select_item("Snapshot_Table", {
+            "source": {
+                "select": "all"
+            }
+        }), (value) => {
+            return value.snapshot_at;
+        }
+    )
+};
 
 const filepath = path.resolve(
     __dirname, "../service/define/default.json"
@@ -751,7 +807,7 @@ const filepath = path.resolve(
     fs.readFileSync(filepath, "UTF-8")
 );
 
-Object.entries(result).map(([key, list]) => {
+Object.entries(result.rank).map(([key, list]) => {
     delete content.metadata.board[key].issue;
 
     content.metadata.board[key].catalog = unique_array(
@@ -761,6 +817,10 @@ Object.entries(result).map(([key, list]) => {
         "issue": issue, "count": list.filter(item => item.issue === issue).length
     })).sort((a, b) => a.issue - b.issue);
 });
+
+content.metadata.snapshot = Object.entries(result.snapshot).map(([date, list]) => ({
+    "date": date, "count": list.length
+}));
 
 fs.writeFileSync(
     filepath, JSON.stringify(

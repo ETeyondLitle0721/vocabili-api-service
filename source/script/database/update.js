@@ -222,7 +222,7 @@ function gen_id(branch, text) {
  * @param {string} filename 文件名名称
  * @param {(count: number) => number} adder 给 counter 自增的回调方法
  */
-function insert_board_rank(type, source, filepath, filename, adder) {
+function insert_normal_board_rank(type, source, filepath, filename, adder) {
     const content = read_xlsx(filepath), datetime = get_date_string(
         filename
     ), board_name = [ "vocaloid-" + source, "vocaloid-" + source + "-" + type ];
@@ -395,7 +395,7 @@ function insert_song(data, adder) {
         entry[1].toString().split("、").map(name => {
             let field = base.map[key];
 
-            name = name.trim();
+            name = name.trim() || "Unknown";
 
             const id = {
                 "video": gen_id("Platform", data.bvid),
@@ -527,13 +527,13 @@ if (shell) {
         return this.split(",").map(item => item.trim());
     }
 
-    if (add) add.my_split().map(filepath => insert_board_rank(
+    if (add) add.my_split().map(filepath => insert_normal_board_rank(
         "new", mode, path.resolve(
             root, filepath
         ), path.basename(filepath), adder
     ));
 
-    if (main) main.my_split().map(filepath => insert_board_rank(
+    if (main) main.my_split().map(filepath => insert_normal_board_rank(
         "main", mode, path.resolve(
             root, filepath
         ), path.basename(filepath), adder

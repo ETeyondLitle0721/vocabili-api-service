@@ -478,5 +478,87 @@
                 }
             ]
         }
+    ],
+    "index": [
+        {
+            "name": "Song_Table_ID_Index",
+            "flag": [ "unique", "if-not-exists" ],
+            "table": "Song_Table",
+            "column": [
+                "id"
+            ]
+        },
+        {
+            "name": "Song_Table_Name_Index",
+            "flag": "if-not-exists",
+            "table": "Song_Table",
+            "column": [
+                "name"
+            ]
+        },
+        {
+            "name": "Platform_Table_ID_Index",
+            "flag": ["if-not-exists", "unique" ],
+            "table": "Platform_Table",
+            "column": [
+                "id"
+            ]
+        },
+        {
+            "name": "Mark_Table_Mix_Index",
+            "flag": "if-not-exists",
+            "table": "Mark_Table",
+            "column": [
+                "id", "type", "target", "value"
+            ]
+        },
+        {
+            "name": "Vocalist_Table_ID_Index",
+            "flag": [ "if-not-exists", "unique" ],
+            "table": "Vocalist_Table",
+            "column": [
+                "id"
+            ]
+        },
+        {
+            "name": "Uploader_Table_ID_Index",
+            "flag": [ "if-not-exists", "unique" ],
+            "table": "Uploader_Table",
+            "column": [
+                "id"
+            ]
+        },
+        {
+            "name": "Producer_Table_ID_Index",
+            "flag": [ "if-not-exists", "unique" ],
+            "table": "Producer_Table",
+            "column": [
+                "id"
+            ]
+        },
+        {
+            "name": "Synthesizer_Table_ID_Index",
+            "flag": [ "if-not-exists", "unique" ],
+            "table": "Synthesizer_Table",
+            "column": [
+                "id"
+            ]
+        },
+        {
+            "name": "Snapshot_Table_Snapshot_AT_Index",
+            "flag": "if-not-exists",
+            "table": "Snapshot_Table",
+            "column": [
+                "snapshot_at"
+            ]
+        },
+        {
+            "name": "Rank_Table_Mix_Index",
+            "flag": "if-not-exists",
+            "table": "Rank_Table",
+            "column": [
+                "board", "rank", "issue"
+            ]
+        }
     ]
 }

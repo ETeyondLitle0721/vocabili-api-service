@@ -1,7 +1,5 @@
-import fs from "fs";
-import url from "url";
-import path from "path";
-import SQLite3 from "better-sqlite3";
+import fs from "fs"; import url from "url";
+import SQLite3 from "better-sqlite3"; import path from "path";
 import DatabaseOperator from "../../../depend/operator/database.js";
 import { text_transformer as capitalize, get_type } from "../../../depend/core.js";
 
@@ -270,3 +268,6 @@ export function get_song_history_info(config) {
         }
     });
 }
+
+export const base = operator;
+export const metadata_define = config.current.metadata;

@@ -1,14 +1,14 @@
 import fs from "fs"; import path from "path"; import HTTP from "http";
 import ansi from "../../depend/utilities/sequence/ansi.js"; import cors from "cors";
 import express from "express"; import template from "../../depend/utilities/template.js";
-import { classification, get_type, text_transformer, unique_array } from "../../depend/core.js";
+import { classification, get_type, text_transformer as capitalize, unique_array } from "../../depend/core.js";
 import format_datetime, { datetime } from "../../depend/toolkit/formatter/datetime.js";
 import { parse_parameter, check_parameter, build_response } from "./depend/default.js";
 import {
     get_board_metadata_info_by_board_id as get_board_metadata_info_by_id,
     get_board_song_list, get_mark_info_by_target_id, get_rank_by_song_id,
-    get_song_history_info, get_target_info_by_id
-} from "./core/service.js";
+    base as database, get_song_history_info, get_target_info_by_id, metadata_define
+} from "./core/interface.js";
 
 const root = path.resolve(".");
 
@@ -109,27 +109,43 @@ function song_info(list = []) {
         "uploader",  Object.values(uploader).flat().map(item => item.value)
     ).map(temp => target[temp.id] = temp);
 
-    return song.map(song => ({
-        "metadata": {
-            "id": song.id, "name": song.name, "type": song.type, "target": {
-                "vocalist": mark[song.id].vocalist ? mark[song.id].vocalist.map(id => ({
-                    "name": target[id].name, "color": target[id].color
-                })) : [],
-                "producer": mark[song.id].producer.map(id => target[id].name),
-                "synthesizer": mark[song.id].vocalist ? mark[song.id].synthesizer.map(id => target[id].name) : []
-            }
-        }, "platform": (mark[song.id].platform || []).map(id => {
-            const info = target[id];
+    return song.map(song => {
+        const marked_data = mark[song.id], temp = {
+            "sv": marked_data.synthesizer ? marked_data.synthesizer.map(id => ({
+                "id": id, "name": target[id].name
+            })) : [],
+            "vocalist": marked_data.vocalist ? marked_data.vocalist.map(id => ({
+                "id": id, "name": target[id].name, "color": target[id].color
+            })) : []
+        };
 
-            return {
-                "link": info.link.replace("BB://V/", "https://b23.tv/"),
-                "publish": info.published_at, "page": info.page, "title": info.title,
-                "uploader": uploader[id] ? uploader[id].map(item => target[item.value].name) : [],
-                "duration": info.duration, "thumbnail": info.thumbnail.replace("BB://I/", "https://i0.hdslb.com/bfs/archive/"),
-                "copyright": info.copyright, "id": id
-            };
-        })
-    }));
+        return {
+            "metadata": {
+                "id": song.id, "name": song.name, "type": song.type, "target": {
+                    "vocalist": temp.vocalist.map(item => {
+                        return item.name;
+                    }).join("").length === 0 ? [] : temp.vocalist,
+                    "producer": marked_data.producer.map(id => ({
+                        "id": id, "name": target[id].name
+                    })),
+                    "synthesizer": temp.sv.map(item => {
+                        return item.name;
+                    }).join("").length === 0 ? [] : temp.sv
+                }
+            }, "platform": marked_data.platform ? marked_data.platform.map(id => {
+                const info = target[id];
+    
+                return {
+                    "link": info.link.replace("BB://V/", "https://b23.tv/"),
+                    "publish": info.published_at, "page": info.page, "title": info.title,
+                    "uploader": uploader[id] ? uploader[id].map(item => target[item.value].name) : [],
+                    "duration": info.duration, "thumbnail": info.thumbnail === "No Image" ?
+                        -1 : info.thumbnail.replace("BB://I/", "https://i0.hdslb.com/bfs/archive/"),
+                    "copyright": info.copyright, "id": id
+                };
+            }) : []
+        }
+    });
 }
 
 /**
@@ -257,44 +273,182 @@ function song_rank_history_info(target, issue, board, count = 50, index = 1) {
     })).filter(item => item.rank.coin > 0);
 }
 
-application.get("/get_current_board_info", (request, response) => {
-    /**
-     * @type {{ "board": string, "count": number, "index": number }}
-     */
-    const param = Object.assign({
-        "count": 50, "index": 1
-    }, parse_parameter(request)), receive = process.uptime(), instance = {
-        response, request
-    };
+/**
+ * 通过曲目 Platform 数据的 BVID 或者 Title 查询对应的曲目数据
+ * 
+ * @param {object} target 需要查询的目标
+ * @param {string} target.bvid 需要包含的 BVID 之中的文本
+ * @param {string} target.title 需要包含的 Title 之中的文本
+ * @param {number} count 要获取多少个
+ * @param {number} index 当前的页数
+ * @returns 获取到的曲目列表
+ */
+function search_song_by_platform_title(target, count = 50, index = 1) {
+    const { bvid = "", title = "" } = target;
+    const platform = database.select_item("Platform_Table", {
+        "where": [
+            {
+                "column": "title",
+                "operator": "like",
+                "value": `%${title}%`
+            },
+            {
+                "column": "link",
+                "operator": "like",
+                "value": `BB://V/%${bvid}%`
+            }
+        ],
+        "control": {
+            "result": {
+                "limit": count,
+                "offset": count * (index - 1)
+            }
+        }
+    }), mark = database.select_item("Mark_Table", {
+        "where": [
+            {
+                "column": "type",
+                "operator": "equal",
+                "value": "platform"
+            },
+            {
+                "column": "value",
+                "operator": "within",
+                "value": platform.map(item => item.id)
+            }
+        ]
+    });
 
-    if (!check_parameter(instance, "board", receive, param.board, "count", {
-        "range": { "maximum": 1 }
-    })) return;
+    return song_info(
+        mark.map(item => item.target)
+    );
+}
 
-    if (!check_parameter(instance, "count", receive, param.count, "number", {
-        "type": "integer",
-        "range": { "minimum": 1, "maximum": 200 }
-    })) return;
+/**
+ * 通过曲目 Song 数据的 Name 查询对应的曲目数据
+ * 
+ * @param {object} name 需要查询的目标
+ * @param {number} count 要获取多少个
+ * @param {number} index 当前的页数
+ * @returns 获取到的曲目列表
+ */
+function search_song_by_name(name, count = 50, index = 1) {
+    const list = database.select_item("Song_Table", {
+        "where": {
+            "column": "name",
+            "operator": "like",
+            "value": `%${name}%`
+        },
+        "control": {
+            "result": {
+                "limit": count,
+                "offset": count * (index - 1)
+            }
+        }
+    });
 
-    if (!check_parameter(instance, "index", receive, param.index, "number", {
-        "type": "integer",
-        "range": { "minimum": 1, "maximum": 131072 }
-    })) return;
+    return song_info(
+        list.map(item => item.id)
+    );
+}
 
-    if (get_board_metadata_info_by_id(param.board)) {
-        return response.send(build_response(instance, {
-            param, receive, "data": current_board_info(
-                param.board, param.count, param.index
-            )
-        }, "OK"));
+/**
+ * 获取目标列表
+ * 
+ * @param {("song"|"board"|"vocalist"|"producer"|"synthesizer")} type 需要获取的目标类型
+ * @param {number} count 要获取多少个
+ * @param {number} index 当前的页数
+ * @returns 获取到的目标列表
+ */
+function get_target_list(type, count = 50, index = 1) {
+    if (type === "board") {
+        const board = metadata_define.board;
+
+        return Object.keys(board).filter((_, board_index) => 
+            count === -1 || (board_index + 1 > count * (index - 1) && board_index + 1 <= count * index)
+        ).map(item => {
+            const metadata = board[item];
+
+            return {
+                "id": item, "name": metadata.name,
+                "issue": metadata.catalog.length
+            };
+        });
     }
 
-    return response.send(build_response(instance, {
-        param, receive, "data": null
-    }, "BOARD_NOT_EXISTS", "目标榜单不存在。"));
-});
+    if (type === "song") {
+        return song_info(
+            database.select_item("Song_Table", {
+                "control": {
+                    "result": {
+                        "limit": count,
+                        "offset": count * (index - 1)
+                    }
+                }
+            }).map(item => item.id)
+        );
+    }
 
-application.get("/get_song_info", (request, response) => {
+    return database.select_item(capitalize(type) + "_Table", {
+        "control": {
+            "result": {
+                "limit": count,
+                "offset": count * (index - 1)
+            }
+        }
+    });
+}
+
+/**
+ * 获取曲目列表（通过关联信息）
+ * 
+ * @param {("vocalist"|"producer"|"synthesizer")} type 关联类型
+ * @param {string} id 关联信息对应的识别码
+ * @param {number} count 要获取多少个
+ * @param {number} index 当前的页数
+ * @returns 获取到的曲目列表
+ */
+function get_song_list_by_mark(type, id, count = 50, index = 1) {
+    const result = database.select_item("Mark_Table", {
+        "where": [
+            {
+                "column": "value",
+                "operator": "equal",
+                "value": id
+            },
+            {
+                "column": "type",
+                "operator": "equal",
+                "value": type
+            }
+        ],
+        "control": {
+            "result": {
+                "limit": count,
+                "offset": count * (index - 1)
+            }
+        }
+    });
+
+    return song_info(
+        result.map(item => item.target)
+    );
+}
+
+// /**
+//  * 获取曲目列表（通过 Pool 识别码）
+//  * 
+//  * @param {string[]} target 需要获取到的目标的 Pool 的识别码
+//  * @param {number} count 要获取多少个
+//  * @param {number} index 当前的页数
+//  * @returns 获取到的曲目列表
+//  */
+// function get_song_list_by_pool_id(target, count = 50, index = 1) {
+//     const part = target.split("-");
+//     const type = part[0], mode = part[1];
+// }
+
+application.get("/get_info/song", (request, response) => {
     /**
      * @type {{ "target": string[] }}
      */
@@ -314,7 +468,90 @@ application.get("/get_song_info", (request, response) => {
     }, "OK"));
 });
 
-application.get("/get_board_info", (request, response) => {
+application.get("/get_list/song/by_:type", (request, response) => {
+    /**
+     * @type {{ "type": ("pool"|"vocalist"|"producer"|"synthesizer"), "count": number, "index": number, "target": string }}
+     */
+    const param = Object.assign({
+        "count": 50, "index": 1
+    }, parse_parameter(request));
+    const receive = process.uptime(), instance = {
+        response, request
+    };
+
+    if (!check_parameter(instance, "type", receive, param.type, "count", {
+        "range": { "maximum": 1 }
+    })) return;
+
+    if (!check_parameter(instance, "type", receive, param.type, "list", {
+        "list": [ "pool", "vocalist", "producer", "synthesizer" ]
+    })) return;
+
+    param.type = param.type[0];
+
+    if (param.type === "pool") return response.send(build_response(
+        instance, { receive }, "NOT_IMPLEMENTED_YET",
+        "目前所访问的目标端点(ep=/get_list/by_pool)目前尚未实现。"
+    ));
+
+    if (!check_parameter(instance, "target", receive, param.target, "count", {
+        "range": { "maximum": 1 }
+    })) return;
+
+    if (!check_parameter(instance, "count", receive, param.count, "number", {
+        "type": "integer",
+        "range": { "minimum": 1, "maximum": 50 }
+    })) return;
+
+    if (!check_parameter(instance, "index", receive, param.index, "number", {
+        "type": "integer",
+        "range": { "minimum": 1, "maximum": 131072 }
+    })) return;
+
+    return response.send(build_response(instance, {
+        param, receive, "data": get_song_list_by_mark(
+            param.type, param.target, param.count, param.index
+        )
+    }, "OK"));
+});
+
+application.get("/get_list/:type", (request, response) => {
+    /**
+     * @type {{ "type": ("song"|"board"|"vocalist"|"producer"|"synthesizer"), "count": number, "index": number }}
+     */
+    const param = Object.assign({
+        "count": 50, "index": 1
+    }, parse_parameter(request));
+    const receive = process.uptime(), instance = {
+        response, request
+    };
+
+    if (!check_parameter(instance, "type", receive, param.type, "count", {
+        "range": { "maximum": 1 }
+    })) return;
+
+    if (!check_parameter(instance, "type", receive, param.type, "list", {
+        "list": [ "pool", "song", "board", "vocalist", "producer", "synthesizer" ]
+    })) return;
+
+    if (!check_parameter(instance, "count", receive, param.count, "number", {
+        "type": "integer",
+        "range": { "minimum": 1, "maximum": 50 }
+    })) return;
+
+    if (!check_parameter(instance, "index", receive, param.index, "number", {
+        "type": "integer",
+        "range": { "minimum": 1, "maximum": 131072 }
+    })) return;
+
+    return response.send(build_response(instance, {
+        param, receive, "data": get_target_list(
+            param.type[0], param.count, param.index
+        )
+    }, "OK"));
+});
+
+application.get("/get_info/board", (request, response) => {
     /**
      * @type {{ "board": string, "count": number, "index": number, "issue": number[] }}
      */
@@ -364,7 +601,51 @@ application.get("/get_board_info", (request, response) => {
     }, "OK"));
 });
 
-application.get("/get_board_metadata_info", (request, response) => {
+application.get("/get_info/board/_current", (request, response) => {
+    /**
+     * @type {{ "board": string, "count": number, "index": number }}
+     */
+    const param = Object.assign({
+        "count": 50, "index": 1
+    }, parse_parameter(request)), receive = process.uptime(), instance = {
+        response, request
+    };
+
+    if (!check_parameter(instance, "board", receive, param.board, "count", {
+        "range": { "maximum": 1 }
+    })) return;
+
+    if (!check_parameter(instance, "count", receive, param.count, "number", {
+        "type": "integer",
+        "range": { "minimum": 1, "maximum": 200 }
+    })) return;
+
+    if (!check_parameter(instance, "index", receive, param.index, "number", {
+        "type": "integer",
+        "range": { "minimum": 1, "maximum": 131072 }
+    })) return;
+
+    const board_info = get_board_metadata_info_by_id(param.board);
+
+    if (board_info) {
+        if (board_info.catalog.length === 0) return response.send(build_response(
+            instance, { receive }, "NO_ENTRY_EXISTS",
+            "所访问的榜单目前没有任何刊目。"
+        ));
+
+        return response.send(build_response(instance, {
+            param, receive, "data": current_board_info(
+                param.board, param.count, param.index
+            )
+        }, "OK"));
+    }
+
+    return response.send(build_response(instance, {
+        param, receive, "data": null
+    }, "BOARD_NOT_EXISTS", "目标榜单不存在。"));
+});
+
+application.get("/get_info/metadata/board", (request, response) => {
     /**
      * @type {{ "target": string, "set-cache": number }}
      */
@@ -398,7 +679,7 @@ application.get("/get_board_metadata_info", (request, response) => {
     }, "BOARD_NOT_EXISTS", "目标榜单不存在。"));
 });
 
-application.get("/get_song_rank_history_info", (request, response) => {
+application.get("/get_history/song/rank", (request, response) => {
     /**
      * @type {{ "board": string, "count": number, "index": number, "issue": number[], "target": string }}
      */
@@ -436,7 +717,7 @@ application.get("/get_song_rank_history_info", (request, response) => {
     }, "OK"));
 });
 
-application.get("/get_song_count_history_info", (request, response) => {
+application.get("/get_history/song/count", (request, response) => {
     /**
      * @type {{ "count": number, "index": number, "target": string }}
      */
@@ -463,6 +744,80 @@ application.get("/get_song_count_history_info", (request, response) => {
 
     return response.send(build_response(instance, {
         param, receive, "data": song_count_history_info(
+            param.target, param.count, param.index
+        )
+    }, "OK"));
+});
+
+application.get("/search/song_list/by_platform", (request, response) => {
+    /**
+     * @type {{ "title": string, "bvid": string, "count": number, "index": number }}
+     */
+    const param = Object.assign(parse_parameter(request), {
+        "count": 25, "index": 1
+    });
+    const receive = process.uptime(), instance = {
+        response, request
+    };
+
+    if (!param.title && !param.bvid) return response.send(build_response(
+        instance, { receive }, "NOT_FOUND_VALID_VALUE", "没有找到有效值：" + 
+        "目标参数(Name=TITLE)和目标参数(Name=BVID)至少需一个有值"
+    ));
+
+    if (param.bvid && !check_parameter(instance, "bvid", receive, param.bvid, "count", {
+        "range": { "maximum": 1 }
+    })) return;
+
+    if (param.title && !check_parameter(instance, "title", receive, param.title, "count", {
+        "range": { "maximum": 1 }
+    })) return;
+
+    if (!check_parameter(instance, "count", receive, param.count, "number", {
+        "type": "integer",
+        "range": { "minimum": 1, "maximum": 50 }
+    })) return;
+
+    if (!check_parameter(instance, "index", receive, param.index, "number", {
+        "type": "integer",
+        "range": { "minimum": 1, "maximum": 131072 }
+    })) return;
+
+    return response.send(build_response(instance, {
+        param, receive, "data": search_song_by_platform_title(
+            { "bvid": param.bvid, "title": param.title },
+            param.count, param.index
+        )
+    }, "OK"));
+});
+
+application.get("/search/song_list/by_song_name", (request, response) => {
+    /**
+     * @type {{ "target": string, "count": number, "index": number }}
+     */
+    const param = Object.assign(parse_parameter(request), {
+        "count": 25, "index": 1
+    });
+    const receive = process.uptime(), instance = {
+        response, request
+    };
+
+    if (!check_parameter(instance, "target", receive, param.target, "count", {
+        "range": { "maximum": 1 }
+    })) return;
+
+    if (!check_parameter(instance, "count", receive, param.count, "number", {
+        "type": "integer",
+        "range": { "minimum": 1, "maximum": 50 }
+    })) return;
+
+    if (!check_parameter(instance, "index", receive, param.index, "number", {
+        "type": "integer",
+        "range": { "minimum": 1, "maximum": 131072 }
+    })) return;
+
+    return response.send(build_response(instance, {
+        param, receive, "data": search_song_by_name(
             param.target, param.count, param.index
         )
     }, "OK"));
@@ -495,7 +850,7 @@ export function start_service() {
                 });
             }
 
-            console.log(`成功在 ${address} 上启用 ${text_transformer(
+            console.log(`成功在 ${address} 上启用 ${capitalize(
                 field, 1, (text) => text.toUpperCase()
             )} 服务`);
         }

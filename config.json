@@ -23,11 +23,11 @@
     "database": {
         "default": {
             "filepath": "./assets/database/default.db",
-            "framework": "./source/define/framework.json"
+            "framework": "./source/define/db-fw.json"
         },
         "problem": {
             "filepath": "./assets/database/problem.db",
-            "framework": "./source/define/framework.json"
+            "framework": "./source/define/db-fw.json"
         }
     }
 }

@@ -1,6 +1,6 @@
 {
     "data": {
-        "song_summa": "./assets/dataset/summa.xlsx",
+        "song_summa": "./assets/dataset/summa.json",
         "singer_color": "./assets/dataset/color.json"
     },
     "history": {
@@ -8,6 +8,58 @@
         "total": "./assets/dataset/总量/",
         "change": "./assets/dataset/增量/"
     },
+    "specially": [
+        {
+            "name": "熱異常 排行榜",
+            "date": "2024-07-28",
+            "path": "./assets/dataset/特刊/热异常.xlsx"
+        },
+        {
+            "name": "強風オールバック 排行榜",
+            "date": "2024-08-10",
+            "path": "./assets/dataset/特刊/强风大背头.xlsx"
+        },
+        {
+            "name": "梦ノ结唱 排行榜 #1",
+            "date": "2024-09-03",
+            "path": "./assets/dataset/特刊/梦的结唱.xlsx"
+        },
+        {
+            "name": "B站ボカロ旧投稿 排行榜",
+            "date": "2024-09-15",
+            "path": "./assets/dataset/特刊/2012排行榜.xlsx"
+        },
+        {
+            "name": "B站世界计划书下曲 排行榜",
+            "date": "2024-10-01",
+            "path": "./assets/dataset/特刊/prsk.xlsx"
+        },
+        {
+            "name": "春嵐 排行榜",
+            "date": "2024-10-15",
+            "path": "./assets/dataset/特刊/春岚.xlsx"
+        },
+        {
+            "name": "梦ノ结唱 排行榜 #2",
+            "date": "2024-11-05",
+            "path": "./assets/dataset/特刊/梦的结唱2.xlsx"
+        },
+        {
+            "name": "メズマライザー 排行榜",
+            "date": "2024-12-13",
+            "path": "./assets/dataset/特刊/催眠者.xlsx"
+        },
+        {
+            "name": "虚拟歌手全世代 排行榜",
+            "date": "2025-01-01",
+            "path": "./assets/dataset/特刊/20250101.xlsx"
+        },
+        {
+            "name": "梦ノ结唱 排行榜 #3",
+            "date": "2025-02-01",
+            "path": "./assets/dataset/特刊/梦的结唱3.xlsx"
+        }
+    ],
     "standard": {
         "vocaloid-daily": {
             "mode": "daily",

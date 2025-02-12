@@ -6,6 +6,7 @@ const root = path.resolve(".");
 
 /**
  * @typedef {import("../../depend/operator/database.js").TableCreateOptions} TableCreateOptions
+ * @typedef {import("../../depend/operator/database.js").IndexCreateOptions} IndexCreateOptions
  */
 
 const config = JSON.parse(
@@ -19,7 +20,7 @@ const field = process.argv[2] || "default";
 const database = {
     /** @type {string} */
     "filepath": config.database[field].filepath,
-    /** @type { { "table": TableCreateOptions[] } } */
+    /** @type { { "table": TableCreateOptions[], "index": IndexCreateOptions[] } } */
     "framework": JSON.parse(
         fs.readFileSync(path.resolve(
             root, config.database[field].framework
@@ -45,3 +46,15 @@ for (let index = 0; index < database.framework.table.length; index++) {
 }
 
 console.log("所有表单创建完毕");
+
+for (let index = 0; index < database.framework.index.length; index++) {
+    const options = database.framework.index[index];
+
+    console.log("正在创建 " + options.name + " 索引");
+
+    operator.create_index(
+        options.name, options
+    );
+}
+
+console.log("所有索引创建完毕");

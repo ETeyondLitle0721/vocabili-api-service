@@ -63,7 +63,7 @@ export function parse_parameter(request) {
  * @param {string} name 参数的名称
  * @param {number} receive 接受请求时间刻度
  * @param {(any[]|string|number)} target 需要检查的参数
- * @param {("number"|"count")} mode 参数检查的模式
+ * @param {("number"|"count""list")} mode 参数检查的模式
  * @param {{ "type": ("integer"), "range": { "minimum": number, "maximum": number } }} options 检查器配置
  * @returns 检查结果
  */
@@ -121,11 +121,20 @@ export function check_parameter(instance, name, receive, target, mode, options) 
         }
     }
 
-    if (result.code) {
-        instance.response.send(build_response(
-            instance, { receive }, result.code, result.message
-        ));
+    if (mode === "list") {
+        if (Array.isArray(target)) target = target[0];
+        
+        if (!options.list.includes(target)) {
+            result.code = "PARAMETER_VALUE_ILLEGAL";
+            result.message = prefix + `被要求必须是 [ ${options.list.map(item => {
+                return quote_string(item, "double");
+            }).join(", ")} ] 之中的一个，但是 ${quote_string(target, "double")} 并不是。`;
+        }
     }
+
+    if (result.code) instance.response.send(build_response(
+        instance, { receive }, result.code, result.message
+    ));
 
     return !result.code;
 }
