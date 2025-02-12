@@ -435,6 +435,7 @@ function get_song_list_by_mark(type, id, count = 50, index = 1) {
     );
 }
 
+// 计划中
 // /**
 //  * 获取曲目列表（通过 Pool 识别码）
 //  * 
@@ -448,7 +449,23 @@ function get_song_list_by_mark(type, id, count = 50, index = 1) {
 //     const type = part[0], mode = part[1];
 // }
 
-application.get("/get_info/song", (request, response) => {
+/**
+ * 注册不同方法的路由
+ * 
+ * @typedef {Parameters<typeof application.get>[1]} RegisterHandler
+ * 
+ * @param {string} router 路由定义字符串
+ * @param {(request: Parameters<typeof RegisterHandler>[0], response: Parameters<typeof RegisterHandler>[1]) => void} handler 处理方法
+ * @param {("get"|"post")[]} method 需要注册的方法
+ * @returns 方法返回值
+ */
+application.register = (router, handler, method = [ "get", "post" ]) => {
+    return method.forEach(method => {
+        return application[method](router, handler);
+    });
+}
+
+application.register("/get_info/song", (request, response) => {
     /**
      * @type {{ "target": string[] }}
      */
@@ -468,7 +485,7 @@ application.get("/get_info/song", (request, response) => {
     }, "OK"));
 });
 
-application.get("/get_list/song/by_:type", (request, response) => {
+application.register("/get_list/song/by_:type", (request, response) => {
     /**
      * @type {{ "type": ("pool"|"vocalist"|"producer"|"synthesizer"), "count": number, "index": number, "target": string }}
      */
@@ -515,7 +532,7 @@ application.get("/get_list/song/by_:type", (request, response) => {
     }, "OK"));
 });
 
-application.get("/get_list/:type", (request, response) => {
+application.register("/get_list/:type", (request, response) => {
     /**
      * @type {{ "type": ("song"|"board"|"vocalist"|"producer"|"synthesizer"), "count": number, "index": number }}
      */
@@ -551,7 +568,7 @@ application.get("/get_list/:type", (request, response) => {
     }, "OK"));
 });
 
-application.get("/get_info/board", (request, response) => {
+application.register("/get_info/board", (request, response) => {
     /**
      * @type {{ "board": string, "count": number, "index": number, "issue": number[] }}
      */
@@ -601,7 +618,7 @@ application.get("/get_info/board", (request, response) => {
     }, "OK"));
 });
 
-application.get("/get_info/board/_current", (request, response) => {
+application.register("/get_info/board/_current", (request, response) => {
     /**
      * @type {{ "board": string, "count": number, "index": number }}
      */
@@ -645,7 +662,7 @@ application.get("/get_info/board/_current", (request, response) => {
     }, "BOARD_NOT_EXISTS", "目标榜单不存在。"));
 });
 
-application.get("/get_info/metadata/board", (request, response) => {
+application.register("/get_info/metadata/board", (request, response) => {
     /**
      * @type {{ "target": string, "set-cache": number }}
      */
@@ -679,7 +696,7 @@ application.get("/get_info/metadata/board", (request, response) => {
     }, "BOARD_NOT_EXISTS", "目标榜单不存在。"));
 });
 
-application.get("/get_history/song/rank", (request, response) => {
+application.register("/get_history/song/rank", (request, response) => {
     /**
      * @type {{ "board": string, "count": number, "index": number, "issue": number[], "target": string }}
      */
@@ -717,7 +734,7 @@ application.get("/get_history/song/rank", (request, response) => {
     }, "OK"));
 });
 
-application.get("/get_history/song/count", (request, response) => {
+application.register("/get_history/song/count", (request, response) => {
     /**
      * @type {{ "count": number, "index": number, "target": string }}
      */
@@ -749,7 +766,7 @@ application.get("/get_history/song/count", (request, response) => {
     }, "OK"));
 });
 
-application.get("/search/song_list/by_platform", (request, response) => {
+application.register("/search/song_list/by_platform", (request, response) => {
     /**
      * @type {{ "title": string, "bvid": string, "count": number, "index": number }}
      */
@@ -791,7 +808,7 @@ application.get("/search/song_list/by_platform", (request, response) => {
     }, "OK"));
 });
 
-application.get("/search/song_list/by_song_name", (request, response) => {
+application.register("/search/song_list/by_song_name", (request, response) => {
     /**
      * @type {{ "target": string, "count": number, "index": number }}
      */

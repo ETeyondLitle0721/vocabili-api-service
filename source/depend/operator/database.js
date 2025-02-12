@@ -82,7 +82,6 @@ import { quote_string, unique_array, generate_random_string as generate, repair_
  * 
  * @typedef IndexDropOptions
  * @property {string} name 出要撤销索引的名称
- * @property {string} table 需要撤销的目标索引的
  * @property {(("if-exists")[]|"if-exists")} flag 撤销的时候传递的标记信息
  * 
  * @typedef IndexCreateOptions
@@ -582,7 +581,7 @@ function _index_create(options = {}) {
  * @returns {GeneralGeneratorResponse} 构建器响应结果
  */
 function _index_drop(options = {}) {
-    let { name, flag, table } = options;
+    let { name, flag } = options;
     let statement = "DROP";
 
     if (flag) {
@@ -596,9 +595,8 @@ function _index_drop(options = {}) {
     }
 
     let sentence = template.replace(
-        "{{statement}} {{name}} ON {{table}}", {
+        "{{statement}} {{name}}", {
             "name": quote_string(name, "double"),
-            "table": quote_string(table, "double"),
             "statement": statement
         }
     );

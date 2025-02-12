@@ -1,361 +1,180 @@
-# vocacili-api-service
-
-这是一个主要由 NodeJS 开发的 Vocacili 项目的 API 服务源代码储存仓库。
-
-本文档详细描述了后端提供的各个API接口及其字段含义。
-
-## 1. 获取当前排行榜信息
-
-**接口路径**: `/get_current_board_info`
-
-**请求方法**: `GET`
-
-**请求参数**:
-
-| 参数名 | 类型 | 必填 | 说明 |
-|--------|------|------|------|
-| `board` | `string` | 是 | 需要获取的排行榜名称。 |
-| `count` | `number` | 否 | 要获取的排行榜条目数量，默认为50。 |
-| `index` | `number` | 否 | 当前页数，默认为1。 |
-
-**响应字段**:
-
-| 字段名 | 类型 | 说明 |
-|--------|------|------|
-| `board` | `Array<Object>` | 排行榜数据列表。 |
-| `metadata` | `Object` | 排行榜的元数据信息。 |
-
-**`board` 字段结构**:
-
-| 字段名 | 类型 | 说明 |
-|--------|------|------|
-| `rank` | `Object` | 曲目的排名信息。 |
-| `count` | `number` | 曲目的统计量。 |
-| `change` | `Object` | 曲目的排名变化信息。 |
-| `target` | `Object` | 曲目的详细信息。 |
-
-**`rank` 字段结构**:
-
-| 字段名 | 类型 | 说明 |
-|--------|------|------|
-| `view` | `number` | 观看量排名。 |
-| `like` | `number` | 点赞量排名。 |
-| `coin` | `number` | 投币量排名。 |
-| `board` | `number` | 综合排名。 |
-| `favorite` | `number` | 收藏量排名。 |
-
-**`change` 字段结构**:
-
-| 字段名 | 类型 | 说明 |
-|--------|------|------|
-| `view` | `number` | 观看量变化。 |
-| `like` | `number` | 点赞量变化。 |
-| `coin` | `number` | 投币量变化。 |
-| `favorite` | `number` | 收藏量变化。 |
-
-**`target` 字段结构**:
-
-| 字段名 | 类型 | 说明 |
-|--------|------|------|
-| `metadata` | `Object` | 曲目的元数据信息。 |
-| `platform` | `Object` | 曲目的平台信息。 |
-
-**`metadata` 字段结构**:
-
-| 字段名 | 类型 | 说明 |
-|--------|------|------|
-| `id` | `string` | 曲目的唯一标识符。 |
-| `name` | `string` | 曲目的名称。 |
-| `type` | `string` | 曲目的类型。 |
-| `target` | `Object` | 曲目的相关创作者信息。 |
-
-**`target` 字段结构**:
-
-| 字段名 | 类型 | 说明 |
-|--------|------|------|
-| `vocalist` | `Array<Object>` | 曲目的歌手信息。 |
-| `producer` | `Array<string>` | 曲目的制作人信息。 |
-| `synthesizer` | `Array<string>` | 曲目的合成器信息。 |
-
-**`platform` 字段结构**:
-
-| 字段名 | 类型 | 说明 |
-|--------|------|------|
-| `link` | `string` | 曲目的平台链接。 |
-| `publish` | `string` | 曲目的发布时间。 |
-| `page` | `string` | 曲目的页面信息。 |
-| `title` | `string` | 曲目的标题。 |
-| `uploader` | `Array<string>` | 曲目的上传者信息。 |
-| `duration` | `string` | 曲目的时长。 |
-| `thumbnail` | `string` | 曲目的缩略图链接。 |
-| `copyright` | `string` | 曲目的版权信息。 |
-
-**`metadata` 字段结构**:
-
-| 字段名 | 类型 | 说明 |
-|--------|------|------|
-| `id` | `string` | 排行榜的唯一标识符。 |
-| `name` | `string` | 排行榜的名称。 |
-| `date` | `string` | 排行榜的发刊日期。 |
-| `issue` | `number` | 排行榜的期数。 |
-| `count` | `number` | 排行榜的上榜曲目数量。 |
-
----
-
-## 2. 获取曲目信息
-
-**接口路径**: `/get_song_info`
-
-**请求方法**: `GET`
-
-**请求参数**:
-
-| 参数名 | 类型 | 必填 | 说明 |
-|--------|------|------|------|
-| `target` | `Array<string>` | 是 | 需要获取信息的曲目ID列表。 |
-
-**响应字段**:
-
-| 字段名 | 类型 | 说明 |
-|--------|------|------|
-| `metadata` | `Object` | 曲目的元数据信息。 |
-| `platform` | `Array<Object>` | 曲目的平台信息。 |
-
-**`metadata` 字段结构**:
-
-| 字段名 | 类型 | 说明 |
-|--------|------|------|
-| `id` | `string` | 曲目的唯一标识符。 |
-| `name` | `string` | 曲目的名称。 |
-| `type` | `string` | 曲目的类型。 |
-| `target` | `Object` | 曲目的相关创作者信息。 |
-
-**`target` 字段结构**:
-
-| 字段名 | 类型 | 说明 |
-|--------|------|------|
-| `vocalist` | `Array<Object>` | 曲目的歌手信息。 |
-| `producer` | `Array<string>` | 曲目的制作人信息。 |
-| `synthesizer` | `Array<string>` | 曲目的合成器信息。 |
-
-**`platform` 字段结构**:
-
-| 字段名 | 类型 | 说明 |
-|--------|------|------|
-| `link` | `string` | 曲目的平台链接。 |
-| `publish` | `string` | 曲目的发布时间。 |
-| `page` | `string` | 曲目的页面信息。 |
-| `title` | `string` | 曲目的标题。 |
-| `uploader` | `Array<string>` | 曲目的上传者信息。 |
-| `duration` | `string` | 曲目的时长。 |
-| `thumbnail` | `string` | 曲目的缩略图链接。 |
-| `copyright` | `string` | 曲目的版权信息。 |
-
----
-
-## 3. 获取指定期数的排行榜信息
-
-**接口路径**: `/get_board_info`
-
-**请求方法**: `GET`
-
-**请求参数**:
-
-| 参数名 | 类型 | 必填 | 说明 |
-|--------|------|------|------|
-| `board` | `string` | 是 | 需要获取的排行榜名称。 |
-| `issue` | `number` | 是 | 需要获取的期数。 |
-| `count` | `number` | 否 | 要获取的排行榜条目数量，默认为50。 |
-| `index` | `number` | 否 | 当前页数，默认为1。 |
-
-**响应字段**:
-
-| 字段名 | 类型 | 说明 |
-|--------|------|------|
-| `board` | `Array<Object>` | 排行榜数据列表。 |
-| `metadata` | `Object` | 排行榜的元数据信息。 |
-
-**`board` 字段结构**:
-
-| 字段名 | 类型 | 说明 |
-|--------|------|------|
-| `rank` | `Object` | 曲目的排名信息。 |
-| `count` | `number` | 曲目的统计量。 |
-| `change` | `Object` | 曲目的排名变化信息。 |
-| `target` | `Object` | 曲目的详细信息。 |
-
-**`rank` 字段结构**:
-
-| 字段名 | 类型 | 说明 |
-|--------|------|------|
-| `view` | `number` | 观看量排名。 |
-| `like` | `number` | 点赞量排名。 |
-| `coin` | `number` | 投币量排名。 |
-| `board` | `number` | 综合排名。 |
-| `favorite` | `number` | 收藏量排名。 |
-
-**`change` 字段结构**:
-
-| 字段名 | 类型 | 说明 |
-|--------|------|------|
-| `view` | `number` | 观看量变化。 |
-| `like` | `number` | 点赞量变化。 |
-| `coin` | `number` | 投币量变化。 |
-| `favorite` | `number` | 收藏量变化。 |
-
-**`target` 字段结构**:
-
-| 字段名 | 类型 | 说明 |
-|--------|------|------|
-| `metadata` | `Object` | 曲目的元数据信息。 |
-| `platform` | `Object` | 曲目的平台信息。 |
-
-**`metadata` 字段结构**:
-
-| 字段名 | 类型 | 说明 |
-|--------|------|------|
-| `id` | `string` | 曲目的唯一标识符。 |
-| `name` | `string` | 曲目的名称。 |
-| `type` | `string` | 曲目的类型。 |
-| `target` | `Object` | 曲目的相关创作者信息。 |
-
-**`target` 字段结构**:
-
-| 字段名 | 类型 | 说明 |
-|--------|------|------|
-| `vocalist` | `Array<Object>` | 曲目的歌手信息。 |
-| `producer` | `Array<string>` | 曲目的制作人信息。 |
-| `synthesizer` | `Array<string>` | 曲目的合成器信息。 |
-
-**`platform` 字段结构**:
-
-| 字段名 | 类型 | 说明 |
-|--------|------|------|
-| `link` | `string` | 曲目的平台链接。 |
-| `publish` | `string` | 曲目的发布时间。 |
-| `page` | `string` | 曲目的页面信息。 |
-| `title` | `string` | 曲目的标题。 |
-| `uploader` | `Array<string>` | 曲目的上传者信息。 |
-| `duration` | `string` | 曲目的时长。 |
-| `thumbnail` | `string` | 曲目的缩略图链接。 |
-| `copyright` | `string` | 曲目的版权信息。 |
-
-**`metadata` 字段结构**:
-
-| 字段名 | 类型 | 说明 |
-|--------|------|------|
-| `id` | `string` | 排行榜的唯一标识符。 |
-| `name` | `string` | 排行榜的名称。 |
-| `issue` | `number` | 排行榜的期数。 |
-
----
-
-## 4. 获取曲目历史统计量信息
-
-**接口路径**: `/get_song_count_history_info`
-
-**请求方法**: `GET`
-
-**请求参数**:
-
-| 参数名 | 类型 | 必填 | 说明 |
-|--------|------|------|------|
-| `target` | `string` | 是 | 需要获取历史统计量的曲目ID。 |
-| `count` | `number` | 否 | 要获取的历史记录数量，默认为300。书写-1表示获取所有数据 |
-| `index` | `number` | 否 | 当前页数，默认为1。 |
-
-**响应字段**:
-
-| 字段名 | 类型 | 说明 |
-|--------|------|------|
-| `date` | `string` | 统计量的日期。 |
-| `count` | `Object` | 曲目的统计量信息。 |
-
-**`count` 字段结构**:
-
-| 字段名 | 类型 | 说明 |
-|--------|------|------|
-| `view` | `number` | 观看量。 |
-| `like` | `number` | 点赞量。 |
-| `coin` | `number` | 投币量。 |
-| `favorite` | `number` | 收藏量。 |
-
----
-
-## 5. 获取曲目历史排名信息
-
-**接口路径**: `/get_song_rank_history_info`
-
-**请求方法**: `GET`
-
-**请求参数**:
-
-| 参数名 | 类型 | 必填 | 说明 |
-|--------|------|------|------|
-| `target` | `string` | 是 | 需要获取历史排名的曲目ID。 |
-| `issue` | `Array<number>` | 否 | 需要获取的期数列表。 |
-| `board` | `Array<string>` | 否 | 需要获取的排行榜列表。 |
-| `count` | `number` | 否 | 要获取的历史记录数量，默认为50。 |
-| `index` | `number` | 否 | 当前页数，默认为1。 |
-
-**响应字段**:
-
-| 字段名 | 类型 | 说明 |
-|--------|------|------|
-| `rank` | `Object` | 曲目的排名信息。 |
-| `target` | `string` | 曲目的ID。 |
-| `point` | `number` | 曲目的得分。 |
-| `change` | `Object` | 曲目的排名变化信息。 |
-| `issue` | `number` | 曲目的期数。 |
-| `board` | `string` | 曲目的排行榜名称。 |
-
-**`rank` 字段结构**:
-
-| 字段名 | 类型 | 说明 |
-|--------|------|------|
-| `view` | `number` | 观看量排名。 |
-| `like` | `number` | 点赞量排名。 |
-| `coin` | `number` | 投币量排名。 |
-| `favorite` | `number` | 收藏量排名。 |
-
-**`change` 字段结构**:
-
-| 字段名 | 类型 | 说明 |
-|--------|------|------|
-| `view` | `number` | 观看量变化。 |
-| `like` | `number` | 点赞量变化。 |
-| `coin` | `number` | 投币量变化。 |
-| `favorite` | `number` | 收藏量变化。 |
-
----
-
-## 6. 获取排行榜元数据信息
-
-**接口路径**: `/get_board_metadata_info`
-
-**请求方法**: `GET`
-
-**请求参数**:
-
-| 参数名 | 类型 | 必填 | 说明 |
-|--------|------|------|------|
-| `target` | `string` | 是 | 需要获取元数据的排行榜名称。 |
-| `set-cache` | `number` | 否 | 设置缓存时间，默认为0，单位秒。 |
-
-**响应字段**:
-
-| 字段名 | 类型 | 说明 |
-|--------|------|------|
-| `id` | `string` | 排行榜的唯一标识符。 |
-| `name` | `string` | 排行榜的名称。 |
-| `catalog` | `Array<Object>` | 排行榜的期数列表。 |
-
-**`catalog` 字段结构**:
-
-| 字段名 | 类型 | 说明 |
-|--------|------|------|
-| `date` | `string` | 排行榜的出榜日期。 |
-| `issue` | `number` | 排行榜的期数。 |
-| `count` | `number` | 排行榜的上榜曲目总数量。 |
-
----
+# Vocacili API 服务文档
+
+## 1. 接口基础信息
+- **服务配置**：
+  - 默认接口地址：`http://127.0.0.1:51001`
+  - CORS策略：允许所有来源（`origin: *`），支持GET/POST方法
+
+## 2. 接口列表
+
+### 2.1 获取曲目信息
+- **路径**：`/get_info/song`
+- **方法**：GET
+- **请求参数**：
+  | 参数名 | 类型 | 必填 | 说明 | 约束 |
+  |--------|------|------|------|------|
+  | target | string[] | 是 | 曲目ID列表 | 最多200个 |
+  
+- **响应示例**：
+  ```json
+  {
+    "metadata": {
+      "id": "SONG_001",
+      "name": "Example Song",
+      "type": "vocaloid",
+      "target": {
+        "vocalist": [{"id":"V_01","name":"Hatsune Miku","color":"#00FF00"}],
+        "producer": [{"id":"P_01","name":"ProducerX"}],
+        "synthesizer": [{"id":"SV_01","name":"VOCALOID5"}]
+      }
+    },
+    "platform": [{
+      "link": "https://b23.tv/av123456",
+      "publish": "2023-01-01",
+      "duration": "03:45",
+      "thumbnail": "https://i0.hdslb.com/bfs/archive/example.jpg"
+    }]
+  }
+  ```
+
+### 2.2 获取当前期数排行榜
+- **路径**：`/get_info/board/_current`
+- **方法**：GET
+- **参数**：
+  | 参数名 | 类型 | 说明 | 约束 |
+  |--------|------|------|------|
+  | board | string | 榜单ID（如vocaoid-weekly-main） | 必填 |
+  | count | number | 每页数量 | 1-200，默认50 |
+  | index | number | 页码 | 1-131072，默认1 |
+
+- **响应新增字段**：
+  ```json
+  {
+    "metadata": {
+      "issue": 256,
+      "date": "2023-12-25"
+    },
+    "board": [{
+      "last": {  // 新增上期排名信息
+        "rank": 5,
+        "point": 9500
+      }
+    }]
+  }
+  ```
+
+### 2.3 高级搜索接口
+#### 2.3.1 按平台信息搜索
+- **路径**：`/search/song_list/by_platform`
+- **参数**：
+  | 参数名 | 说明 | 示例 |
+  |--------|------|------|
+  | bvid | B站视频ID | BV1Ab411d7fg |
+  | title | 视频标题关键词 | 初音未来 |
+
+#### 2.3.2 按曲目名称搜索
+- **路径**：`/search/song_list/by_song_name`
+- **参数**：
+  | 参数名 | 说明 | 示例 |
+  |--------|------|------|
+  | target | 曲目名称关键词 | 千本樱 |
+
+### 2.4 历史数据接口
+#### 2.4.1 统计量历史
+- **路径**：`/get_history/song/count`
+- **参数**：
+  | 参数名 | 说明 | 特殊值 |
+  |--------|------|------|
+  | count | 获取数量 | -1表示获取全部 |
+
+#### 2.4.2 排名历史
+- **路径**：`/get_history/song/rank`
+- **新增参数**：
+  | 参数名 | 说明 |
+  |--------|------|
+  | board | 指定多个榜单ID |
+  | issue | 指定多个期数 |
+
+### 2.5 列表获取接口
+- **路径**：`/get_list/:type`
+- **支持类型**：
+  ```javascript
+  ["song", "board", "vocalist", "producer", "synthesizer"]
+  ```
+- **响应结构**：
+  ```json
+  {
+    "data": [
+      {"id": "BOARD_01", "name": "主榜", "issue": 256},  // 当type=board时
+      {"id": "SONG_001", "name": "Example Song", ...}    // 当type=song时
+    ]
+  }
+  ```
+
+## 3. 数据结构定义
+
+### 3.1 通用响应结构
+```typescript
+interface APIResponse<T> {
+  code: "OK" | "BOARD_NOT_EXISTS" | "TARGET_NOT_EXISTS"; // 完整错误码见附录
+  time: ISO8601;
+  data: T;
+  message?: string;
+  extra?: {
+    debug?: {
+      timing: {
+        consume: string; // 如 "5.4ms"
+      }
+    }
+  }
+}
+```
+
+### 3.2 排行榜元数据
+```json
+{
+  "catalog": [{
+    "issue": 256,
+    "date": "2023-12-25",
+    "count": 50
+  }]
+}
+```
+
+## 4. 配置项说明
+`config.json` 关键配置：
+```json
+{
+  "service": {
+    "interface": {
+      "port": 51001,
+      "cors": {  // CORS配置
+        "origin": "*",
+        "methods": ["GET","POST"],
+        "allowedHeaders": ["Content-Type"]
+      }
+    }
+  },
+  "database": {
+    "default": {
+      "filepath": "./assets/database/default.db",  // SQLite数据库路径
+      "framework": "./source/define/db-fw.json"    // 表结构定义
+    }
+  }
+}
+```
+
+## 附录：错误代码表
+| 代码 | 说明 | 常见原因 |
+|------|------|------|
+| BOARD_NOT_EXISTS | 榜单不存在 | 错误的board参数 |
+| ISSUE_NOT_EXISTS | 期数不存在 | 该期未发布或参数错误 |
+| TARGET_NOT_EXISTS | 缺少必要参数 | 未传递target参数 |
+| DISALLOW_MULTIPLE_TARGET | 多目标禁止 | 传入了数组型参数 |
+
+更新说明：
+1. 新增了搜索类接口文档
+2. 补充了历史数据接口的分页参数说明
+3. 明确了分页参数的最大值限制（index ≤ 131072）
+4. 添加了调试信息字段说明
+5. 更新了错误代码附录表
