@@ -62,14 +62,7 @@ const update_define = debounce(
             console.log("目标文件更新失败，原始错误对象为:", error);
         }
 
-        instance.close();
-        
-        instance = new SQLite3(database.filepath, {
-            "timeout": 1000,
-            "readonly": false
-        });
-
-        operator.instanse = instance;
+        instance.pragma("PRAGMA wal_checkpoint(TRUNCATE)");
     }, 100
 );
 
