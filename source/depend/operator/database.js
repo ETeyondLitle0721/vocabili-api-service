@@ -352,7 +352,7 @@ function _item_count(options = {}) {
         parameter[nickname] = real;
     };
 
-    part.push("SELECT (*)");
+    part.push("SELECT COUNT(*)");
     part.push("FROM " + quote_string(source.table, "double"));
 
     part.push("WHERE " + parse_where(where, {
@@ -360,7 +360,7 @@ function _item_count(options = {}) {
     }));
 
     return {
-        "action": "request",
+        "action": "execute",
         "sentence": part.join(" "),
         "parameter": parameter
     };
@@ -655,7 +655,7 @@ export class DatabaseOperator {
      * @returns {SQLite3.RunResult} 处理结果
      */
     #processer(response) {
-        // console.log(response);
+        console.log(response);
 
         return this.instanse.prepare(response.sentence)[{
             "request": "run",
@@ -707,7 +707,7 @@ export class DatabaseOperator {
      */
     count_item(list, options = {}, handler = (_options, response) => response) {
         return this.#process(
-            this.generator.item.count, list, options, name => ({
+            this.generator.item.count, list, options, handler, name => ({
                 "source": {
                     "table": name
                 }

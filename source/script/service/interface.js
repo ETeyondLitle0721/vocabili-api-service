@@ -322,7 +322,7 @@ function search_song_by_platform_title(target, count = 50, index = 1) {
     return {
         "total": database.count_item("Platform_Table", {
             "where": where
-        }),
+        })[0]["COUNT(*)"],
         "result": song_info(
             mark.map(item => item.target)
         )
