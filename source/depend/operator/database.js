@@ -1,6 +1,8 @@
-import SQLite3 from "better-sqlite3";
-import template from "../utilities/template.js";
-import { quote_string, unique_array, generate_random_string as generate, repair_character as repair, get_type, to_string } from "../core.js";
+import SQLite3 from "better-sqlite3"; import template from "../utilities/template.js";
+import {
+    repair_character as repair, get_type, to_string,
+    quote_string, unique_array, generate_random_string as generate
+} from "../core.js";
 
 /**
  * @typedef {("<"|">"|"<="|">="|"<>")} GeneralOperator
@@ -102,17 +104,16 @@ import { quote_string, unique_array, generate_random_string as generate, repair_
  * @returns {string} 生成的 Nickname 字符串
  */
 function generate_placeholder(column_name, index, value, sequence, setter) {
-    let nickname = `Value_${column_name.toUpperCase()}_${repair(index + 1, 4, "0")}_${sequence}`;
+    const nickname = `Value_${column_name.toUpperCase()}_${repair(index + 1, 4, "0")}_${sequence}`;
 
-    setter(
-        value, nickname, column_name
-    );
+    setter(value, nickname, column_name);
 
     return ":" + nickname;
 }
 
 /**
  * 生成随机的顺序码
+ * 
  * @returns {string} 随机生成的顺序码
  */
 function generate_sequence() {
@@ -149,14 +150,15 @@ function parse_where(options = {}, callback = {}) {
         return `(${part.join(` ${joiner.toUpperCase()} `)})`;
     }
 
-    let { mark, value, column, operator } = options, result = "";
-    let seq_id = generate_sequence();
+    let result = "", value = options.value;
+    const seq_id = generate_sequence();
+    const { mark, column, operator } = options;
 
     if (operator === "equal") {
-        let part = [];
+        const part = [];
 
         if (get_type(value).second !== "array") {
-            value = [value];
+            value = [ value ];
         }
 
         for (let index = 0; index < value.length; index++) {
@@ -165,7 +167,7 @@ function parse_where(options = {}, callback = {}) {
             )}`);
         }
 
-        result = part.join(", ");
+        result = part.join(" OR ");
     }
 
     if (operator === "like") {
@@ -184,7 +186,7 @@ function parse_where(options = {}, callback = {}) {
 
     if (operator === "within") {
         if (get_type(value).second !== "array") {
-            value = [value];
+            value = [ value ];
         }
 
         result = `${quote_string(column, "double")} IN ( ${value.map((item, index) => generate_placeholder(
@@ -213,7 +215,7 @@ function parse_where(options = {}, callback = {}) {
  * @returns {string} 解析出来的 SQL 元组
  */
 function parse_tuple(tuple = {}, callback = {}) {
-    let seq_id = generate_sequence();
+    const seq_id = generate_sequence();
 
     return "( " + tuple.map((item, index) => generate_placeholder(
         item[0], index, item[1], seq_id, callback
@@ -227,13 +229,14 @@ function parse_tuple(tuple = {}, callback = {}) {
  * @returns {GeneralGeneratorResponse} 构建器响应结果
  */
 function _item_insert(options = {}) {
-    let { flag, table, target = [] } = options;
-    let replacer = {
+    let target = options.target || [];
+    const { flag, table } = options;
+    const value = [], column = [], replacer = {
         "statement": "INSERT"
-    }, parameter = {}, value = [], column = [];
+    }, parameter = {};
 
     if (!Array.isArray(target)) {
-        target = [target];
+        target = [ target ];
     }
 
     replacer.table = quote_string(table, "double");
@@ -246,18 +249,16 @@ function _item_insert(options = {}) {
         }[flag] || replacer.statement;
     }
 
-    // console.log(target)
-
     for (let index = 0; index < target.length; index++) {
-        target[index] ? value.push(parse_tuple(
+        if (target[index]) value.push(parse_tuple(
             Object.entries(target[index]), (real, nickname, name) => {
                 column.push(name);
                 parameter[nickname] = real;
             }
-        )) : false;
+        ));
     }
 
-    let sentence = template.replace(
+    const sentence = template.replace(
         "{{statement}} INTO {{table}} ( {{column}} ) VALUES {{value}}", {
             ...replacer,
             "value": value.join(", "),
@@ -281,10 +282,10 @@ function _item_insert(options = {}) {
  * @returns {GeneralGeneratorResponse} 构建器响应结果
  */
 function _item_select(options = {}) {
-    let { where = {}, source = {}, control = {} } = options;
-    let part = [], parameter = {};
+    const part = [], parameter = {};
+    const { where = {}, source = {}, control = {} } = options;
 
-    let param_setter = (real, nickname) => {
+    const param_setter = (real, nickname) => {
         parameter[nickname] = real;
     };
 
@@ -311,8 +312,9 @@ function _item_select(options = {}) {
     }
 
     if (control.result) {
-        let { limit, offset } = control.result;
-        let seq_id = generate_sequence(), index = 0;
+        let index = 0;
+        const seq_id = generate_sequence();
+        const { limit, offset } = control.result;
 
         if (limit) {
             part.push("LIMIT " + generate_placeholder(
@@ -345,10 +347,10 @@ function _item_select(options = {}) {
  * @returns {GeneralGeneratorResponse} 构建器响应结果
  */
 function _item_count(options = {}) {
-    let { where = {}, source = {} } = options;
-    let part = [], parameter = {};
+    const part = [], parameter = {};
+    const { where = {}, source = {} } = options;
 
-    let param_setter = (real, nickname) => {
+    const param_setter = (real, nickname) => {
         parameter[nickname] = real;
     };
 
@@ -375,22 +377,24 @@ function _item_count(options = {}) {
  * @returns {GeneralGeneratorResponse} 构建器响应结果
  */
 function _item_delete(options = {}) {
-    let parameter = {};
+    const parameter = {};
+
+    const sentence = template.replace(
+        "DELETE FROM {{table}} WHERE {{where}}", {
+            "table": quote_string(options.table, "double"),
+            "where": parse_where(
+                options.target, {
+                    "parameter": (real, nickname) => {
+                        parameter[nickname] = real;
+                    }
+                }
+            )
+        }
+    );
 
     return {
         "action": "request",
-        "sentence": template.replace(
-            "DELETE FROM {{table}} WHERE {{where}}", {
-                "table": quote_string(options.table, "double"),
-                "where": parse_where(
-                    options.target, {
-                        "parameter": (real, nickname) => {
-                            parameter[nickname] = real;
-                        }
-                    }
-                )
-            }
-        ),
+        "sentence": sentence,
         "parameter": parameter
     };
 }
@@ -403,10 +407,10 @@ function _item_delete(options = {}) {
  * @returns {GeneralGeneratorResponse} 构建器响应结果
  */
 function _item_update(options = {}) {
-    let { table, target = {}, data = {} } = options;
-    let part = [], parameter = {}, seq_id = generate_sequence();
+    const { table, target = {}, data = {} } = options;
+    const part = [], parameter = {}, seq_id = generate_sequence();
 
-    let entries = Object.entries(data), param_setter = (real, nickname) => {
+    const entries = Object.entries(data), param_setter = (real, nickname) => {
         parameter[nickname] = real;
     };
 
@@ -442,8 +446,8 @@ function _item_update(options = {}) {
  * @returns {GeneralGeneratorResponse} 构建器响应结果
  */
 function _table_drop(options = {}) {
-    let { flag, table } = options;
     let statement = "DROP TABLE";
+    const { flag, table } = options;
 
     if (flag) {
         statement = {
@@ -471,7 +475,7 @@ function _table_drop(options = {}) {
  * @returns {GeneralGeneratorResponse} 构建器响应结果
  */
 function _table_create(options = {}) {
-    let { name, flag, column: column_list } = options;
+    const { name, flag, column: column_list } = options;
     let statement = "CREATE TABLE", part = [], parameter = {};
 
     if (flag) {
@@ -499,7 +503,13 @@ function _table_create(options = {}) {
         // CREATE TABLE 不涉及数据操作，不能使用参数化绑定
 
         if (value !== undefined) {
-            if (get_type(value).first === "string") {
+            const type = get_type(value);
+
+            if (type.first === "boolean") {
+                value = value ? 1 : 0;
+            }
+
+            if (type.first === "string") {
                 value = quote_string(value, "single");
             }
 
@@ -543,8 +553,8 @@ function _table_create(options = {}) {
  * @returns {GeneralGeneratorResponse} 构建器响应结果
  */
 function _index_create(options = {}) {
-    let { name, flag, table, column: column_list } = options;
     let statement = "CREATE";
+    const { name, flag, table, column: column_list } = options;
 
     if (flag) {
         if (!Array.isArray(flag)) flag = [ flag ];
@@ -581,8 +591,8 @@ function _index_create(options = {}) {
  * @returns {GeneralGeneratorResponse} 构建器响应结果
  */
 function _index_drop(options = {}) {
-    let { name, flag } = options;
     let statement = "DROP";
+    const { name, flag } = options;
 
     if (flag) {
         if (!Array.isArray(flag)) flag = [ flag ];
@@ -655,7 +665,7 @@ export class DatabaseOperator {
      * @returns {SQLite3.RunResult} 处理结果
      */
     #processer(response) {
-        console.log(response);
+        // console.log(response);
 
         return this.instanse.prepare(response.sentence)[{
             "request": "run",
@@ -674,14 +684,14 @@ export class DatabaseOperator {
      * @returns 执行结果
      */
     #process(generator, list, options, handler, parser = (value) => ({ "table": value })) {
-        let result = [];
+        const result = [];
 
         if (get_type(list).second !== "array") {
             list = [ list ];
         }
 
         for (let index = 0; index < list.length; index++) {
-            let current = list[index], config = Object.assign(options, 
+            const current = list[index], config = Object.assign(options, 
                 parser(current)
             ), response = handler(
                 config, generator(config)

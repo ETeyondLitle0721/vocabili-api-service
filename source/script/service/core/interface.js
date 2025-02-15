@@ -61,6 +61,8 @@ const update_define = debounce(
         } catch (error) {
             console.log("目标文件更新失败，原始错误对象为:", error);
         }
+
+        instance.pragma("wal_checkpoint(FULL)");
     }, 100
 );
 
