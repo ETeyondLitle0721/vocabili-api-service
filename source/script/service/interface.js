@@ -138,7 +138,9 @@ function song_info(list = []) {
                 return {
                     "id": id, "link": info.link.replace("BB://V/", "https://b23.tv/"),
                     "publish": info.published_at, "page": info.page, "title": info.title,
-                    "uploader": uploader[id] ?? [], "duration": info.duration,
+                    "uploader": uploader[id] ? uploader[id].map(item => ({
+                        "id": item.value, "name": target[item.value].name
+                    })) : [], "duration": info.duration,
                     "thumbnail": info.thumbnail.replace("BB://I/", "https://i0.hdslb.com/bfs/archive/"),
                     "copyright": info.copyright
                 };
@@ -360,7 +362,7 @@ function search_song_by_name(name, count = 50, index = 1) {
 /**
  * 获取目标列表
  * 
- * @param {("song"|"board"|"vocalist"|"producer"|"synthesizer")} type 需要获取的目标类型
+ * @param {("song"|"board"|"uploader"|"vocalist"|"producer"|"synthesizer")} type 需要获取的目标类型
  * @param {number} count 要获取多少个
  * @param {number} index 当前的页数
  * @returns 获取到的目标列表
@@ -492,7 +494,7 @@ application.register("/get_info/song", (request, response) => {
 
 application.register("/get_list/song/by_:type", (request, response) => {
     /**
-     * @type {{ "type": ("pool"|"vocalist"|"producer"|"synthesizer"), "count": number, "index": number, "target": string }}
+     * @type {{ "type": ("pool"|"uploader"|"vocalist"|"producer"|"synthesizer"), "count": number, "index": number, "target": string }}
      */
     const param = Object.assign({
         "count": 50, "index": 1
