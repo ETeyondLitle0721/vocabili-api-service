@@ -701,7 +701,7 @@ export class DatabaseOperator {
      * 读取数据库中的项目
      * 
      * @param {ListLike} list 需要读取的表的列表
-     * @param {ItemSelectOptions} options 传入的配置
+     * @param {ItemCountOptions} options 传入的配置
      * @param {ResponseHandler} handler 语句构建结果处理器
      * @returns {RunResult} 执行结果
      */

@@ -136,12 +136,11 @@ function song_info(list = []) {
                 const info = target[id];
     
                 return {
-                    "link": info.link.replace("BB://V/", "https://b23.tv/"),
+                    "id": id, "link": info.link.replace("BB://V/", "https://b23.tv/"),
                     "publish": info.published_at, "page": info.page, "title": info.title,
-                    "uploader": uploader[id] ? uploader[id].map(item => target[item.value].name) : [],
-                    "duration": info.duration, "thumbnail": info.thumbnail === "No Image" ?
-                        -1 : info.thumbnail.replace("BB://I/", "https://i0.hdslb.com/bfs/archive/"),
-                    "copyright": info.copyright, "id": id
+                    "uploader": uploader[id] ?? [], "duration": info.duration,
+                    "thumbnail": info.thumbnail.replace("BB://I/", "https://i0.hdslb.com/bfs/archive/"),
+                    "copyright": info.copyright
                 };
             }) : []
         }
@@ -285,20 +284,21 @@ function song_rank_history_info(target, issue, board, count = 50, index = 1) {
  */
 function search_song_by_platform_title(target, count = 50, index = 1) {
     const { bvid = "", title = "" } = target;
+    const where = [
+        {
+            "column": "title",
+            "operator": "like",
+            "value": `%${title}%`
+        },
+        {
+            "column": "link",
+            "operator": "like",
+            "value": `BB://V/%${bvid}%`
+        }
+    ];
+
     const platform = database.select_item("Platform_Table", {
-        "where": [
-            {
-                "column": "title",
-                "operator": "like",
-                "value": `%${title}%`
-            },
-            {
-                "column": "link",
-                "operator": "like",
-                "value": `BB://V/%${bvid}%`
-            }
-        ],
-        "control": {
+        "where": where, "control": {
             "result": {
                 "limit": count,
                 "offset": count * (index - 1)
@@ -319,9 +319,14 @@ function search_song_by_platform_title(target, count = 50, index = 1) {
         ]
     });
 
-    return song_info(
-        mark.map(item => item.target)
-    );
+    return {
+        "total": database.count_item("Platform_Table", {
+            "where": where
+        }),
+        "result": song_info(
+            mark.map(item => item.target)
+        )
+    };
 }
 
 /**
@@ -770,9 +775,9 @@ application.register("/search/song_list/by_platform", (request, response) => {
     /**
      * @type {{ "title": string, "bvid": string, "count": number, "index": number }}
      */
-    const param = Object.assign(parse_parameter(request), {
+    const param = Object.assign({
         "count": 25, "index": 1
-    });
+    }, parse_parameter(request));
     const receive = process.uptime(), instance = {
         response, request
     };
@@ -812,9 +817,9 @@ application.register("/search/song_list/by_song_name", (request, response) => {
     /**
      * @type {{ "target": string, "count": number, "index": number }}
      */
-    const param = Object.assign(parse_parameter(request), {
+    const param = Object.assign({
         "count": 25, "index": 1
-    });
+    }, parse_parameter(request));
     const receive = process.uptime(), instance = {
         response, request
     };
