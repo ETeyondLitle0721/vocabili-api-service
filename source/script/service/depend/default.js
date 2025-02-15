@@ -126,9 +126,9 @@ export function check_parameter(instance, name, receive, target, mode, options) 
         
         if (!options.list.includes(target)) {
             result.code = "PARAMETER_VALUE_ILLEGAL";
-            result.message = prefix + `被要求必须是 [ ${options.list.map(item => {
+            result.message = prefix + `被要求必须是 ${options.list.map(item => {
                 return quote_string(item, "double");
-            }).join(", ")} ] 之中的一个，但是 ${quote_string(target, "double")} 并不是。`;
+            }).join(", ")} 之中的一个，但是 ${quote_string(target, "double")} 并不是。`;
         }
     }
 

@@ -409,7 +409,7 @@ function get_target_list(type, count = 50, index = 1) {
 /**
  * 获取曲目列表（通过关联信息）
  * 
- * @param {("vocalist"|"producer"|"synthesizer")} type 关联类型
+ * @param {("uploader"|"vocalist"|"producer"|"synthesizer")} type 关联类型
  * @param {string} id 关联信息对应的识别码
  * @param {number} count 要获取多少个
  * @param {number} index 当前的页数
@@ -440,6 +440,39 @@ function get_song_list_by_mark(type, id, count = 50, index = 1) {
     return song_info(
         result.map(item => item.target)
     );
+}
+
+/**
+ * 通过目标数据的 Name 查询对应的目标列表
+ * 
+ * @param {("uploader"|"vocalist"|"producer"|"synthesizer")} type 目标类型
+ * @param {string} name 目标名称
+ * @param {number} count 要获取多少个
+ * @param {number} index 当前的页数
+ * @returns 获取到的目标列表
+ */
+function search_target_by_name(type, name, count, index) {
+    const list = database.select_item(capitalize(type) + "_Table", {
+        "where": {
+            "column": "name",
+            "operator": "like",
+            "value": `%${name}%`
+        },
+        "control": {
+            "result": {
+                "limit": count,
+                "offset": count * (index - 1)
+            }
+        }
+    });
+
+    if (type === "vocalist") return list.map(item => ({
+        "id": item.id, "name": item.name, "color": item.color
+    }));
+
+    return list.map(item => ({
+        "id": item.id, "name": item.name
+    }));
 }
 
 // 计划中
@@ -508,7 +541,7 @@ application.register("/get_list/song/by_:type", (request, response) => {
     })) return;
 
     if (!check_parameter(instance, "type", receive, param.type, "list", {
-        "list": [ "pool", "vocalist", "producer", "synthesizer" ]
+        "list": [ "pool", "uploader", "vocalist", "producer", "synthesizer" ]
     })) return;
 
     param.type = param.type[0];
@@ -541,7 +574,7 @@ application.register("/get_list/song/by_:type", (request, response) => {
 
 application.register("/get_list/:type", (request, response) => {
     /**
-     * @type {{ "type": ("song"|"board"|"vocalist"|"producer"|"synthesizer"), "count": number, "index": number }}
+     * @type {{ "type": ("song"|"board"|"uploader"|"vocalist"|"producer"|"synthesizer"), "count": number, "index": number }}
      */
     const param = Object.assign({
         "count": 50, "index": 1
@@ -555,7 +588,7 @@ application.register("/get_list/:type", (request, response) => {
     })) return;
 
     if (!check_parameter(instance, "type", receive, param.type, "list", {
-        "list": [ "pool", "song", "board", "vocalist", "producer", "synthesizer" ]
+        "list": [ "pool", "song", "board", "uploader", "vocalist", "producer", "synthesizer" ]
     })) return;
 
     if (!check_parameter(instance, "count", receive, param.count, "number", {
@@ -773,7 +806,7 @@ application.register("/get_history/song/count", (request, response) => {
     }, "OK"));
 });
 
-application.register("/search/song_list/by_platform", (request, response) => {
+application.register("/search/song/by_platform", (request, response) => {
     /**
      * @type {{ "title": string, "bvid": string, "count": number, "index": number }}
      */
@@ -815,7 +848,7 @@ application.register("/search/song_list/by_platform", (request, response) => {
     }, "OK"));
 });
 
-application.register("/search/song_list/by_song_name", (request, response) => {
+application.register("/search/song/by_name", (request, response) => {
     /**
      * @type {{ "target": string, "count": number, "index": number }}
      */
@@ -843,6 +876,48 @@ application.register("/search/song_list/by_song_name", (request, response) => {
     return response.send(build_response(instance, {
         param, receive, "data": search_song_by_name(
             param.target, param.count, param.index
+        )
+    }, "OK"));
+});
+
+application.register("/search/:type/by_name", (request, response) => {
+    /**
+     * @type {{ "target": string, "count": number, "index": number, "type": string }}
+     */
+    const param = Object.assign({
+        "count": 25, "index": 1
+    }, parse_parameter(request));
+    const receive = process.uptime(), instance = {
+        response, request
+    };
+
+    if (!check_parameter(instance, "type", receive, param.type, "count", {
+        "range": { "maximum": 1 }
+    })) return;
+
+    if (!check_parameter(instance, "type", receive, param.type, "list", {
+        "list": [ "uploader", "vocalist", "producer", "synthesizer" ]
+    })) return;
+
+    param.type = param.type[0];
+
+    if (!check_parameter(instance, "target", receive, param.target, "count", {
+        "range": { "maximum": 1 }
+    })) return;
+
+    if (!check_parameter(instance, "count", receive, param.count, "number", {
+        "type": "integer",
+        "range": { "minimum": 1, "maximum": 50 }
+    })) return;
+
+    if (!check_parameter(instance, "index", receive, param.index, "number", {
+        "type": "integer",
+        "range": { "minimum": 1, "maximum": 131072 }
+    })) return;
+
+    return response.send(build_response(instance, {
+        param, receive, "data": search_target_by_name(
+            param.type, param.target, param.count, param.index
         )
     }, "OK"));
 });
