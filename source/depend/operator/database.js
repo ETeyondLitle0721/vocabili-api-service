@@ -707,7 +707,11 @@ export class DatabaseOperator {
      */
     count_item(list, options = {}, handler = (_options, response) => response) {
         return this.#process(
-            this.generator.item.count, list, options, handler
+            this.generator.item.count, list, options, name => ({
+                "source": {
+                    "table": name
+                }
+            })
         );
     }
 
