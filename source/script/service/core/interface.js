@@ -264,3 +264,13 @@ export function get_song_history_info(config) {
 
 export const base = operator;
 export const metadata_define = config.current.metadata;
+
+function exit() {
+    instance.close();
+
+    process.exit(1);
+}
+
+process.on("exit", exit);
+process.on("SIGINT", exit);
+process.on("SIGTERM", exit);

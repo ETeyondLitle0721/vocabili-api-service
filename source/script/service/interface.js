@@ -397,8 +397,14 @@ function get_target_list(type, count = 50, index = 1) {
 
     const table_name = capitalize(type) + "_Table";
 
+    const where = type === "song" ? {
+        "column": "type",
+        "operator": "<>",
+        "value": "Unmarked"
+    } : {};
+
     const result = database.select_item(table_name, {
-        "control": {
+        where, "control": {
             "result": {
                 "limit": count,
                 "offset": count * (index - 1)
@@ -408,7 +414,7 @@ function get_target_list(type, count = 50, index = 1) {
 
     return {
         "total": database.count_item(
-            table_name
+            table_name, { where }
         )[0]["COUNT(*)"],
         "result": ((type, result) => {
             if (type === "song") return song_info(

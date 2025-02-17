@@ -253,7 +253,7 @@ function insert_normal_board_rank(type, source, filepath, filename, adder) {
             }
         );
 
-        if (type === "new") insert_song(data, adder);
+        insert_song(data, adder);
     });
 }
 
@@ -498,30 +498,11 @@ if (standard) {
 }
 
 if (shell) {
-    const { new: add, main, total, summa, mode } = shell;
+    const { new: add, main, total, mode } = shell;
 
     let counter = 0;
 
     const adder = (count = 1) => counter += count;
-
-    if (summa) {
-        const filepath = path.resolve(
-            root, summa
-        ), content = read_xlsx(filepath);
-    
-        console.log(`正在开始分析 ${summa} 历史收录曲目数据定义文件`);
-    
-        for (let index = 0; index < content.length; index++) {
-            const song_data = content[index];
-
-            adder();
-            memory.video.set(
-                song_data.bvid, song_data.name
-            );
-
-            insert_song(song_data, adder);
-        }
-    }
 
     String.prototype.my_split = function () {
         return this.split(",").map(item => item.trim());
@@ -566,6 +547,20 @@ instance.pragma("synchronous = OFF");
 instance.pragma("journal_mode = WAL");
 
 const operator = new DatabaseOperator(instance);
+
+console.log("共计找到了 " + memory.data.song.size +  " 个曲目数据，即将尝试删除数据...");
+
+operator.delete_item("Mark_Table", {
+    "target": {
+        "column": "target",
+        "operator": "within",
+        "value": [
+            ...memory.data.song
+        ].map(([key]) => key)
+    }
+});
+
+console.log("数据删除成功，正在进行下一个步骤...");
 
 Object.entries(task).forEach(entry => {
     if (entry[1].length < 1) return;

@@ -553,8 +553,8 @@ function _table_create(options = {}) {
  * @returns {GeneralGeneratorResponse} 构建器响应结果
  */
 function _index_create(options = {}) {
-    let statement = "CREATE";
-    const { name, flag, table, column: column_list } = options;
+    let statement = "CREATE", flag = options.flag;
+    const { name, table, column: column_list } = options;
 
     if (flag) {
         if (!Array.isArray(flag)) flag = [ flag ];
@@ -776,7 +776,7 @@ export class DatabaseOperator {
      * 删除数据库已有的项目
      * 
      * @param {ListLike} list 需要改变的表单
-     * @param {ItemUpdateOptions} options 传入的配置
+     * @param {{ table: string, target: ItemSelectWhereOptions }} options 传入的配置
      * @param {ResponseHandler} handler 语句构建结果处理器
      * @returns {RunResult} 执行结果
      */
