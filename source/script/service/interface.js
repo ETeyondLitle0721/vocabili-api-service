@@ -44,7 +44,7 @@ application.use((req, _res, next) => {
                 }
             }),
             "level": ansi.encode({
-                "text": "(Information)",
+                "text": "(Info)",
                 "color": {
                     "background": "cyan"
                 }
@@ -58,7 +58,7 @@ application.use((req, _res, next) => {
         }
     ));
 
-    console.log(`请求来源: ${req.socket.remoteAddress} (Port=${req.socket.remotePort}, Famliy=${req.socket.remoteFamily})`);
+    console.log(`请求来源: ${req.headers["x-real-ip"] || req.socket.remoteAddress} (Port=${req.socket.remotePort}, Famliy=${req.socket.remoteFamily})`);
     console.log(`请求目标: ${req.path} (Method=${req.method})`);
     console.log("携带参数:", parse_parameter(req));
 
@@ -195,7 +195,8 @@ function board_info(issue, board = "vocaoid-weekly-main", count = 50, index = 1)
                     ];
                 })
             )
-        })), "metadata": {
+        })),
+        "metadata": {
             "id": get_type(board).second === "array" ? board[0] : board,
             "name": metadata.name, "date": issue_metadata.date,
             "issue": issue, "count": issue_metadata.count
@@ -300,13 +301,15 @@ function search_song_by_platform_title(target, count = 50, index = 1) {
     ];
 
     const platform = database.select_item("Platform_Table", {
-        "where": where, "control": {
+        where, "control": {
             "result": {
                 "limit": count,
                 "offset": count * (index - 1)
             }
         }
-    }), mark = database.select_item("Mark_Table", {
+    });
+    
+    const mark = database.select_item("Mark_Table", {
         "where": [
             {
                 "column": "type",
@@ -322,9 +325,9 @@ function search_song_by_platform_title(target, count = 50, index = 1) {
     });
 
     return {
-        "total": database.count_item("Platform_Table", {
-            "where": where
-        })[0]["COUNT(*)"],
+        "total": database.count_item(
+            "Platform_Table", { where }
+        )[0]["COUNT(*)"],
         "result": song_info(
             mark.map(item => item.target)
         )
@@ -340,13 +343,14 @@ function search_song_by_platform_title(target, count = 50, index = 1) {
  * @returns 获取到的曲目列表
  */
 function search_song_by_name(name, count = 50, index = 1) {
+    const where = {
+        "column": "name",
+        "operator": "like",
+        "value": `%${name}%`
+    };
+
     const list = database.select_item("Song_Table", {
-        "where": {
-            "column": "name",
-            "operator": "like",
-            "value": `%${name}%`
-        },
-        "control": {
+        where, "control": {
             "result": {
                 "limit": count,
                 "offset": count * (index - 1)
@@ -354,9 +358,14 @@ function search_song_by_name(name, count = 50, index = 1) {
         }
     });
 
-    return song_info(
-        list.map(item => item.id)
-    );
+    return {
+        "total": database.count_item(
+            "Song_Table", { where }
+        )[0]["COUNT(*)"],
+        "result": song_info(
+            list.map(item => item.id)
+        )
+    };
 }
 
 /**
@@ -372,7 +381,10 @@ function get_target_list(type, count = 50, index = 1) {
         const board = metadata_define.board;
 
         return Object.keys(board).filter((_, board_index) => 
-            count === -1 || (board_index + 1 > count * (index - 1) && board_index + 1 <= count * index)
+            count === -1 || (
+                board_index + 1 > count * (index - 1) &&
+                board_index + 1 <= count * index
+            )
         ).map(item => {
             const metadata = board[item];
 
@@ -383,20 +395,9 @@ function get_target_list(type, count = 50, index = 1) {
         });
     }
 
-    if (type === "song") {
-        return song_info(
-            database.select_item("Song_Table", {
-                "control": {
-                    "result": {
-                        "limit": count,
-                        "offset": count * (index - 1)
-                    }
-                }
-            }).map(item => item.id)
-        );
-    }
+    const table_name = capitalize(type) + "_Table";
 
-    return database.select_item(capitalize(type) + "_Table", {
+    const result = database.select_item(table_name, {
         "control": {
             "result": {
                 "limit": count,
@@ -404,6 +405,27 @@ function get_target_list(type, count = 50, index = 1) {
             }
         }
     });
+
+    return {
+        "total": database.count_item(
+            table_name
+        )[0]["COUNT(*)"],
+        "result": ((type, result) => {
+            if (type === "song") return song_info(
+                result.map(item => item.id)
+            );
+            
+            if (type === "vocalist") return result.map(item => ({
+                "id": item.id,
+                "name": item.name,
+                "color": item.color
+            }));
+            
+            return result.map(item => ({
+                "id": item.id, "name": item.name
+            }));
+        })(type, result)
+    };
 }
 
 /**
@@ -416,20 +438,21 @@ function get_target_list(type, count = 50, index = 1) {
  * @returns 获取到的曲目列表
  */
 function get_song_list_by_mark(type, id, count = 50, index = 1) {
+    const where = [
+        {
+            "column": "value",
+            "operator": "equal",
+            "value": id
+        },
+        {
+            "column": "type",
+            "operator": "equal",
+            "value": type
+        }
+    ];
+
     const result = database.select_item("Mark_Table", {
-        "where": [
-            {
-                "column": "value",
-                "operator": "equal",
-                "value": id
-            },
-            {
-                "column": "type",
-                "operator": "equal",
-                "value": type
-            }
-        ],
-        "control": {
+        where, "control": {
             "result": {
                 "limit": count,
                 "offset": count * (index - 1)
@@ -437,9 +460,14 @@ function get_song_list_by_mark(type, id, count = 50, index = 1) {
         }
     });
 
-    return song_info(
-        result.map(item => item.target)
-    );
+    return {
+        "total": database.count_item(
+            "Mark_Table", { where }
+        )[0]["COUNT(*)"],
+        "result": song_info(
+            result.map(item => item.target)
+        )
+    };
 }
 
 /**
@@ -452,13 +480,16 @@ function get_song_list_by_mark(type, id, count = 50, index = 1) {
  * @returns 获取到的目标列表
  */
 function search_target_by_name(type, name, count, index) {
-    const list = database.select_item(capitalize(type) + "_Table", {
-        "where": {
-            "column": "name",
-            "operator": "like",
-            "value": `%${name}%`
-        },
-        "control": {
+    const where = {
+        "column": "name",
+        "operator": "like",
+        "value": `%${name}%`
+    };
+
+    const table_name = capitalize(type) + "_Table";
+
+    const list = database.select_item(table_name, {
+        where, "control": {
             "result": {
                 "limit": count,
                 "offset": count * (index - 1)
@@ -466,16 +497,26 @@ function search_target_by_name(type, name, count, index) {
         }
     });
 
-    if (type === "vocalist") return list.map(item => ({
-        "id": item.id, "name": item.name, "color": item.color
+    let result = list.map(item => ({
+        "id": item.id,
+        "name": item.name
     }));
 
-    return list.map(item => ({
-        "id": item.id, "name": item.name
+    if (type === "vocalist") result = list.map(item => ({
+        "id": item.id,
+        "name": item.name,
+        "color": item.color
     }));
+
+    return {
+        "total": database.count_item(
+            table_name, { where }
+        )[0]["COUNT(*)"],
+        "result": result
+    };
 }
 
-// 计划中
+// 随缘编写，但是已经提上日程了（划掉
 // /**
 //  * 获取曲目列表（通过 Pool 识别码）
 //  * 
@@ -492,10 +533,8 @@ function search_target_by_name(type, name, count, index) {
 /**
  * 注册不同方法的路由
  * 
- * @typedef {Parameters<typeof application.get>[1]} RegisterHandler
- * 
  * @param {string} router 路由定义字符串
- * @param {(request: Parameters<typeof RegisterHandler>[0], response: Parameters<typeof RegisterHandler>[1]) => void} handler 处理方法
+ * @param {Parameters<typeof application.post>[1]} handler 处理方法
  * @param {("get"|"post")[]} method 需要注册的方法
  * @returns 方法返回值
  */
@@ -806,6 +845,38 @@ application.register("/get_history/song/count", (request, response) => {
     }, "OK"));
 });
 
+application.register("/search/song/by_name", (request, response) => {
+    /**
+     * @type {{ "target": string, "count": number, "index": number }}
+     */
+    const param = Object.assign({
+        "count": 25, "index": 1
+    }, parse_parameter(request));
+    const receive = process.uptime(), instance = {
+        response, request
+    };
+
+    if (!check_parameter(instance, "target", receive, param.target, "count", {
+        "range": { "maximum": 1 }
+    })) return;
+
+    if (!check_parameter(instance, "count", receive, param.count, "number", {
+        "type": "integer",
+        "range": { "minimum": 1, "maximum": 50 }
+    })) return;
+
+    if (!check_parameter(instance, "index", receive, param.index, "number", {
+        "type": "integer",
+        "range": { "minimum": 1, "maximum": 131072 }
+    })) return;
+
+    return response.send(build_response(instance, {
+        param, receive, "data": search_song_by_name(
+            param.target, param.count, param.index
+        )
+    }, "OK"));
+});
+
 application.register("/search/song/by_platform", (request, response) => {
     /**
      * @type {{ "title": string, "bvid": string, "count": number, "index": number }}
@@ -844,38 +915,6 @@ application.register("/search/song/by_platform", (request, response) => {
         param, receive, "data": search_song_by_platform_title(
             { "bvid": param.bvid, "title": param.title },
             param.count, param.index
-        )
-    }, "OK"));
-});
-
-application.register("/search/song/by_name", (request, response) => {
-    /**
-     * @type {{ "target": string, "count": number, "index": number }}
-     */
-    const param = Object.assign({
-        "count": 25, "index": 1
-    }, parse_parameter(request));
-    const receive = process.uptime(), instance = {
-        response, request
-    };
-
-    if (!check_parameter(instance, "target", receive, param.target, "count", {
-        "range": { "maximum": 1 }
-    })) return;
-
-    if (!check_parameter(instance, "count", receive, param.count, "number", {
-        "type": "integer",
-        "range": { "minimum": 1, "maximum": 50 }
-    })) return;
-
-    if (!check_parameter(instance, "index", receive, param.index, "number", {
-        "type": "integer",
-        "range": { "minimum": 1, "maximum": 131072 }
-    })) return;
-
-    return response.send(build_response(instance, {
-        param, receive, "data": search_song_by_name(
-            param.target, param.count, param.index
         )
     }, "OK"));
 });
