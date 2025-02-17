@@ -10,7 +10,7 @@
             },
             "interface": {
                 "host": "127.0.0.1",
-                "port": 51002,
+                "port": 51001,
                 "cors": {
                     "origin": "*",
                     "methods": [
