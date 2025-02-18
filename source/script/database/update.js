@@ -577,17 +577,23 @@ Object.entries(task).forEach(entry => {
 });
 
 console.log("数据条目全部插入完毕");
-console.log("正在尝试更新 ISSUE 定义文件（一般需要较长时间，请耐心等待）");
+console.log("正在尝试更新期刊信息原始数据定义文件（一般不需要长时间）");
 
-const result = classification(
-    operator.select_item("Rank_Table", {
-        "source": {
-            "select": "all"
-        }
-    }), (value) => {
-        return value.board;
-    }
-);
+const result = {
+    "rank": instance.prepare(`
+        SELECT
+            board, issue, COUNT(*) AS count
+        FROM Rank_Table
+        GROUP BY board, issue
+        ORDER BY board, issue
+    `).all(),
+    "snapshot": instance.prepare(`
+        SELECT
+            snapshot_at AS date, COUNT(*) AS count
+        FROM Snapshot_Table
+        GROUP BY date
+    `).all()
+};
 
 const filepath = path.resolve(
     __dirname, "../service/define/default.json"
@@ -595,16 +601,18 @@ const filepath = path.resolve(
     fs.readFileSync(filepath, "UTF-8")
 );
 
-Object.entries(result).map(([key, list]) => {
-    delete content.metadata.board[key].issue;
-
-    content.metadata.board[key].catalog = unique_array(
-        list.map(item => item.issue)
-    ).map(issue => ({
-        "date": memory.issue.get(key.replace(/-(?:new|main)/, ""))[issue],
-        "issue": issue, "count": list.filter(item => item.issue === issue).length
-    })).sort((a, b) => a.issue - b.issue);
+Object.entries(classification(
+    result.rank, item => item.board
+)).forEach(([board, list]) => {
+    content.metadata.board[board].catalog =
+        list.map(({ issue, count }) => ({
+            "date": memory.issue.get(board
+                .replace(/-(?:new|main)/, "")
+            )[issue], issue, count
+        }));
 });
+
+content.metadata.snapshot = result.snapshot;
 
 fs.writeFileSync(
     filepath, JSON.stringify(
@@ -612,4 +620,4 @@ fs.writeFileSync(
     )
 );
 
-console.log("成功更新 ISSUE 定义文件");
+console.log("成功更新期刊信息原始数据定义文件");
