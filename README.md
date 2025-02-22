@@ -633,3 +633,29 @@ GET /get_info/metadata/board?target=vocaoid-weekly-main&set-cache=3600
 | 代码                       | 含义                                     | 描述                                                                 |
 |----------------------------|------------------------------------------|----------------------------------------------------------------------|
 | `NOT_FOUND`                | 目标资源不存在                           | 请求的资源不存在。                                                   |
+
+## 调试模式添加的信息
+
+```json
+{
+    "debug": {
+        "timing": {
+            "receive": "2023-10-01T12:00:00.000Z", // 请求接收时间
+            "current": "2023-10-01T12:00:01.000Z", // 当前时间
+            "consume": "100ms" // 请求处理耗时
+        },
+        "request": {
+            "params": { // 请求参数
+                "target": "song_id_1",
+                "count": 10
+            },
+            "headers": { // 请求头信息
+                "user-agent": "Mozilla/5.0",
+                "accept": "application/json"
+            },
+            "address": "127.0.0.1", // 客户端IP地址
+            "resource": "/get_info/song" // 请求资源路径
+        }
+    }
+}
+```
