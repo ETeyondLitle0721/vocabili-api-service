@@ -56,7 +56,8 @@
                 {
                     "name": "title",
                     "value": {
-                        "type": "text"
+                        "type": "text",
+                        "restrict": "not-null"
                     }
                 },
                 {
@@ -69,7 +70,8 @@
                 {
                     "name": "page",
                     "value": {
-                        "type": "integer"
+                        "type": "integer",
+                        "default": -1
                     }
                 },
                 {
@@ -82,7 +84,8 @@
                 {
                     "name": "duration",
                     "value": {
-                        "type": "integer"
+                        "type": "integer",
+                        "default": -1
                     }
                 },
                 {
@@ -498,7 +501,15 @@
         },
         {
             "name": "Platform_Table_ID_Index",
-            "flag": ["if-not-exists", "unique" ],
+            "flag": [ "if-not-exists", "unique" ],
+            "table": "Platform_Table",
+            "column": [
+                "id"
+            ]
+        },
+        {
+            "name": "Platform_Table_Title_Index",
+            "flag": "if-not-exists",
             "table": "Platform_Table",
             "column": [
                 "id"

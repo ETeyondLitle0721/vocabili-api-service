@@ -536,12 +536,12 @@ function insert_snapshot_list(filepath, filename, adder) {
         if (!data.bvid) return;
 
         const id = {
-            "song": gen_id("Song", memory.video.get(data.bvid) || data.name || data.title)
+            "platform": gen_id("Platform", data.bvid)
         };
 
         memory.data.snapshot.set(
-            gen_id("Record", id.song + datetime), {
-                "target": id.song, "view": data.view, "like": data.like,
+            gen_id("Record", id.platform + datetime), {
+                "target": id.platform, "view": data.view, "like": data.like,
                 "coin": data.coin, "favorite": data.favorite, "recorded_at": get_iso_time_text(),
                 "snapshot_at": datetime
             }
@@ -645,6 +645,7 @@ function insert_platform(data, adder) {
     const shortener = url => path.basename(new URL(url).pathname);
 
     adder();
+
     memory.data.platform.set(target.video, {
         "page": Math.floor(data.page ?? -1), // 这个 Math.floor 是真有必要
         "thumbnail": data.image_url ? "BB://I/" + shortener(data.image_url) : "No Image",
@@ -688,7 +689,9 @@ function insert_song(data, adder) {
         entry[1].toString().split("、").map(name => {
             let field = base.map[key];
 
-            name = name.trim() || "Unknown";
+            name = name.trim();
+
+            if (!name) return;
 
             const id = {
                 "video": gen_id("Platform", data.bvid),

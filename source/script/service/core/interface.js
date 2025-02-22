@@ -233,35 +233,6 @@ export function get_board_song_list(config) {
     });
 }
 
-/**
- * 获取曲目识别码对应的历史数据
- * 
- * @param {object} config 传入的配置
- * @param {number} config.count 一页展示的项目数量
- * @param {number} config.index 当前的页索引
- * @param {string} config.target 需要查询的目标
- * @returns 查询结果
- */
-export function get_song_history_info(config) {
-    const options = Object.assign({
-        "count": 50, "index": 1
-    }, config);
-
-    return operator.select_item("Snapshot_Table", {
-        "where": {
-            "column": "target",
-            "operator": "equal",
-            "value": options.target
-        },
-        "control": {
-            "result": {
-                "limit": options.count,
-                "offset": options.count * (options.index - 1)
-            }
-        }
-    });
-}
-
 export const base = operator;
 export const metadata_define = config.current.metadata;
 
