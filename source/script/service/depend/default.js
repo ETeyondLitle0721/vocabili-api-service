@@ -167,7 +167,8 @@ export function build_response(instance, data = {}, code = "OK", message = "ä¸€å
                 "timing": {
                     "receive": new Date(performance.timeOrigin + data.receive * 1000),
                     "current": new Date(), "consume": 
-                        consume * 1000 < 1 ? parseInt(consume * 1000000) + "us" : parseInt(consume * 1000000) / 1000 + "ms"
+                        consume * 1000 < 1 ? parseInt(consume * 1000000) + "us" :
+                        parseInt(consume * 1000000) / 1000 + "ms"
                 },
                 "request": {
                     "parmas": parse_parameter(request),
