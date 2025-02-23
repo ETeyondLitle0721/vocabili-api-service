@@ -22,8 +22,9 @@ import {
  * @typedef ItemSelectWhereSingleOptions
  * @property {"not"} mark 标记
  * @property {string} column 比较的列名
- * @property {("like"|"equal"|"range"|"within"|GeneralOperator)} operator 运算符
  * @property {(GeneralObject|NormalType[])} value 取值
+ * @property {("binary"|"nocase")} collate 数值校对模式 
+ * @property {("like"|"equal"|"range"|"within"|GeneralOperator)} operator 运算符
  * 
  * @typedef ItemSelectWhereGroupOptions
  * @property {("or"|"and")} joiner 多个表达式之间的连接符
@@ -176,7 +177,17 @@ function parse_where(options = {}, setter = _setter(), getter = _getter()) {
     }
 
     let result = "", value = options.value;
-    const { mark, column, operator } = options;
+    const { mark, column, collate, operator } = options;
+
+    const gen = (value) => {
+        const result = placeholder(
+            value, getter(), setter
+        );
+
+        return collate ? [
+            result, "COLLATE " + collate.toUpperCase()
+        ].join(" ") : result;
+    };
 
     if (operator === "equal") {
         const part = [];
@@ -186,28 +197,20 @@ function parse_where(options = {}, setter = _setter(), getter = _getter()) {
         }
 
         for (let index = 0; index < value.length; index++) {
-            part.push(`${quote(column)} = ${placeholder(
-                value[index], getter(), setter
-            )}`);
+            part.push(`${quote(column)} = ${gen(value[index])}`);
         }
 
         result = part.join(" OR ");
     }
 
     if (operator === "like") {
-        result = `${quote(column)} LIKE ${placeholder(
-            value, getter(), setter
-        )}`;
+        result = `${quote(column)} LIKE ${gen(value)}`;
     }
 
     if (operator === "range") {
         const { minimum, maximum } = value;
 
-        result = `${quote(column)} BETWEEN ${placeholder(
-            minimum, getter(), setter
-        )} AND ${placeholder(
-            maximum, getter(), setter
-        )}`;
+        result = `${quote(column)} BETWEEN ${gen(minimum)} AND ${gen(maximum)}`;
     }
 
     if (operator === "within") {
@@ -215,15 +218,13 @@ function parse_where(options = {}, setter = _setter(), getter = _getter()) {
             value = [ value ];
         }
 
-        result = `${quote(column)} IN ( ${value.map(item => placeholder(
-            item, getter(), setter
-        )).join(", ")} )`;
+        result = `${quote(column)} IN ( ${value.map(item => 
+            gen(item)
+        ).join(", ")} )`;
     }
 
     if ([ ">", ">=", "<", "<=", "<>", "==", "!=" ].includes(operator)) {
-        result = `${quote(column)} ${operator} ${placeholder(
-            value, getter(), setter
-        )}`;
+        result = `${quote(column)} ${operator} ${gen(value)}`;
     }
 
     if (mark === "not") {

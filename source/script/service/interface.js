@@ -305,12 +305,14 @@ function search_song_by_platform_title(target, count = 50, index = 1) {
         {
             "column": "title",
             "operator": "like",
-            "value": `%${title}%`
+            "value": `%${title}%`,
+            "collate": "nocase"
         },
         {
             "column": "link",
             "operator": "like",
-            "value": `BB://V/%${bvid}%`
+            "value": `BB://V/%${bvid}%`,
+            "collate": "nocase"
         }
     ];
 
@@ -360,7 +362,8 @@ function search_song_by_name(name, count = 50, index = 1) {
     const where = {
         "column": "name",
         "operator": "like",
-        "value": `%${name}%`
+        "value": `%${name}%`,
+        "collate": "nocase"
     };
 
     const list = database.select_item("Song_Table", {
@@ -528,7 +531,8 @@ function search_target_by_name(type, name, count, index) {
     const where = {
         "column": "name",
         "operator": "like",
-        "value": `%${name}%`
+        "value": `%${name}%`,
+        "collate": "nocase"
     };
 
     const table_name = capitalize(type) + "_Table";
@@ -1168,4 +1172,3 @@ export function start_service() {
 export default {
     "start": start_service
 };
-
