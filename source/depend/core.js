@@ -13,7 +13,7 @@ import crypto from "node:crypto";
 export function text_transformer(text, length = 1, transformer = (text) => text.toUpperCase()) {
     if (length < 0) {
         const start = text.length + length;
-        
+
         return text.slice(0, start) + transformer(text.slice(start));
     }
 
@@ -30,9 +30,9 @@ export function text_transformer(text, length = 1, transformer = (text) => text.
  */
 export function compute_hash(text, charset = "UTF-8", algorithm = "SHA-256") {
     let hash = crypto.createHash(algorithm);
-    
+
     hash.update(text, charset);
-    
+
     return hash.digest("hex");
 }
 
@@ -64,11 +64,11 @@ export function compute_hamc(text, algorithm = "SHA-256", secret = "default-secr
 export function repair_character(string, length, character = " ", direction = "start") {
     let temp = to_string(string);
 
-    if ([ "start", "end" ].includes(direction)) {
+    if (["start", "end"].includes(direction)) {
         let scheme = {
             "start": "padStart",
             "end": "padEnd"
-        } [direction];
+        }[direction];
 
         return temp[scheme](
             length, character
@@ -124,7 +124,7 @@ export function to_string(value) {
 export async function check_service_accessible(host, port) {
     return new Promise((resolve) => {
         let server = net.createServer();
-        
+
         server.once("error", () => {
             resolve(true);
         });
@@ -284,7 +284,7 @@ export function deep_freeze(target) {
  */
 export function deep_clone(target) {
     let result = Array.isArray(target) ? [] : {};
-    
+
     if (target === null || typeof target !== "object") {
         return target;
     }
@@ -293,7 +293,7 @@ export function deep_clone(target) {
 
     for (let index = 0; index < key_list.length; index++) {
         let key = key_list[index];
-        
+
         result[key] = deep_clone(
             target[key]
         );
@@ -325,20 +325,24 @@ export function invert_object(target) {
  * 
  * @param {string} target 需要引用的原始字符串
  * @param {("single"|"double")} type 引用字符串使用的引号类型
+ * @param {(text: string) => string} quoter 引用处理器
  * @returns {string} 被引用的字符串
  */
-export function quote_string(target, type = "double") {
+export function quote_string(
+    target, type = "double",
+    quoter = text => "\\" + text
+) {
     let quote = {
         "single": "'", "double": '"'
-    } [type], result = "";
+    }[type], result = "";
 
     target = to_string(target);
 
     for (let index = 0; index < target.length; index++) {
         let current = target[index];
-        
-        if (current[index - 1] !== "\\" && current === quote) {
-            result += "\\" + quote;
+
+        if (current === quote && (index === 0 || target[index - 1] !== "\\")) {
+            result += quoter(quote);
         } else {
             result += current;
         }
@@ -358,7 +362,7 @@ export function compare_object(obj1, obj2) {
     if (obj1 === obj2) return true;
 
     if (Object.prototype.toString.call(obj1) !== Object.prototype.toString.call(obj2)) return false;
-    
+
     if (obj1 == null || obj2 == null || typeof obj1 !== "object" || typeof obj2 !== "object") return false;
 
     if (Number.isNaN(obj1) && Number.isNaN(obj2)) return true;
@@ -586,7 +590,7 @@ export function classification(list, namer) {
         if (result[name]) {
             result[name].push(current);
         } else {
-            result[name] = [ current ];
+            result[name] = [current];
         }
     }
 
@@ -628,4 +632,38 @@ export function append_rank_field(
     return uuid_list.map((uuid, index) => setter(
         rank[uuid], array[index]
     ));
+}
+
+/**
+ * 深度和合并两个对象
+ * 
+ * @template T, U
+ * @param {T} target 目标对象
+ * @param {U} source 源对象
+ * @param {boolean} clone 是否先克隆再合并
+ * @param {number} depth 最大合并深度
+ * @returns {(T & U)} 合并结果
+ */
+export function object_merge(target, source, clone = true, depth = -1) {
+    if (clone) {
+        target = deep_clone(target);
+    }
+
+    if (depth === 0) {
+        return Object.assign(target, source);
+    }
+
+    for (const key in source) {
+        if (source.hasOwnProperty(key)) {
+            if (typeof source[key] === "object" && typeof target[key] === "object") {
+                object_merge(
+                    target[key], source[key], depth - 1
+                );
+            } else {
+                target[key] = source[key];
+            }
+        }
+    }
+
+    return target;
 }

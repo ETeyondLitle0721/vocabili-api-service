@@ -1,7 +1,8 @@
 import SQLite3 from "better-sqlite3"; import template from "../utilities/template.js";
 import {
     repair_character as repair, get_type,
-    to_string, quote_string, unique_array
+    to_string, quote_string, unique_array,
+    object_merge
 } from "../core.js";
 
 /**
@@ -103,6 +104,33 @@ import {
  * 
  * @callback SequenceGetter
  * @returns {number} 获取到的序列值
+ * 
+ * @typedef TableAlterOptions
+ * @property {("column"|"table")} target 需要操作的目标
+ * @property {("add"|"rename")} operate 需要进行的操作
+ * @property {(TATRenameDefine|TACRenameDefine|TACAddDefine)} define 操作定义项
+ * 
+ * @typedef TATRenameDefine
+ * @property {string} name 重命名之后的名称
+ * @property {string} table 需要重命名的表单的名称
+ * 
+ * @typedef TACRenameDefine
+ * @property {string} table 目标列所处的表单的名称
+ * @property {object} column 目标的列定义
+ * @property {string} column.old 目标列的原始名称
+ * @property {string} column.new 目标列的新名称
+ * 
+ * @typedef TACAddDefine
+ * @property {string} table 需要添加列的表单的名称
+ * @property {string} column 添加的目标列的名称
+ * @property {TableCreateColumnOptions} define 列定义
+ * 
+ * @typedef SavePointOptions
+ * @property {string} name 目标保存点的名称
+ * @property {("create"|"release"|"rollback")} operate 需要执行的操作
+ * 
+ * @typedef TransactionOptions
+ * @property {("begin"|"commit"|"rollback")} operate 需要执行的操作
  */
 
 /**
@@ -149,6 +177,51 @@ function placeholder(value, sequence, setter = _setter()) {
 }
 
 /**
+ * 解析 Column 定义语句配置信息为 SQL 语句
+ * 
+ * @param {TableCreateColumnOptions} options 需要解析的对象
+ * @returns {string} 解析出来的 SQL 字符串
+ */
+function parse_column(options) {
+    let { mark = [], value: {
+        default: value, restrict = []
+    } } = options;
+
+    const constraint = [];
+
+    if (Array.isArray(mark)) mark = [ mark ];
+    if (Array.isArray(restrict)) restrict = [ restrict ];
+
+    if (value !== undefined) {
+        const type = get_type(value);
+
+        if (type.first === "boolean") {
+            value = value ? 1 : 0;
+        }
+
+        if (type.first === "string") {
+            value = quote(value);
+        }
+
+        constraint.push("DEFAULT " + to_string(value));
+    };
+
+    if (mark.includes("primary-key")) constraint.push("PRIMARY KEY");
+    if (mark.includes("auto-increment")) constraint.push("AUTOINCREMENT");
+
+    if (restrict.includes("unique")) constraint.push("UNIQUE");
+    if (restrict.includes("not-null")) constraint.push("NOT NULL");
+
+    return template.replace(
+        "{{column}} {{type}} {{constraint}}", {
+            "type": options.value.type.toUpperCase(),
+            "column": quote(options.name),
+            "constraint": constraint.join(" ")
+        }
+    ).trimEnd();
+}
+
+/**
  * 解析 Where 语句配置信息为 SQL 语句
  * 
  * @param {ItemSelectWhereOptions} options 需要解析的 Where 语句配置信息
@@ -157,14 +230,14 @@ function placeholder(value, sequence, setter = _setter()) {
  * @returns {string} 解析出来的 SQL 语句
  */
 function parse_where(options = {}, setter = _setter(), getter = _getter()) {
-    if (get_type(options).second === "array") {
+    if (Array.isArray(options)) {
         return parse_where({
             "joiner": "and",
             "children": options
         }, setter, getter);
     }
 
-    if (get_type(options.children).second === "array") {
+    if (Array.isArray(options.children)) {
         let { joiner = "and", children = [] } = options, part = [];
 
         for (let index = 0; index < children.length; index++) {
@@ -179,7 +252,7 @@ function parse_where(options = {}, setter = _setter(), getter = _getter()) {
     let result = "", value = options.value;
     const { mark, column, collate, operator } = options;
 
-    const gen = (value) => {
+    const generate = (value) => {
         const result = placeholder(
             value, getter(), setter
         );
@@ -192,39 +265,39 @@ function parse_where(options = {}, setter = _setter(), getter = _getter()) {
     if (operator === "equal") {
         const part = [];
 
-        if (get_type(value).second !== "array") {
+        if (!Array.isArray(value)) {
             value = [ value ];
         }
 
         for (let index = 0; index < value.length; index++) {
-            part.push(`${quote(column)} = ${gen(value[index])}`);
+            part.push(`${quote(column)} = ${generate(value[index])}`);
         }
 
         result = part.join(" OR ");
     }
 
     if (operator === "like") {
-        result = `${quote(column)} LIKE ${gen(value)}`;
+        result = `${quote(column)} LIKE ${generate(value)}`;
     }
 
     if (operator === "range") {
         const { minimum, maximum } = value;
 
-        result = `${quote(column)} BETWEEN ${gen(minimum)} AND ${gen(maximum)}`;
+        result = `${quote(column)} BETWEEN ${generate(minimum)} AND ${generate(maximum)}`;
     }
 
     if (operator === "within") {
-        if (get_type(value).second !== "array") {
+        if (!Array.isArray(value)) {
             value = [ value ];
         }
 
         result = `${quote(column)} IN ( ${value.map(item => 
-            gen(item)
+            generate(item)
         ).join(", ")} )`;
     }
 
     if ([ ">", ">=", "<", "<=", "<>", "==", "!=" ].includes(operator)) {
-        result = `${quote(column)} ${operator} ${gen(value)}`;
+        result = `${quote(column)} ${operator} ${generate(value)}`;
     }
 
     if (mark === "not") {
@@ -599,59 +672,20 @@ function _table_drop(options = {}) {
 function _table_create(options = {}) {
     let statement = "CREATE TABLE";
 
-    const part = [], parameter = {};
-    const { name, flag, column: column_list } = options;
+    const part = [];
+    const { name, flag, column: columns } = options;
 
     if (flag) statement = {
         "direct-create": "CREATE TABLE",
         "if-not-exists": "CREATE TABLE IF NOT EXISTS"
     } [ flag ] || statement;
 
-    for (let index = 0; index < column_list.length; index++) {
-        const column = column_list[index], constraint = [];
+    for (let index = 0; index < columns.length; index++) {
+        const column = columns[index];
 
-        let { mark = [], value: {
-            default: value, restrict = []
-        } } = column;
-
-        if (get_type(mark).second !== "array") mark = [ mark ];
-        if (get_type(restrict).second !== "array") restrict = [ restrict ];
-
-        // if (value !== undefined) constraint.push("DEFAULT " + generate_placeholder(
-        //     column.name, index, value, seq_id, (real, nickname) => {
-        //         parameter[nickname] = real;
-        //     }
-        // ));
-
-        // CREATE TABLE 不涉及数据操作，不能使用参数化绑定
-
-        if (value !== undefined) {
-            const type = get_type(value);
-
-            if (type.first === "boolean") {
-                value = value ? 1 : 0;
-            }
-
-            if (type.first === "string") {
-                value = quote(value);
-            }
-
-            constraint.push("DEFAULT " + to_string(value));
-        };
-
-        if (mark.includes("primary-key")) constraint.push("PRIMARY KEY");
-        if (mark.includes("auto-increment")) constraint.push("AUTOINCREMENT");
-
-        if (restrict.includes("unique")) constraint.push("UNIQUE");
-        if (restrict.includes("not-null")) constraint.push("NOT NULL");
-
-        part.push(template.replace(
-            "{{column}} {{type}} {{constraint}}", {
-                "column": quote(column.name),
-                "type": column.value.type.toUpperCase(),
-                "constraint": constraint.join(" ")
-            }
-        ).trimEnd());
+        part.push(
+            parse_column(column)
+        );
     }
 
     const sentence = template.replace(
@@ -667,7 +701,7 @@ function _table_create(options = {}) {
     return {
         "action": "request",
         "sentence": sentence,
-        "parameter": parameter
+        "parameter": {}
     };
 }
 
@@ -748,7 +782,140 @@ function _index_drop(options = {}) {
 }
 
 /**
+ * 构建可以操纵数据库标单结构的 SQL 语句
+ * 
+ * @param {TableAlterOptions} options 构建 SQL 语句的配置
+ * @returns {GeneratorResponse} 构建器响应结果
+ */
+function _table_alter(options = {}) {
+    let sentence = "";
+
+    const { target, operate, define } = options;
+
+    if (target === "table") {
+        if (operate === "rename") {
+            sentence = template.replace(
+                "ALTER TABLE {{table}} RENAME TO {{name}}", {
+                    "name": quote(define.name),
+                    "table": quote(define.table)
+                }
+            )
+        }
+    }
+
+    if (target === "column") {
+        if (operate === "rename") {
+            sentence = template.replace(
+                "ALTER TABLE {{table}} RENAME COLUMN {{old}} TO {{new}}", {
+                    "old": quote(define.column.old),
+                    "new": quote(define.column.new),
+                    "table": quote(define.table),
+                }
+            );
+        }
+
+        if (operate === "add") {
+            sentence = template.replace(
+                "ALTER TABLE {{table}} ADD COLUMN {{define}}", {
+                    "table": quote(define.table),
+                    "column": quote(define.column),
+                    "define": parse_column(
+                        Object.assign({
+                            "name": define.column
+                        }, define.define)
+                    )
+                }
+            );
+        }
+    }
+
+    return {
+        "action": "request",
+        "sentence": sentence,
+        "parameter": {}
+    };
+}
+
+/**
+ * 构建可以执行保存点相关的 SQL 语句
+ * 
+ * @param {SavePointOptions} options 构建 SQL 语句的配置
+ * @returns {GeneratorResponse} 构建器响应结果
+ */
+function _savepoint(options = {}) {
+    let statement;
+
+    const { name, operate } = options;
+
+    if ([ "create", "release", "rollback" ].includes(operate)) {
+        statement = {
+            "create": "SAVEPOINT",
+            "release": "RELEASE SAVEPOINT",
+            "rollback": "ROLLBACK TO SAVEPOINT"
+        };
+    }
+
+    const sentence = template.replace(
+        "{{statement}} {{name}}", {
+            "name": name,
+            "statement": statement
+        }
+    );
+
+    return {
+        "action": "request",
+        "sentence": sentence,
+        "parameter": {}
+    };
+}
+
+/**
+ * 构建可以执行事务相关的 SQL 语句
+ * 
+ * @param {TransactionOptions} options 构建 SQL 语句的配置
+ * @returns {GeneratorResponse} 构建器响应结果
+ */
+function _transaction(options = {}) {
+    let sentence;
+
+    const { operate } = options;
+
+    if ([ "begin", "commit", "rollback" ].includes(operate)) {
+        sentence = {
+            "begin": "BEGIN TRANSACTION",
+            "commit": "COMMIT",
+            "rollback": "ROLLBACK"
+        };
+    }
+
+    return {
+        "action": "request",
+        "sentence": sentence,
+        "parameter": {}
+    };
+}
+
+/**
+ * 通过一个 Error 实例化对象获取调用函数的名称
+ * 
+ * @param {Error} error 一个 Error 实例化
+ * @param {number} depth 需要获取的目标调用者的调用栈深度
+ * @param {(text: string) => string} extractor 提取器
+ * @returns {string} 获取调用函数的名称
+ */
+function get_caller_name(error, depth = 2, extractor = text => {
+    const match = text.match(/at ([\w\.\#]+)/);
+
+    return match ? match[1] : "Unknown";
+}) {
+    return extractor(
+        error.stack.split("\n")[depth]
+    );
+}
+
+/**
  * 获取目前支持的生成器列表
+ * 
  * @returns 目前支持的生成器列表
  */
 export function get_generator() {
@@ -766,8 +933,11 @@ export function get_generator() {
         },
         "table": {
             "drop": _table_drop,
+            "alter": _table_alter,
             "create": _table_create
-        }
+        },
+        "savepoint": _savepoint,
+        "transaction": _transaction
     };
 }
 
@@ -821,7 +991,7 @@ export class DatabaseOperator {
 
         const { action, sentence, parameter } = response;
 
-        // console.log(sentence)
+        // console.log(response)
 
         if (this.statement.has(sentence)) {
             statement = this.statement.get(sentence);
@@ -852,13 +1022,13 @@ export class DatabaseOperator {
     ) {
         const result = [];
 
-        if (get_type(list).second !== "array") {
+        if (!Array.isArray(list)) {
             list = [ list ];
         }
 
         for (let index = 0; index < list.length; index++) {
-            const current = list[index], config = Object.assign(options, 
-                parser(current)
+            const current = list[index], config = object_merge(
+                options, parser(current)
             ), temp = generator(config), response = handler(
                 config, temp
             );
@@ -892,7 +1062,8 @@ export class DatabaseOperator {
      */
     count_item(list, options = {}, handler = this.handler) {
         return this.#process(
-            this.generator.item.count, list, options, handler, name => ({
+            this.generator.item.count, list,
+            options, handler, name => ({
                 "source": {
                     "table": name
                 }
@@ -910,7 +1081,8 @@ export class DatabaseOperator {
      */
     insert_item(list, options = {}, handler = this.handler) {
         return this.#process(
-            this.generator.item.insert, list, options, handler
+            this.generator.item.insert,
+            list, options, handler
         );
     }
 
@@ -924,7 +1096,8 @@ export class DatabaseOperator {
      */
     select_item(list, options = {}, handler = this.handler) {
         return this.#process(
-            this.generator.item.select, list, options, handler, name => ({
+            this.generator.item.select, list,
+            options, handler, name => ({
                 "source": {
                     "table": name,
                     "select": "all"
@@ -943,7 +1116,8 @@ export class DatabaseOperator {
      */
     update_item(list, options = {}, handler = this.handler) {
         return this.#process(
-            this.generator.item.update, list, options, handler
+            this.generator.item.update,
+            list, options, handler
         );
     }
 
@@ -957,7 +1131,8 @@ export class DatabaseOperator {
      */
     delete_item(list, options = {}, handler = this.handler) {
         return this.#process(
-            this.generator.item.delete, list, options, handler
+            this.generator.item.delete,
+            list, options, handler
         );
     }
 
@@ -970,7 +1145,21 @@ export class DatabaseOperator {
      */
     drop_table(list, options = {}, handler = this.handler) {
         return this.#process(
-            this.generator.table.drop, list, options, handler
+            this.generator.table.drop,
+            list, options, handler
+        );
+    }
+
+    /**
+     * 在当前数据库中调整表单
+     * 
+     * @param {ListLike} list 调整的表单的名称
+     * @param {ResponseHandler} handler 语句构建结果处理器
+     * @returns {RunResult} 执行结果
+     */
+    alter_table(list, options = {}, handler = this.handler) {
+        return this.#process(
+            this.generator.table.alter, list, options, handler
         );
     }
 
@@ -984,8 +1173,8 @@ export class DatabaseOperator {
      */
     create_table(list, options = {}, handler = this.handler) {
         return this.#process(
-            this.generator.table.create, list, options, handler,
-            value => ({ "name": value })
+            this.generator.table.create, list, options,
+            handler, value => ({ "name": value })
         );
     }
 
@@ -999,8 +1188,8 @@ export class DatabaseOperator {
      */
     drop_index(list, options = {}, handler = this.handler) {
         return this.#process(
-            this.generator.index.drop, list, options, handler,
-            value => ({ "name": value })
+            this.generator.index.drop, list, options,
+            handler, value => ({ "name": value })
         );
     }
 
@@ -1014,8 +1203,35 @@ export class DatabaseOperator {
      */
     create_index(list, options = {}, handler = this.handler) {
         return this.#process(
-            this.generator.index.create, list, options, handler,
-            value => ({ "name": value })
+            this.generator.index.create, list, options,
+            handler, value => ({ "name": value })
+        );
+    }
+
+    /**
+     * 实现基础保存点操作
+     * 
+     * @param {ListLike} list 保存点的名称
+     * @param {("create"|"release"|"rollback")} operate 需要进行的操作
+     * @returns {RunResult} 执行结果
+     */
+    savepoint(list, options, handler = this.handler) {
+        return this.#process(
+            this.generator.savepoint, list, options,
+            handler, value => ({ "name": value })
+        );
+    }
+
+    /**
+     * 实现基础事务操作
+     * 
+     * @param {("begin"|"commit"|"rollback")} operate 需要进行的操作
+     * @returns {RunResult} 执行结果
+     */
+    transaction(operate, handler = this.handler) {
+        return this.#process(
+            this.generator.transaction, [operate],
+            { operate }, handler, value => value
         );
     }
 }

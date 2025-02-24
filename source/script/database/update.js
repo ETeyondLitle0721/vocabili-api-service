@@ -554,13 +554,20 @@ const operator = new DatabaseOperator(instance);
 console.log("共计找到了 " + memory.data.song.size +  " 个曲目数据，即将尝试删除数据...");
 
 operator.delete_item("Mark_Table", {
-    "target": {
-        "column": "target",
-        "operator": "within",
-        "value": [
-            ...memory.data.song
-        ].map(([key]) => key)
-    }
+    "target": [
+        {
+            "column": "target",
+            "operator": "within",
+            "value": [
+                ...memory.data.song
+            ].map(([key]) => key)
+        },
+        {
+            "column": "type",
+            "operator": "<>",
+            "value": "platform"
+        }
+    ]
 });
 
 console.log("数据删除成功，正在进行下一个步骤...");
