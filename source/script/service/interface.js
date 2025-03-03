@@ -1,9 +1,19 @@
-import fs from "fs"; import path from "path"; import HTTP from "http";
-import ansi from "../../depend/utilities/sequence/ansi.js"; import cors from "cors";
-import express from "express"; import template from "../../depend/utilities/template.js";
-import { classification, get_type, text_transformer as capitalize, unique_array } from "../../depend/core.js";
+import fs from "fs";
+import url from "url";
+import cors from "cors";
+import path from "path";
+import ansi from "../../depend/utilities/sequence/ansi.js";
+import HTTP from "http";
+import express from "express";
+import template from "../../depend/utilities/template.js";
+import levenshtein from "fast-levenshtein";
 import format_datetime, { datetime } from "../../depend/toolkit/formatter/datetime.js";
-import { parse_parameter, check_parameter, build_response } from "./depend/default.js";
+import {
+    unique_array, classification, text_transformer as capitalize
+} from "../../depend/core.js";
+import {
+    parse_parameter, check_parameter, build_response
+} from "./core/depend.js";
 import {
     get_board_metadata_info_by_board_id as get_board_metadata_info_by_id,
     get_board_song_list, get_mark_info_by_target_id, get_rank_by_song_id,
@@ -12,19 +22,40 @@ import {
 
 const root = path.resolve(".");
 
+const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
+
 /**
  * @typedef {import("../../depend/operator/database.js").GeneralObject} GeneralObject
  */
+
+const field = "interface";
 
 const config = JSON.parse(
     fs.readFileSync(path.resolve(
         root, "./config.json"
     ), "UTF-8")
-), field = "interface";
+);
 
-const service_config = config.service.options[field];
+const rule = {
+    "param": JSON.parse(
+        fs.readFileSync(path.resolve(
+            __dirname, "./define/param.json"
+        ))
+    )
+};
+
+const language = {
+    "text": JSON.parse(
+        fs.readFileSync(path.resolve(
+            root, config.language.filepath
+        ), "UTF-8")
+    ),
+    "default": config.language.default
+};
 
 const application = express();
+
+const service_config = config.service.options[field];
 
 if (service_config.cors) {
     application.use(cors(
@@ -32,121 +63,141 @@ if (service_config.cors) {
     ));
 }
 
-application.use((req, _res, next) => {
-    console.log(template.replace(
-        "{{datetime}} {{level}} {{message}}", {
-            "datetime": ansi.encode({
-                "text": "[" + format_datetime(
-                    datetime.format, new Date()
-                ) + "]",
-                "color": {
-                    "background": "green"
-                }
-            }),
-            "level": ansi.encode({
-                "text": "(Info)",
-                "color": {
-                    "background": "cyan"
-                }
-            }),
-            "message": ansi.encode({
-                "text": "接收到来自客户端的 HTTP 请求",
-                "color": {
-                    "background": "yellow"
-                }
-            })
-        }
-    ));
-
-    console.log(`请求来源: ${req.headers["x-real-ip"] || req.socket.remoteAddress} (Port=${req.socket.remotePort}, Famliy=${req.socket.remoteFamily})`);
-    console.log(`请求目标: ${req.path} (Method=${req.method})`);
-    console.log("携带参数:", parse_parameter(req));
-
-    next();
-});
-
 /**
- * 获取曲目数据
+ * 从数据库中现有的数据中获取曲目信息（包含标记信息）
  * 
- * @param {string[]} list 需要获取信息的曲目的识别码列表
+ * @param {string[]} ids 需要获取信息的曲目的识别码列表
  * @returns 获取到的曲目数据
  */
-function song_info(list = []) {
-    const song = get_target_info_by_id(
-        "song", list
-    );
-
-    const mark = Object.fromEntries(Object.entries(
-        classification(
-            get_mark_info_by_target_id(list), value => {
-                return value.target;
-            }
-        )
-    ).map(([key, value]) => ([
-        key, Object.fromEntries(Object.entries(
-            classification(value, value => value.type)
-        ).map(([key, value]) => ([
-            key, unique_array(value.map(item => item.value))
-        ])))
-    ])));
-
-    const target = Object.fromEntries(
-        get_target_info_by_id(
-            [ "producer", "vocalist", "synthesizer", "platform" ],
-            Object.values(mark).flat().map(item => Object.values(item)).flat(2)
-        ).map(item => item.response).flat().map(item => ([
-            item.id, item
-        ]))
-    );
-
-    const uploader = classification(
-        get_mark_info_by_target_id(
-            Object.values(mark).map(item => Object.values(item)).flat(2).filter(item => item.startsWith("Platform:"))
-        ), (value) => value.target
-    );
-
-    get_target_info_by_id(
-        "uploader",  Object.values(uploader).flat().map(item => item.value)
-    ).map(temp => target[temp.id] = temp);
-
-    return song.map(song => {
-        const marked_data = mark[song.id], temp = {
-            "sv": marked_data.synthesizer ? marked_data.synthesizer.map(id => ({
-                "id": id, "name": target[id].name
-            })) : [],
-            "vocalist": marked_data.vocalist ? marked_data.vocalist.map(id => ({
-                "id": id, "name": target[id].name, "color": target[id].color
-            })) : []
-        };
-
-        return {
-            "metadata": {
-                "id": song.id, "name": song.name, "type": song.type, "target": {
-                    "vocalist": temp.vocalist.map(item => {
-                        return item.name;
-                    }).join("").length === 0 ? [] : temp.vocalist,
-                    "producer": marked_data.producer.map(id => ({
-                        "id": id, "name": target[id].name
-                    })),
-                    "synthesizer": temp.sv.map(item => {
-                        return item.name;
-                    }).join("").length === 0 ? [] : temp.sv
-                }
-            }, "platform": marked_data.platform ? marked_data.platform.map(id => {
-                const info = target[id];
+function get_song_info_by_id(ids = []) {
+    const parse_song = (song, mark, target, uploader) => {
+        const song_mark = mark[song.id];
     
-                return {
-                    "id": id, "link": info.link.replace("BB://V/", "https://b23.tv/"),
-                    "publish": info.published_at, "page": info.page, "title": info.title,
-                    "uploader": uploader[id] ? uploader[id].map(item => ({
-                        "id": item.value, "name": target[item.value].name
-                    })) : [], "duration": info.duration,
-                    "thumbnail": info.thumbnail.replace("BB://I/", "https://i0.hdslb.com/bfs/archive/"),
-                    "copyright": info.copyright
-                };
-            }) : []
-        }
-    });
+        const metadata = {
+            "id": song.id,
+            "name": song.name,
+            "type": song.type,
+            "target": {
+                "producer": [],
+                "vocalist": [],
+                "synthesizer": []
+            }
+        };
+    
+        song_mark.vocalist && song_mark.vocalist.forEach(
+            id => metadata.target.vocalist.push({
+                "id": id, "name": target[id].name,
+                "color": target[id].color
+            })
+        );
+
+        song_mark.producer && song_mark.producer.forEach(
+            id => metadata.target.producer.push({
+                "id": id, "name": target[id].name
+            })
+        );
+    
+        song_mark.synthesizer && song_mark.synthesizer.forEach(
+            id => metadata.target.synthesizer.push({
+                "id": id, "name": target[id].name
+            })
+        );
+            
+        const platform = [];
+    
+        song_mark.platform && song_mark.platform.forEach(
+            id => platform.push(parse_platform(
+                id, target, uploader
+            ))
+        );
+    
+        return { metadata, platform };
+    };
+    
+    const parse_platform = (id, platform, uploader) => {
+        const info = platform[id];
+    
+        const result = {
+            "id": id, "page": info.page,
+            "link": info.link.replace("BB://V/", "https://b23.tv/"),
+            "publish": info.published_at, "title": info.title, "uploader": [],
+            "duration": info.duration, "copyright": info.copyright,
+            "thumbnail": info.thumbnail.replace(
+                "BB://I/", "https://i0.hdslb.com/bfs/archive/"
+            )
+        };
+    
+        uploader[id] && uploader[id].forEach(
+            item => result.uploader.push({
+                "id": item.value, "name": target[item.value].name
+            })
+        );
+    
+        return result;
+    };
+
+    const get_mark_info_by_song_list = song_list => {
+        return Object.fromEntries(Object.entries(
+            classification(
+                get_mark_info_by_target_id(song_list),
+                value => value.target
+            )
+        ).map(([key, value]) => ([
+            key, Object.fromEntries(Object.entries(
+                classification(value, value => value.type)
+            ).map(([key, value]) => ([
+                key, unique_array(value.map(
+                    item => item.value
+                ))
+            ])))
+        ])));
+    };
+    
+    const get_target_info_by_mark_info = mark_info => {
+        return Object.fromEntries(
+            get_target_info_by_id(
+                [ "producer", "vocalist", "synthesizer", "platform" ],
+                Object.values(mark_info).flat().map(
+                    item => Object.values(item)
+                ).flat(2)
+            ).map(item => item.response).flat().map(
+                item => ([ item.id, item ])
+            )
+        );
+    };
+    
+    const get_uploader_info_by_mark_info = mark_info => {
+        return classification(
+            get_mark_info_by_target_id(
+                Object.values(mark_info).map(
+                    item => Object.values(item)
+                ).flat(2).filter(
+                    item => item.startsWith("Platform:")
+                )
+            ), value => value.target
+        );
+    };
+
+    const song = get_target_info_by_id("song", ids);
+    const mark = get_mark_info_by_song_list(song.map(
+        item => item.id
+    ));
+    const target = get_target_info_by_mark_info(mark);
+    const uploader = get_uploader_info_by_mark_info(mark);
+
+    const uploader_ids = Object.values(uploader).flat().map(item => item.value);
+
+    get_target_info_by_id("uploader", uploader_ids).forEach(
+        temp => target[temp.id] = temp
+    );
+
+    const map = Object.fromEntries(song.map(
+        item => ([ item.id, item ])
+    ));
+
+    return ids.map(id => parse_song(
+        map[id], mark, target, uploader
+    ));
 }
 
 /**
@@ -156,55 +207,71 @@ function song_info(list = []) {
  * @param {string} board 需要获取的排行榜
  * @param {number} count 要获取多少个
  * @param {number} index 页索引
+ * @param {string} part 需要获取的目标的子刊名称
  * @returns 获取到的排行榜信息
  */
-function board_info(issue, board = "vocaoid-weekly-main", count = 50, index = 1) {
-    const list = get_board_song_list({
-        issue, count, index, board
-    }), metadata = get_board_metadata_info_by_id(board);
+function get_board_info_by_entry(issue, board = "vocaoid-weekly", count = 50, index = 1, part) {
+    const list = get_board_song_list({ issue, count, index, board, part });
+    const metadata = {
+        "board": get_board_metadata_info_by_id(board)
+    };
 
-    const issue_metadata = metadata.catalog.find(item => item.issue === issue);
+    metadata.issue = metadata.board.catalog.find(
+        item => item.issue === issue
+    );
 
-    const song_id_list = list.map(item => item.target);
+    const parse_song = song => {
+        return {
+            "rank": {
+                "view": song.view_rank, "like": song.like_rank,
+                "coin": song.coin_rank, "board": song.rank,
+                "favorite": song.favorite_rank
+            }, "count": song.count ?? 0, "change": {
+                "view": song.view_change, "like": song.like_change,
+                "coin": song.coin_change, "favorite": song.favorite_change
+            }, "target": parse_target(
+                target[song.target], song.platform
+            )
+        };
+    };
+
+    const parse_target = (target, platform) => {
+        for (const [ field, value ] of Object.entries(target)) {
+            if (field === "platform") {
+                target[field] = value.find(
+                    item => item.id === platform
+                ) || {};
+            }
+        }
+
+        return target;
+    };
+
+    const song_ids = list.map(item => item.target);
 
     const target = Object.fromEntries(
-        song_info(song_id_list).map(item => ([
+        get_song_info_by_id(song_ids).map(item => ([
             item.metadata.id, item
         ]))
     );
     
     const result = {
-        "board": list.map(song => ({
-            "rank": {
-                "view": song.view_rank, "like": song.like_rank,
-                "coin": song.coin_rank, "board": song.rank,
-                "favorite": song.favorite_rank
-            }, "count": song.count || 0, "change": {
-                "view": song.view_change, "like": song.like_change,
-                "coin": song.coin_change, "favorite": song.favorite_change
-            }, "target": Object.fromEntries(
-                Object.entries(target[song.target] || {}).map(([key, value]) => {
-                    if (key === "platform") {
-                        value = value.find(item => item.id === song.platform);
-                    };
-
-                    return [
-                        key, value
-                    ];
-                })
-            )
-        })),
+        "board": list.map(
+            song => parse_song(song)
+        ),
         "metadata": {
-            "id": get_type(board).second === "array" ? board[0] : board,
-            "name": metadata.name, "date": issue_metadata.date,
-            "issue": issue, "count": issue_metadata.count
+            "id": board, "name": metadata.name,
+            "date": metadata.issue.date,
+            "part": list[0].part, "issue": issue,
+            "count": metadata.issue.part[list[0].part]
         }
     };
 
     get_rank_by_song_id({
-        board, "count": count, "issue": [ issue - 1 ], "target": song_id_list
-    }).map(last => (result.board[song_id_list.indexOf(last.target)].last = {
-        "rank": last.rank, "point": last.point
+        board, count, "issue": [ issue - 1 ], "target": song_ids
+    }).map(last => (result.board[song_ids.indexOf(last.target)].last = {
+        "rank": last.rank,
+        "point": last.point
     }));
 
     return result;
@@ -216,13 +283,14 @@ function board_info(issue, board = "vocaoid-weekly-main", count = 50, index = 1)
  * @param {string} board 需要获取的排行榜
  * @param {number} count 要获取多少个
  * @param {number} index 当前的页数
+ * @param {string} part 需要获取的目标的子刊名称
  * @returns 获取到的排行榜信息
  */
-function current_board_info(board = "vocaoid-weekly-main", count = 50, index = 1) {
+function get_current_board_info_by_entry(board = "vocaoid-weekly", count = 50, index = 1, part) {
     const metadata = get_board_metadata_info_by_id(board);
 
-    return board_info(
-        metadata.catalog.at(-1).issue, board, count, index
+    return get_board_info_by_entry(
+        metadata.catalog.at(-1).issue, board, count, index, part
     );
 }
 
@@ -234,7 +302,7 @@ function current_board_info(board = "vocaoid-weekly-main", count = 50, index = 1
  * @param {number} index 当前的页数
  * @returns 获取到的排行榜信息
  */
-function platform_count_history_info(target, count = 50, index = 1) {
+function get_platform_count_history_info_by_id(target, count = 50, index = 1) {
     const where = {
         "column": "target",
         "operator": "equal",
@@ -268,14 +336,14 @@ function platform_count_history_info(target, count = 50, index = 1) {
  * 
  * @param {string} target 目标曲目
  * @param {number[]} issue 需要获取的期数列表
- * @param {string[]} board 排名榜单
+ * @param {string} board 排名榜单
  * @param {number} count 要获取多少个
  * @param {number} index 当前的页数
  * @returns 获取到的排行榜信息
  */
-function song_rank_history_info(target, issue, board, count = 50, index = 1) {
+function get_song_rank_history_info_by_id(target, issue, board, count = 50, index = 1) {
     const rank = get_rank_by_song_id({
-        count, index, target, "issue": issue || [], "board": board || []
+        count, index, target, issue, board
     });
 
     return rank.map(item => ({
@@ -288,6 +356,14 @@ function song_rank_history_info(target, issue, board, count = 50, index = 1) {
         }, "issue": item.issue, "board": item.board
     })).filter(item => item.rank.coin > 0);
 }
+
+const instance = database.instance;
+
+instance.function("levenshtein", (str1, str2) => {
+    return levenshtein.get(str1, str2, {
+        "useCollator": true
+    });
+});
 
 /**
  * 通过曲目 Platform 数据的 BVID 或者 Title 查询对应的曲目数据
@@ -344,7 +420,7 @@ function search_song_by_platform_title(target, count = 50, index = 1) {
         "total": database.count_item(
             "Platform_Table", { where }
         )[0]["COUNT(*)"],
-        "result": song_info(
+        "result": get_song_info_by_id(
             mark.map(item => item.target)
         )
     };
@@ -359,27 +435,27 @@ function search_song_by_platform_title(target, count = 50, index = 1) {
  * @returns 获取到的曲目列表
  */
 function search_song_by_name(name, count = 50, index = 1) {
-    const where = {
-        "column": "name",
-        "operator": "like",
-        "value": `%${name}%`,
-        "collate": "nocase"
-    };
-
-    const list = database.select_item("Song_Table", {
-        where, "control": {
-            "result": {
-                "limit": count,
-                "offset": count * (index - 1)
-            }
-        }
+    const list = instance.prepare(`
+        SELECT
+            *, levenshtein(name, :name) AS distance
+        FROM Song_Table
+        WHERE distance <= LENGTH(:name)
+        ORDER BY
+            CASE WHEN type = 'Unmarked' THEN 1 ELSE 0 END, distance ASC
+        LIMIT :count OFFSET :offset
+    `).all({
+        name, count, "offset": count * (index - 1)
     });
 
     return {
-        "total": database.count_item(
-            "Song_Table", { where }
-        )[0]["COUNT(*)"],
-        "result": song_info(
+        "total": instance.prepare(`
+            SELECT COUNT(*) FROM (
+                SELECT levenshtein(name, :name) AS distance
+                FROM Song_Table
+                WHERE distance <= LENGTH(:name)
+            ) AS subquery
+        `).all({ name })[0]["COUNT(*)"],
+        "result": get_song_info_by_id(
             list.map(item => item.id)
         )
     };
@@ -393,7 +469,7 @@ function search_song_by_name(name, count = 50, index = 1) {
  * @param {number} index 当前的页数
  * @returns 获取到的目标列表
  */
-function get_target_list(type, count = 50, index = 1) {
+function get_target_list_by_type(type, count = 50, index = 1) {
     if (type === "board") {
         const board = metadata_define.board;
 
@@ -434,7 +510,7 @@ function get_target_list(type, count = 50, index = 1) {
             table_name, { where }
         )[0]["COUNT(*)"],
         "result": ((type, result) => {
-            if (type === "song") return song_info(
+            if (type === "song") return get_song_info_by_id(
                 result.map(item => item.id)
             );
             
@@ -510,7 +586,7 @@ function get_song_list_by_mark(type, target, count = 50, index = 1) {
         "total": database.count_item(
             "Mark_Table", { where }
         )[0]["COUNT(*)"],
-        "result": song_info(
+        "result": get_song_info_by_id(
             result.map(item =>
                 mapping[item.target] || item.target
             )
@@ -636,7 +712,7 @@ function get_song_list_by_pool_id(target, count = 50, index = 1) {
             );
 
             const info = Object.fromEntries(
-                song_info(
+                get_song_info_by_id(
                     unique_array(
                         Object.values(mapping)
                     )
@@ -693,6 +769,60 @@ function get_song_list_by_pool_id(target, count = 50, index = 1) {
 }
 
 /**
+ * 检查目标有效性
+ * 
+ * @typedef CheckExistsEntry
+ * @property {number} issue 目标的期数
+ * @property {string} [part] 目标子刊
+ * @property {boolean} exists 检查结果
+ * 
+ * @param {object} metadata 榜单元数据
+ * @param {string} part 子刊代号
+ * @param {number[]} issue 期数代号
+ * @returns {CheckExistsEntry[]} 检查结果
+ */
+function check_exists_board_entry(metadata, part, issues) {
+    const result = [], mapping = new Map();
+
+    metadata.catalog.forEach(item => {
+        mapping.set(
+            item.issue.toString(), item
+        );
+    });
+
+    for (let index = 0; index < issues.length; index++) {
+        const issue = issues[index];
+
+        const target = mapping.get(issue);
+        
+        if (!target) {
+            result.push({
+                "issue": issue,
+                "exists": false
+            });
+
+            continue;
+        }
+
+        if (!target.part[part]) {
+            result.push({
+                issue, part,
+                "exists": false
+            });
+
+            continue;
+        }
+
+        result.push({
+            issue, part,
+            "exists": true
+        });
+    }
+
+    return result;
+}
+
+/**
  * 注册不同方法的路由
  * 
  * @param {string} router 路由定义字符串
@@ -706,23 +836,119 @@ application.register = (router, handler, method = [ "get", "post" ]) => {
     });
 }
 
+const map = {
+    "zh": "zh-TW",
+    "ja": "ja-JP",
+    "ko": "ko-KR",
+    "es": "es-ES",
+    "fr": "fr-FR",
+    "en": "en-US",
+    "de": "de-DE"
+};
+
+application.use((req, res, next) => {
+    console.log(template.replace(
+        "{{datetime}} {{level}} {{message}}", {
+            "datetime": ansi.encode({
+                "text": "[" + format_datetime(
+                    datetime.format, new Date()
+                ) + "]",
+                "color": {
+                    "background": "green"
+                }
+            }),
+            "level": ansi.encode({
+                "text": "(Info)",
+                "color": {
+                    "background": "cyan"
+                }
+            }),
+            "message": ansi.encode({
+                "text": "接收到来自客户端的 HTTP 请求",
+                "color": {
+                    "background": "yellow"
+                }
+            })
+        }
+    ));
+
+    console.log(`请求来源: ${req.headers["x-real-ip"] || req.socket.remoteAddress} (Port=${req.socket.remotePort}, Famliy=${req.socket.remoteFamily})`);
+    console.log(`请求目标: ${req.path} (Method=${req.method})`);
+    console.log("携带参数:", parse_parameter(req));
+
+    const list = req.acceptsLanguages().map(
+        item => map[item] ? map[item] : item
+    );
+
+    const code = list.filter(code => list.includes(code))[0];
+
+    const text = language.text[code] || language.text[language.default];
+
+    res.get_local_text = (entry, param) => {
+        return template.replace(
+            text[entry] || text.UNKNOWN_TEXT_ENTRY,
+            typeof param === "object" ? param : {}
+        );
+    };
+
+    next();
+});
+
+/**
+ * 检查简单参数是否符合要求
+ * 
+ * @param {Object<string, string[]>} param 参数列表
+ * @param {number} receive 请求接收时间
+ * @param {{ "request": Express.Request, "response": Express.Response }} instance Express 实例
+ * @returns {boolean} 是否通过了检查
+ */
+function check_param(param, receive, instance) {
+    const { request } = instance;
+
+    const route_rule = rule.param[request.route.path];
+
+    if (!route_rule) return true;
+
+    function _check(field, rule, value) {
+        if (rule.mode !== "count") {
+            value = value[0];
+        }
+
+        return check_parameter(
+            instance, field, receive,
+            value, rule.mode, rule.options
+        );
+    }
+
+    for (let [ field, rule ] of Object.entries(route_rule)) {
+        if (!Array.isArray(rule)) {
+            rule = [ rule ];
+        }
+
+        for (let index = 0; index < rule.length; index++) {
+            const current = rule[index];
+            
+            if (!_check(field, current, param[field])) {
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
+
 application.register("/get_info/song", (request, response) => {
     /**
      * @type {{ "target": string[] }}
      */
     const param = parse_parameter(request);
-    const receive = process.uptime(), instance = {
-        response, request
-    };
+    const receive = process.uptime();
+    const instance = { response, request };
 
-    if (!check_parameter(instance, "target", receive, param.target, "count", {
-        "range": { "maximum": 200 }
-    })) return;
+    if (!check_param(param, receive, instance)) return;
 
     return response.send(build_response(instance, {
-        param, receive, "data": song_info(
-            param.target
-        )
+        param, receive, "data": get_song_info_by_id(param.target)
     }, "OK"));
 });
 
@@ -731,50 +957,26 @@ application.register("/get_list/song/by_:type", (request, response) => {
      * @type {{ "type": ("pool"|"uploader"|"vocalist"|"producer"|"synthesizer"), "count": number, "index": number, "target": string }}
      */
     const param = Object.assign({
-        "count": 50, "index": 1
+        "count": [ "50" ], "index": [ "1" ]
     }, parse_parameter(request));
-    const receive = process.uptime(), instance = {
-        response, request
-    };
+    const receive = process.uptime();
+    const instance = { response, request };
 
-    if (!check_parameter(instance, "type", receive, param.type, "count", {
-        "range": { "maximum": 1 }
-    })) return;
+    if (!check_param(param, receive, instance)) return;
 
-    if (!check_parameter(instance, "type", receive, param.type, "list", {
-        "list": [ "pool", "uploader", "vocalist", "producer", "synthesizer" ]
-    })) return;
-
-    param.type = param.type[0];
-
-    // if (param.type === "pool") return response.send(build_response(
-    //     instance, { receive }, "NOT_IMPLEMENTED_YET",
-    //     "目前所访问的目标端点(ep=/get_list/by_pool)目前尚未实现。"
-    // ));
-    
-    if (!check_parameter(instance, "target", receive, param.target, "count", {
-        "range": { "maximum": 1 }
-    })) return;
-
-    if (!check_parameter(instance, "count", receive, param.count, "number", {
-        "type": "integer",
-        "range": { "minimum": 1, "maximum": 50 }
-    })) return;
-
-    if (!check_parameter(instance, "index", receive, param.index, "number", {
-        "type": "integer",
-        "range": { "minimum": 1, "maximum": 131072 }
-    })) return;
+    for (const [ key, value ] of Object.entries(param)) {
+        param[key] = value[0];
+    }
 
     if (param.type === "pool") return response.send(build_response(instance, {
         param, receive, "data": get_song_list_by_pool_id(
-            param.target[0], param.count, param.index
+            param.target, +param.count, +param.index
         )
     }, "OK"));
 
     return response.send(build_response(instance, {
         param, receive, "data": get_song_list_by_mark(
-            param.type, param.target[0], param.count, param.index
+            param.type, param.target, +param.count, +param.index
         )
     }, "OK"));
 });
@@ -784,158 +986,146 @@ application.register("/get_list/:type", (request, response) => {
      * @type {{ "type": ("song"|"board"|"uploader"|"vocalist"|"producer"|"synthesizer"), "count": number, "index": number }}
      */
     const param = Object.assign({
-        "count": 20, "index": 1
+        "count": [ "20" ], "index": [ "1" ]
     }, parse_parameter(request));
-    const receive = process.uptime(), instance = {
-        response, request
-    };
+    const receive = process.uptime();
+    const instance = { response, request };
 
-    if (!check_parameter(instance, "type", receive, param.type, "count", {
-        "range": { "maximum": 1 }
-    })) return;
+    if (!check_param(param, receive, instance)) return;
 
-    if (!check_parameter(instance, "type", receive, param.type, "list", {
-        "list": [ "song", "board", "uploader", "vocalist", "producer", "synthesizer" ]
-    })) return;
-
-    if (!check_parameter(instance, "count", receive, param.count, "number", {
-        "type": "integer",
-        "range": { "minimum": 1, "maximum": 50 }
-    })) return;
-
-    if (!check_parameter(instance, "index", receive, param.index, "number", {
-        "type": "integer",
-        "range": { "minimum": 1, "maximum": 131072 }
-    })) return;
+    for (const [ key, value ] of Object.entries(param)) {
+        param[key] = value[0];
+    }
 
     return response.send(build_response(instance, {
-        param, receive, "data": get_target_list(
-            param.type[0], param.count, param.index
+        param, receive, "data": get_target_list_by_type(
+            param.type, +param.count, +param.index
         )
     }, "OK"));
 });
 
 application.register("/get_info/board", (request, response) => {
     /**
-     * @type {{ "board": string, "count": number, "index": number, "issue": number[] }}
+     * @type {{ "board": string, "count": number, "index": number, "issue": number[], "part": string }}
      */
     const param = Object.assign({
-        "count": 50, "index": 1
-    }, parse_parameter(request)), receive = process.uptime(), instance = {
-        response, request
-    };
-    
-    if (!check_parameter(instance, "board", receive, param.board, "count", {
-        "range": { "maximum": 1 }
-    })) return;
+        "count": [ "50" ], "index": [ "1" ], "part": [ "main" ]
+    }, parse_parameter(request));
+    const receive = process.uptime();
+    const instance = { response, request };
 
-    if (!check_parameter(instance, "issue", receive, param.issue, "number", {
-        "type": "integer",
-        "range": { "minimum": -131072, "maximum": 131072 }
-    })) return;
+    if (!check_param(param, receive, instance)) return;
 
-    if (!check_parameter(instance, "count", receive, param.count, "number", {
-        "type": "integer",
-        "range": { "minimum": 1, "maximum": 200 }
-    })) return;
-
-    if (!check_parameter(instance, "index", receive, param.index, "number", {
-        "type": "integer",
-        "range": { "minimum": 1, "maximum": 131072 }
-    })) return;
+    for (const [ key, value ] of Object.entries(param)) {
+        param[key] = value[0];
+    }
 
     const metadata = get_board_metadata_info_by_id(param.board);
 
     if (!metadata) return response.send(
         build_response(instance, {
-            param, receive, "data": null
-        }, "BOARD_NOT_EXISTS", "目标榜单不存在。")
+            param, receive
+        }, "BOARD_NOT_EXISTS")
     );
 
-    if (!metadata.catalog.some(item => item.issue === param.issue)) return response.send(
-        build_response(instance, {
-            param, receive, "data": null
-        }, "ISSUE_NOT_EXISTS", "目标刊目不存在。")
+    const target = metadata.catalog.find(
+        item => item.issue === +param.issue
     );
+
+    if (!target) return response.send(
+        build_response(instance, {
+            param, receive
+        }, "ISSUE_NOT_EXISTS")
+    );
+
+    if (!target.part[param.part]) {
+        return response.send(
+            build_response(instance, {
+                param, receive 
+            }, "PART_NO_EXISTS")
+        );
+    }
 
     return response.send(build_response(instance, {
-        param, receive, "data": board_info(
-            param.issue, param.board, param.count, param.index
+        param, receive, "data": get_board_info_by_entry(
+            +param.issue, param.board, +param.count,
+            +param.index, param.part
         )
     }, "OK"));
 });
 
-application.register("/get_info/board/_current", (request, response) => {
+application.register("/get_info/board/_latest", (request, response) => {
     /**
-     * @type {{ "board": string, "count": number, "index": number }}
+     * @type {{ "board": string, "count": number, "index": number, "part": string }}
      */
     const param = Object.assign({
-        "count": 50, "index": 1
-    }, parse_parameter(request)), receive = process.uptime(), instance = {
-        response, request
-    };
+        "count": [ "50" ], "index": [ "1" ], "part": [ "main" ]
+    }, parse_parameter(request));
+    const receive = process.uptime();
+    const instance = { response, request };
 
-    if (!check_parameter(instance, "board", receive, param.board, "count", {
-        "range": { "maximum": 1 }
-    })) return;
+    if (!check_param(param, receive, instance)) return;
 
-    if (!check_parameter(instance, "count", receive, param.count, "number", {
-        "type": "integer",
-        "range": { "minimum": 1, "maximum": 200 }
-    })) return;
+    for (const [ key, value ] of Object.entries(param)) {
+        param[key] = value[0];
+    }
 
-    if (!check_parameter(instance, "index", receive, param.index, "number", {
-        "type": "integer",
-        "range": { "minimum": 1, "maximum": 131072 }
-    })) return;
+    const metadata = get_board_metadata_info_by_id(param.board);
 
-    const board_info = get_board_metadata_info_by_id(param.board);
+    if (!metadata) {
+        return response.send(
+            build_response(instance, {
+                param, receive
+            }, "BOARD_NOT_EXISTS")
+        );
+    }
 
-    if (board_info) {
-        if (board_info.catalog.length === 0) return response.send(build_response(
-            instance, { receive }, "NO_ENTRY_EXISTS",
-            "所访问的榜单目前没有任何刊目。"
-        ));
+    if (metadata.catalog.length === 0) {
+        return response.send(
+            build_response(instance, {
+                param, receive
+            }, "NO_ENTRY_EXISTS")
+        );
+    }
 
-        return response.send(build_response(instance, {
-            param, receive, "data": current_board_info(
-                param.board, param.count, param.index
-            )
-        }, "OK"));
+    if (!metadata.catalog.at(-1).part[param.part]) {
+        return response.send(
+            build_response(instance, {
+                param, receive
+            }, "PART_NO_EXISTS")
+        );
     }
 
     return response.send(build_response(instance, {
-        param, receive, "data": null
-    }, "BOARD_NOT_EXISTS", "目标榜单不存在。"));
+        param, receive, "data": get_current_board_info_by_entry(
+            param.board, +param.count, +param.index, param.part
+        )
+    }, "OK"));
 });
 
 application.register("/get_info/metadata/board", (request, response) => {
     /**
      * @type {{ "target": string, "set-cache": number }}
      */
-    const param = Object.assign({
-        "set-cache": 0
-    }, parse_parameter(request));
-    const receive = process.uptime(), instance = {
-        response, request
-    };
+    const param = Object.assign({ "set-cache": [ "0" ] }, parse_parameter(request));
+    const receive = process.uptime();
+    const instance = { response, request };
 
-    if (!check_parameter(instance, "set-cache", receive, param["set-cache"], "number", {
-        "range": { "minimum": 0, "maximum": 131072 }
-    })) return;
+    if (!check_param(param, receive, instance)) return;
 
-    if (!check_parameter(instance, "target", receive, param.target, "count", {
-        "range": { "maximum": 1 }
-    })) return;
-
-    if (get_board_metadata_info_by_id(param.target[0])) {
-        return response.send(build_response(instance, {
-            param, receive, "data": get_board_metadata_info_by_id(param.target[0])
-        }, "OK"));
+    for (const [ key, value ] of Object.entries(param)) {
+        param[key] = value[0];
     }
 
     if (param["set-cache"] !== 0) {
         response.setHeaders("Cache-Control", "public, max-age=" + param["set-cache"]);
+    }
+
+    if (get_board_metadata_info_by_id(param.target)) {
+        return response.send(build_response(instance, {
+            param, receive, "data":
+                get_board_metadata_info_by_id(param.target)
+        }, "OK"));
     }
 
     return response.send(build_response(instance, {
@@ -948,35 +1138,32 @@ application.register("/get_history/song/rank", (request, response) => {
      * @type {{ "board": string, "count": number, "index": number, "issue": number[], "target": string }}
      */
     const param = Object.assign({
-        "count": 50, "index": 1, "board": [], "issue": []
+        "count": [ "50" ], "index": [ "1" ], "issue": []
     }, parse_parameter(request));
-    const receive = process.uptime(), instance = {
-        response, request
-    };
+    const receive = process.uptime();
+    const instance = { response, request };
 
-    if (!Array.isArray(param.issue)) param.issue = [ param.issue ];
+    if (param.issue.length > 1) {
+        const result = check_parameter(
+            instance, "issue", receive,
+            param.issue, "count", {
+                "range": { "maximum": 128 }
+            }
+        );
 
-    if  (param.issue.length > 1 && !check_parameter(instance, "issue", receive, param.issue, "count", {
-        "range": { "maximum": 128 }
-    })) return;
+        if (!result) return;
+    }
 
-    if (!check_parameter(instance, "target", receive, param.target, "count", {
-        "range": { "maximum": 5 }
-    })) return;
+    if (!check_param(param, receive, instance)) return;
 
-    if (!check_parameter(instance, "count", receive, param.count, "number", {
-        "type": "integer",
-        "range": { "minimum": -1, "maximum": 300 }
-    })) return;
-
-    if (!check_parameter(instance, "index", receive, param.index, "number", {
-        "type": "integer",
-        "range": { "minimum": 1, "maximum": 131072 }
-    })) return;
+    for (const [ key, value ] of Object.entries(param)) {
+        param[key] = value[0];
+    }
 
     return response.send(build_response(instance, {
-        param, receive, "data": song_rank_history_info(
-            param.target, param.issue, param.board, param.count, param.index
+        param, receive, "data": get_song_rank_history_info_by_id(
+            param.target, +param.issue, param.board,
+            +param.count, +param.index
         )
     }, "OK"));
 });
@@ -986,29 +1173,20 @@ application.register("/get_history/platform/count", (request, response) => {
      * @type {{ "count": number, "index": number, "target": string }}
      */
     const param = Object.assign({
-        "count": 300, "index": 1
+        "count": [ "300" ], "index": [ "1" ]
     }, parse_parameter(request));
-    const receive = process.uptime(), instance = {
-        response, request
-    };
+    const receive = process.uptime();
+    const instance = { response, request };
 
-    if (!check_parameter(instance, "target", receive, param.target, "count", {
-        "range": { "maximum": 1 }
-    })) return;
+    if (!check_param(param, receive, instance)) return;
 
-    if (!check_parameter(instance, "count", receive, param.count, "number", {
-        "type": "integer",
-        "range": { "minimum": -1, "maximum": 300 }
-    })) return;
-
-    if (!check_parameter(instance, "index", receive, param.index, "number", {
-        "type": "integer",
-        "range": { "minimum": 1, "maximum": 131072 }
-    })) return;
+    for (const [ key, value ] of Object.entries(param)) {
+        param[key] = value[0];
+    }
 
     return response.send(build_response(instance, {
-        param, receive, "data": platform_count_history_info(
-            param.target, param.count, param.index
+        param, receive, "data": get_platform_count_history_info_by_id(
+            param.target, +param.count, +param.index
         )
     }, "OK"));
 });
@@ -1018,29 +1196,20 @@ application.register("/search/song/by_name", (request, response) => {
      * @type {{ "target": string, "count": number, "index": number }}
      */
     const param = Object.assign({
-        "count": 25, "index": 1
+        "count": [ "25" ], "index": [ "1" ]
     }, parse_parameter(request));
-    const receive = process.uptime(), instance = {
-        response, request
-    };
+    const receive = process.uptime();
+    const instance = { response, request };
 
-    if (!check_parameter(instance, "target", receive, param.target, "count", {
-        "range": { "maximum": 1 }
-    })) return;
+    if (!check_param(param, receive, instance)) return;
 
-    if (!check_parameter(instance, "count", receive, param.count, "number", {
-        "type": "integer",
-        "range": { "minimum": 1, "maximum": 50 }
-    })) return;
-
-    if (!check_parameter(instance, "index", receive, param.index, "number", {
-        "type": "integer",
-        "range": { "minimum": 1, "maximum": 131072 }
-    })) return;
+    for (const [ key, value ] of Object.entries(param)) {
+        param[key] = value[0];
+    }
 
     return response.send(build_response(instance, {
         param, receive, "data": search_song_by_name(
-            param.target, param.count, param.index
+            param.target, +param.count, +param.index
         )
     }, "OK"));
 });
@@ -1050,39 +1219,48 @@ application.register("/search/song/by_platform", (request, response) => {
      * @type {{ "title": string, "bvid": string, "count": number, "index": number }}
      */
     const param = Object.assign({
-        "count": 25, "index": 1
+        "count": [ "25" ], "index": [ "1" ]
     }, parse_parameter(request));
-    const receive = process.uptime(), instance = {
-        response, request
-    };
+    const receive = process.uptime();
+    const instance = { response, request };
 
-    if (!param.title && !param.bvid) return response.send(build_response(
-        instance, { receive }, "NOT_FOUND_VALID_VALUE", "没有找到有效值：" + 
-        "目标参数(Name=TITLE)和目标参数(Name=BVID)至少需一个有值"
-    ));
+    if (!param.title && !param.bvid) {
+        return response.send(build_response(
+            instance, { receive }, "NOT_FOUND_VALID_VALUE", {
+                "TARGET_PARAMETER": [
+                    "BVID", "NAME"
+                ].map(item => response.get_local_text(
+                    "TARGET_PARAMETER",
+                    { "name": item }
+                )).join(response.get_local_text(
+                    "NOT_FOUND_VALID_VALUE_JOINER"
+                ))
+            }
+        ));
+    }
+    
+    if (param.bvid) {
+        if (!check_parameter(instance, "bvid", receive, param.bvid, "count", {
+            "range": { "maximum": 1 }
+        })) return;
+    }
 
-    if (param.bvid && !check_parameter(instance, "bvid", receive, param.bvid, "count", {
-        "range": { "maximum": 1 }
-    })) return;
+    if (param.title) {
+        if (!check_parameter(instance, "title", receive, param.title, "count", {
+            "range": { "maximum": 1 }
+        })) return;
+    }
 
-    if (param.title && !check_parameter(instance, "title", receive, param.title, "count", {
-        "range": { "maximum": 1 }
-    })) return;
+    if (!check_param(param, receive, instance)) return;
 
-    if (!check_parameter(instance, "count", receive, param.count, "number", {
-        "type": "integer",
-        "range": { "minimum": 1, "maximum": 50 }
-    })) return;
-
-    if (!check_parameter(instance, "index", receive, param.index, "number", {
-        "type": "integer",
-        "range": { "minimum": 1, "maximum": 131072 }
-    })) return;
+    for (const [ key, value ] of Object.entries(param)) {
+        param[key] = value[0];
+    }
 
     return response.send(build_response(instance, {
-        param, receive, "data": search_song_by_platform_title(
-            { "bvid": param.bvid, "title": param.title },
-            param.count, param.index
+        param, receive, "data": search_song_by_platform_title({
+                "bvid": param.bvid, "title": param.title
+            }, +param.count, +param.index
         )
     }, "OK"));
 });
@@ -1092,40 +1270,54 @@ application.register("/search/:type/by_name", (request, response) => {
      * @type {{ "target": string, "count": number, "index": number, "type": string }}
      */
     const param = Object.assign({
-        "count": 25, "index": 1
+        "count": [ "25" ], "index": [ "1" ]
     }, parse_parameter(request));
-    const receive = process.uptime(), instance = {
-        response, request
-    };
+    const receive = process.uptime();
+    const instance = { response, request };
 
-    if (!check_parameter(instance, "type", receive, param.type, "count", {
-        "range": { "maximum": 1 }
-    })) return;
+    if (!check_param(param, receive, instance)) return;
 
-    if (!check_parameter(instance, "type", receive, param.type, "list", {
-        "list": [ "uploader", "vocalist", "producer", "synthesizer" ]
-    })) return;
-
-    param.type = param.type[0];
-
-    if (!check_parameter(instance, "target", receive, param.target, "count", {
-        "range": { "maximum": 1 }
-    })) return;
-
-    if (!check_parameter(instance, "count", receive, param.count, "number", {
-        "type": "integer",
-        "range": { "minimum": 1, "maximum": 50 }
-    })) return;
-
-    if (!check_parameter(instance, "index", receive, param.index, "number", {
-        "type": "integer",
-        "range": { "minimum": 1, "maximum": 131072 }
-    })) return;
+    for (const [ key, value ] of Object.entries(param)) {
+        param[key] = value[0];
+    }
 
     return response.send(build_response(instance, {
         param, receive, "data": search_target_by_name(
-            param.type, param.target, param.count, param.index
+            param.type, param.target, +param.count, +param.index
         )
+    }, "OK"));
+});
+
+application.register("/check/exists/board-entry", (request, response) => {
+    /**
+     * @type {{ "board": string, "issue": number, "part": string }}
+     */
+    const param = parse_parameter(request);
+    const receive = process.uptime();
+    const instance = { response, request };
+
+    if (!check_param(param, receive, instance)) return;
+
+    const metadata = get_board_metadata_info_by_id(param.board);
+
+    if (!metadata) return response.send(
+        build_response(instance, {
+            param, receive
+        }, "BOARD_NOT_EXISTS")
+    );
+
+    const result = check_exists_board_entry(
+        metadata, param.part[0], param.issue
+    );
+
+    return response.send(build_response(instance, {
+        param, receive, "data": {
+            result, "metadata": {
+                "name": metadata.name,
+                "board": param.board[0],
+                "count": metadata.catalog.length
+            }
+        }
     }, "OK"));
 });
 
@@ -1135,7 +1327,7 @@ application.use((request, response) => {
         "time": new Date().toISOString(),
         "status": "failed",
         "target": request.path,
-        "message": "目标资源不存在。"
+        "message": response.get_local_text("NOT_FOUND")
     });
 });
 

@@ -1,7 +1,14 @@
-import fs, { Dirent } from "fs"; import url from "url"; import xlsx from "xlsx"; import path from "path";
-import SQLite3 from "better-sqlite3"; import { command_parser } from "../depend/parse.js";
-import { compute_hamc, get_type, quote_string, split_group, text_transformer as cap, append_rank_field, classification, unique_array } from "../../depend/core.js";
-import DatabaseOperator from "../../depend/operator/database.js";
+import url from "url";
+import xlsx from "xlsx";
+import path from "path";
+import SQLite3 from "better-sqlite3";
+import fs, { Dirent } from "fs";
+import { command_parser } from "../depend/parse.js";
+import {
+    compute_hamc, get_type, quote_string,
+    split_group, text_transformer as cap,
+    append_rank_field, classification
+} from "../../depend/core.js";
 
 const root = path.resolve("."), shell = command_parser(process.argv);
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
@@ -26,11 +33,12 @@ const config = {
 };
 
 const database = {
-    "filepath": config.global.database[field].filepath
+    "path": config.global.database[field].path
 };
+
 const charset = "0123456789qazwsxedcrfvtgbyhnujmikolpQAZWSXEDCRFVTGBYHNUJMIKOLP-_";
 
-const instance = new SQLite3(database.filepath, { 
+const instance = new SQLite3(database.path, { 
     "timeout": 1000, "readonly": false
 });
 
@@ -45,15 +53,15 @@ const instance = new SQLite3(database.filepath, {
  * @param {(index|string|ReadXlsxTargetCallback)} target 要读取的目标工作表
  * @returns {(Object<string, (number|string)>)[]} 读取出来的数据
  */
-function read_xlsx(filepath, target = 0) {
-
+function read_xlsx(filepath, target = 0, rename = true) {
     if (filepath.endsWith(".json")) return JSON.parse(
         fs.readFileSync(
             filepath, "UTF-8"
         )
     );
 
-    const workbook = xlsx.readFile(filepath), type = get_type(target);
+    const type = get_type(target);
+    const workbook = xlsx.readFile(filepath);
 
     if (type.first !== "function") {
         if (type.first === "string") {
@@ -73,13 +81,21 @@ function read_xlsx(filepath, target = 0) {
         workbook.Sheets[target(
             workbook.SheetNames
         )]
-    ), new_filepath = filepath.replace(/\.xlsx$/, ".json");
+    );
+    
+    if (!rename) return result ?? read_xlsx(
+        filepath, target, rename
+    );
+
+    const new_filepath = filepath.replace(/\.xlsx$/, ".json");
 
     fs.renameSync(filepath, new_filepath);
 
     fs.writeFileSync(new_filepath, JSON.stringify(result));
 
-    return result;
+    return result ?? read_xlsx(
+        new_filepath, target, rename
+    );
 }
 
 /**
@@ -237,12 +253,459 @@ function gen_id(branch, text) {
     return branch + ":" + output.slice(0, 10);
 }
 
+/**
+ * 在内存中插入普通榜单数据
+ * 
+ * @param {("new"|"main")} part 子榜单类别
+ * @param {("daily"|"weekly"|"monthly")} source 目标文件来源
+ * @param {string} filepath 文件绝对路径
+ * @param {string} filename 目标文件名称
+ * @param {(count: number) => number} adder 给 counter 自增的回调方法
+ */
+function insert_normal_board_rank(part = "main", source, filepath, filename, adder) {
+    const date = get_date_string(filename);
+    const board = "vocaloid-" + source;
+    const dataset = read_xlsx(filepath);
+
+    console.log(`Part: ${part}, Type: ${source}, Counter: ${dataset.length}, Filename: ${filename}, Datetime: ${date}`);
+
+    adder(dataset.length);
+
+    append_rank_field(dataset, [
+        "point", "view", "coin", "like", "favorite"
+    ]).forEach(data => {
+        // console.log(data, get_song_name(data));
+
+        const song_id = gen_id("Song", get_song_name(data));
+
+        memory.data.rank.set(
+            gen_id("Record", board + song_id + date + part), {
+                "target": song_id, "point": data.point,
+                "count": data.count ?? -1, board, part,
+                "issue": memory.issue.get(board)[date],
+                "platform": gen_id("Platform", data.bvid),
+                "recorded_at": get_iso_time_text(),
+                "rank": data.rank || data._rank.point + 1,
+                "coin_change": data.coin, "view_change": data.view,
+                "favorite_change": data.favorite, "like_change": data.like,
+                "view_rank": data.view_rank || data._rank.view + 1,
+                "like_rank": data.like_rank || data._rank.like + 1,
+                "coin_rank": data.coin_rank || data._rank.coin + 1,
+                "favorite_rank": data.favorite_rank || data._rank.favorite + 1
+            }
+        );
+
+        if (part === "new") {
+            if (URL.canParse(data.image_url)) {
+                insert_song(data, adder);
+            }
+        }
+    });
+}
+
+/**
+ * 在内存中插入特殊榜单数据
+ * 
+ * @param {string} filepath 文件绝对路径
+ * @param {string} datetime 目标刊物发刊时间
+ * @param {number} issue 目标刊物的期号
+ * @param {(count: number) => number} adder 给 counter 自增的回调方法
+ */
+function insert_special_board_rank(filepath, datetime, issue, adder) {
+    const data = {};
+    const board = "vocaloid-special";
+
+    console.log(`Type: ${filepath}, Datetime: ${datetime}, Issue: ${issue}`);
+
+    let sheets = [];
+
+    const temp = read_xlsx(filepath, (list) => {
+        sheets = list;
+
+        for (let index = 1; index < sheets.length; index++) {
+            const sheet = sheets[index];
+            
+            data[sheet] = read_xlsx(
+                filepath, sheet, false
+            );
+        }
+
+        return sheets[0];
+    }, false);
+
+    data[sheets[0]] = temp;
+
+    for (let [ sheet, dataset ] of Object.entries(data)) {
+        const part = sheet === "Sheet1" ? "main" : sheet;
+
+        // console.log(dataset)
+
+        adder(dataset.length);
+
+        append_rank_field(dataset, [
+            "point", "view", "coin", "like", "favorite"
+        ]).forEach(data => {
+            const song_id = gen_id("Song", get_song_name(data));
+
+            memory.data.rank.set(
+                gen_id("Record", board + song_id + datetime), {
+                    "target": song_id, "point": data.point, part,
+                    "count": data.count ?? -1, board, issue,
+                    "recorded_at": get_iso_time_text(),
+                    "platform": gen_id("Platform", data.bvid),
+                    "rank": data.rank || data._rank.point + 1,
+                    "coin_change": data.coin, "view_change": data.view,
+                    "favorite_change": data.favorite, "like_change": data.like,
+                    "view_rank": data.view_rank || data._rank.view + 1,
+                    "like_rank": data.like_rank || data._rank.like + 1,
+                    "coin_rank": data.coin_rank || data._rank.coin + 1,
+                    "favorite_rank": data.favorite_rank || data._rank.favorite + 1
+                }
+            );
+
+            insert_song(data, adder);
+        });
+    }
+}
+
+/**
+ * 获取当前的 ISO 8601 毫秒级时间字符串
+ * 
+ * @param {Date} instance 需要转换的 Date 实例
+ * @param {(text: string) => string} handler 结构处理器
+ * @returns {string} 转换出来的结果
+ */
+function get_iso_time_text(instance = new Date(), handler = text => text) {
+    return handler(instance.toISOString());
+}
+
+/**
+ * 获取指定目录的子集列表
+ * 
+ * @param {string} dirpath 目录路径
+ * @param {object} options 配置信息
+ * @param {boolean} options.include_directory 是否包含目录
+ * @param {boolean} options.recursive 是否递归获取
+ * @param {boolean} options.with_type 是否包含文件类型的知名符号（Symbol(type)）
+ * @param {BufferEncoding} options.encoding 目标名称的编码
+ * @returns {(Dirent & { "filepath": string })[]} 获取到的目标的列表
+ */
+function get_dirpath_children(dirpath, options) {
+    const {
+        encoding = "UTF-8", recursive = true,
+        include_directory = false,
+        with_type: withFileTypes = true
+    } = options;
+
+    return fs.readdirSync(dirpath, {
+        encoding, recursive, withFileTypes
+    }).filter(dirent => {
+        return dirent.isFile() ? true : include_directory;
+    }).map(dirent => {
+        dirent.filepath = path.join(dirent.path, dirent.name);
+
+        return dirent;
+    }).sort((a, b) => {
+        return a.filepath.localeCompare(b.filepath);
+    });
+}
+
+/**
+ * 插入表单数据
+ * 
+ * @param {("new"|"main")} type 表单类型
+ * @param {string} target_dirpath 表单数据目录地址
+ * @param {(count: number) => number} adder 给 counter 自增的回调方法
+ */
+function insert_board(type, target_dirpath, adder) {
+    const dirpath = path.resolve(
+        root, target_dirpath
+    );
+
+    const dirents = get_dirpath_children(
+        dirpath, { "include_directory": false }
+    );
+
+    console.log(`正在开始分析 ${target_dirpath} 目录下的曲目列表文件（共有 ${dirents.length} 个文件）`);
+
+    for (let index = 0; index < dirents.length; index++) {
+        const dirent = dirents[index];
+
+        console.log(`目前正在处理 ./${path.relative(
+            root, dirent.filepath
+        ).split(path.sep).filter(item => item !== "..").join("/")} 文件`);
+        
+        insert_normal_board_rank(
+            type, journal_mapping[
+                path.basename(dirent.parentPath)
+            ], dirent.filepath, dirent.name, adder
+        );
+    }
+}
+
+/**
+ * 插入每日快照数据
+ * 
+ * @param {string} filepath 文件绝对路径
+ * @param {string} filename 文件名名称
+ * @param {(count: number) => number} adder 给 counter 自增的回调方法 
+ */
+function insert_snapshot_list(filepath, filename, adder) {
+    const content = read_xlsx(filepath);
+    const datetime = get_date_string(filename);
+
+    console.log(`Counter: ${content.length}, Filename: ${filename}, Datetime: ${datetime}`);
+
+    adder(content.length);
+
+    content.forEach(data => {
+        if (!data.bvid) return;
+
+        const platform_id = gen_id("Platform", data.bvid);
+
+        memory.data.snapshot.set(
+            gen_id("Record", platform_id + datetime), {
+                "target": platform_id, "snapshot_at": datetime,
+                "view": data.view, "like": data.like,
+                "coin": data.coin, "favorite": data.favorite,
+                "recorded_at": get_iso_time_text()
+            }
+        );
+
+        memory.data.latest_snapshot.set(platform_id, {
+            "target": platform_id, "snapshot_at": datetime,
+            "view": data.view, "like": data.like,
+            "coin": data.coin, "favorite": data.favorite,
+            "recorded_at": get_iso_time_text()
+        });
+    })
+}
+
+/**
+ * 插入每日快照数据
+ * 
+ * @param {string} target_dirpath 目标表单数据目录地址
+ * @param {(count: number) => number} adder 给 counter 自增的回调方法
+ */
+function insert_snapshot(target_dirpath, adder) {
+    const dirpath = path.resolve(
+        root, target_dirpath
+    );
+
+    const dirents = get_dirpath_children(
+        dirpath, { "include_directory": false }
+    );
+
+    console.log(`正在开始分析 ${target_dirpath} 目录下的曲目列表文件（共有 ${dirents.length} 个文件）`);
+
+    for (let index = 0; index < dirents.length; index++) {
+        const dirent = dirents[index];
+
+        console.log(`目前正在处理 ./${path.relative(
+            root, dirent.filepath
+        ).split(path.sep).filter(item => item !== "..").join("/")} 文件`);
+        
+        insert_snapshot_list(
+            dirent.filepath, dirent.name, adder
+        );
+    }
+}
+
+/**
+ * 在数据库中创建标记关系
+ * 
+ * @param {object} data 决定标记关系的数据
+ * @param {(count: number) => number} adder 给 counter 自增的回调方法
+ */
+function insert_mark(data, adder) {
+    const { type, value, target } = data;
+
+    data = Object.assign(data, {
+        "set_at": get_iso_time_text()
+    });
+
+    const id = gen_id("Mark", type + value + target);
+
+    if (!memory.data.mark.has(id)) {
+        adder();
+
+        memory.data.mark.set(
+            id, data
+        );
+    }
+    
+    return {
+        "id": id, "data": data
+    };
+}
+
+/**
+ * 将易于人类理解的时长（45, 2:12, 13:14:14）转换成易于计算机理解的时长
+ * 
+ * @param {string} human_duration 需要转换的人类易于理解的时长
+ * @returns {number} 计算机容易理解的时长
+ */
+function human_duration_to_duration(human_duration) {
+    let result = 0;
+    const part = human_duration.split(/:0{0,1}/);
+
+    for (let index = part.length - 1; index >= 0; index--) {
+        result += Number(part[index]) * 60 ** (part.length - index - 1);
+    }
+
+    return result;
+}
+
+/**
+ * 在数据库中插入关联视频数据并构建关联关系（使用原始条目数据）
+ * 
+ * @param {object} data 原始条目数据
+ * @param {(count: number) => number} adder 给 counter 自增的回调方法
+ */
+function insert_platform(data, adder) {
+    const target = {
+        "song": gen_id("Song", get_song_name(data)),
+        "video": gen_id("Platform", data.bvid)
+    };
+
+    const shortener = url => {
+        if (URL.canParse(url)) {
+            return "BB://I/" + path.basename(new URL(url).pathname);
+        }
+
+        return null;
+    };
+
+    adder();
+
+    memory.data.platform.set(target.video, {
+        "title": data.title, "page": Math.floor(data.page ?? -1), // 这个 Math.floor 是真有必要
+        "thumbnail": data.image_url ? shortener(data.image_url) : "No Image",
+        "copyright": data.copyright ?? -1, "link": "BB://V/" + data.bvid,
+        "duration": data.duration ? human_duration_to_duration(
+            data.duration.replace("分", ":").replace("秒", "")
+        ) : -1, "recorded_at": get_iso_time_text(), "published_at": data.pubdate ? get_iso_time_text(
+            new Date(data.pubdate), text => text.replace(/\.\d{3}/, "")
+        ) : get_iso_time_text(new Date(0))
+    });
+
+    insert_mark({
+        "type": "platform",
+        "value": target.video,
+        "target": target.song
+    }, adder);
+}
+
+const collate = {
+    "index": JSON.parse(
+        fs.readFileSync(path.resolve(
+            __dirname, "./define/collate.json"
+        ), "UTF-8")
+    )
+};
+
+collate.bvids = Object.keys(collate.index);
+collate.names = Object.values(collate.index);
+
+/**
+ * 获取曲目名称
+ * 
+ * @param {object} data 曲目信息记录项
+ * @returns {string} 曲目名称
+ */
+function get_song_name(data) {
+    const { bvid, name } = data;
+
+    if (
+        !collate.bvids.includes(bvid) &&
+        collate.names.includes(name)
+    ) {
+        collate.index[bvid] = collate[collate.bvids[
+            collate.names.indexOf(name)
+        ]] ?? name;
+    } else if (!collate.index[bvid]) {
+        collate.index[bvid] = name;
+    }
+
+    return collate.index[bvid];
+}
+
+/**
+ * 在数据库中插入曲目数据（使用原始条目数据）
+ * 
+ * @param {object} data 原始条目数据
+ * @param {(count: number) => number} adder 给 counter 自增的回调方法
+ */
+function insert_song(data, adder) {
+    const entries = Object.entries(data);
+    const song_id = gen_id("Song", get_song_name(data));
+
+    adder();
+
+    memory.data.song.set(song_id, {
+        "name": get_song_name(data),
+        "type": data.type || "Unmarked",
+        "add_at": get_iso_time_text()
+    });
+
+    insert_platform(data, adder);
+
+    for (let index = 0; index < entries.length; index++) {
+        const entry = entries[index];
+        
+        if (!base.list.includes(entry[0])) continue;
+
+        entry[1].toString().split("、").forEach(name => {
+            const field = base.map[entry[0]];
+
+            name = name.trim();
+
+            if (!name) return;
+
+            const id = {
+                "video": gen_id("Platform", data.bvid),
+                "target": gen_id(cap(field), name)
+            }, _data = {
+                "mark": {
+                    "type": field,
+                    "value": id.target,
+                    "target": song_id
+                },
+                "insert": {
+                    "id": id.target, "name": name,
+                    "add_at": get_iso_time_text()
+                }
+            };
+
+            if (field === "uploader") _data.mark.target = id.video;
+            if (field === "vocalist") _data.insert.color = get_singer_color_by_name(name);
+
+            if (!memory.data[field].get(id.target)) {
+                adder();
+
+                memory.data[field].set(
+                    id.target, _data.insert
+                );
+            }
+
+            insert_mark(_data.mark, adder);
+        });
+    }
+}
+
 const memory = {
     "color": new Map(), "issue": new Map(), "video": new Map(), "data": {
         "platform": new Map(), "vocalist": new Map(), "snapshot": new Map(),
         "synthesizer": new Map(), "uploader": new Map(), "song": new Map(),
-        "producer": new Map(), "rank": new Map(), "mark": new Map()
+        "producer": new Map(), "rank": new Map(), "mark": new Map(),
+        "latest_snapshot": new Map()
     }
+};
+
+const journal_mapping = {
+    "日刊": "daily",
+    "周刊": "weekly",
+    "月刊": "monthly"
 };
 
 const base = {
@@ -257,7 +720,7 @@ const base = {
     ]
 };
 
-const { data, history, standard, specially } = config.manifest;
+const { data, history, standard, special } = config.manifest;
 
 if (data) {
     const { singer_color: singer_color_filepath, song_summa: song_summa_filepath } = data;
@@ -290,10 +753,12 @@ if (data) {
 
                     continue;
                 }
+
+                adder();
                 
                 memory.color.set(
                     data, color_number
-                ), adder();
+                );
             }
         }
     }
@@ -309,6 +774,7 @@ if (data) {
             const song_data = content[index];
 
             adder();
+
             memory.video.set(
                 song_data.bvid, song_data.name
             );
@@ -319,107 +785,6 @@ if (data) {
 
     console.log(`目标文件已经全部分析完毕，共构建了 ${counter} 个有效映射关系`);
 }
-
-/**
- * 在内存中插入普通榜单数据
- * 
- * @param {("new"|"main")} type 榜单类别
- * @param {("daily"|"weekly"|"monthly")} source 目标文件来源
- * @param {string} filepath 文件绝对路径
- * @param {string} filename 文件名名称
- * @param {(count: number) => number} adder 给 counter 自增的回调方法
- */
-function insert_normal_board_rank(type, source, filepath, filename, adder) {
-    const content = read_xlsx(filepath), datetime = get_date_string(
-        filename
-    ), board_name = [ "vocaloid-" + source, "vocaloid-" + source + "-" + type ];
-
-    console.log(`Type: ${type}, Source: ${source}, Counter: ${content.length}, Filename: ${filename}, Datetime: ${datetime}`);
-
-    adder(content.length);
-
-    append_rank_field(
-        content, [
-            "point", "view", "coin", "like", "favorite"
-        ]
-    ).forEach(data => {
-        const id = {
-            "song": gen_id("Song", memory.video.get(data.bvid) || data.name)
-        };
-
-        // if (!memory.data.song.has(id.song)) {
-        //     console.log(data);
-
-        //     insert_song(data, adder);
-        // }
-
-        // console.log(source + ": " + datetime + " => " + memory.issue.get(board_name[0])[datetime]);
-
-        memory.data.rank.set(
-            gen_id("Record", board_name[1] + id.song + datetime), {
-                "board": board_name[1], "issue": memory.issue.get(board_name[0])[datetime],
-                "target": id.song, "rank": data.rank || data._rank.point + 1, "view_rank": data.view_rank || data._rank.view + 1,
-                "like_rank": data.like_rank || data._rank.like + 1, "coin_rank": data.coin_rank || data._rank.coin + 1, "point": data.point,
-                "favorite_rank": data.favorite_rank || data._rank.favorite + 1, "like_change": data.like,
-                "coin_change": data.coin, "view_change": data.view, "favorite_change": data.favorite,
-                "recorded_at": get_iso_time_text(), "platform": gen_id("Platform", data.bvid), "count": data.count ?? -1
-            }
-        );
-
-        if (type === "new" && typeof data.image_url === "string" && data.image_url.startsWith("http")) insert_song(data, adder);
-    });
-}
-
-// /**
-//  * 在内存中插入特殊榜单数据
-//  * 
-//  * @param {string} filepath 文件绝对路径
-//  * @param {(count: number) => number} adder 给 counter 自增的回调方法
-//  */
-// function insert_specially_board_rank(filepath, datetime, issue, adder) {
-//     const content = read_xlsx(filepath);
-
-//     adder(content.length);
-
-//     append_rank_field(
-//         content, [
-//             "point", "view", "coin", "like", "favorite"
-//         ]
-//     ).forEach(data => {
-//         const id = {
-//             "song": gen_id("Song", memory.video.get(data.bvid) || data.name)
-//         };
-
-//         memory.data.rank.set(
-//             gen_id("Record", "vocaloid-specially" + id.song + datetime), {
-//                 "board": "vocaloid-specially", "issue": issue, "target": id.song,
-//                 "rank": data.rank || data._rank.point + 1, "view_rank": data.view_rank || data._rank.view + 1,
-//                 "like_rank": data.like_rank || data._rank.like + 1, "coin_rank": data.coin_rank || data._rank.coin + 1, "point": data.point,
-//                 "favorite_rank": data.favorite_rank || data._rank.favorite + 1, "like_change": data.like,
-//                 "coin_change": data.coin, "view_change": data.view, "favorite_change": data.favorite,
-//                 "recorded_at": get_iso_time_text(), "platform": gen_id("Platform", data.bvid), "count": data.count ?? -1
-//             }
-//         );
-//     });
-// }
-
-// if (specially) {
-//     console.log("正在开始分析特刊文件");
-
-//     let counter = 0;
-
-//     const adder = (amount = 1) => counter += amount;
-
-    
-
-//     console.log(`目标文件已经全部分析完毕，共构建了 ${counter} 个有效映射关系`);
-// }
-
-const journal_mapping = {
-    "日刊": "daily",
-    "周刊": "weekly",
-    "月刊": "monthly"
-};
 
 if (standard) {
     const entries = Object.entries(standard);
@@ -443,278 +808,41 @@ if (standard) {
     }
 }
 
-/**
- * 获取当前的 ISO 8601 毫秒级时间字符串
- * 
- * @param {Date} instance 需要转换的 Date 实例
- * @param {(text: string) => string} handler 结构处理器
- * @returns {string} 转换出来的结果
- */
-function get_iso_time_text(instance = new Date(), handler = text => text) {
-    return handler(instance.toISOString());
-}
+if (special) {
+    console.log("正在开始分析特刊文件");
 
-/**
- * 获取指定目录的子集列表
- * 
- * @param {string} dirpath 目录路径
- * @param {object} options 配置信息
- * @param {boolean} options.include_directory 是否包含目录
- * @param {boolean} options.recursive 是否递归获取
- * @param {boolean} options.with_type 是否包含文件类型的知名符号（Symbol(type)）
- * @param {BufferEncoding} options.encoding 目标名称的编码
- * @returns {(Dirent & { "filepath": string })[]} 获取到的目标的列表
- */
-function get_dirpath_children(dirpath, options) {
-    const { include_directory = false, encoding = "UTF-8", recursive = true, with_type: withFileTypes = true } = options;
+    let counter = 0;
 
-    return fs.readdirSync(
-        dirpath, {
-           encoding, recursive, withFileTypes
-        }
-    ).filter(dirent => {
-        return dirent.isFile() ? true : include_directory;
-    }).map(dirent => {
-        dirent.filepath = path.join(dirent.path, dirent.name);
+    const adder = (amount = 1) => counter += amount;
 
-        return dirent;
-    }).sort((a, b) => {
-        return a.filepath.localeCompare(b.filepath);
-    });
-}
-
-/**
- * 插入表单数据
- * 
- * @param {("new"|"main")} type 表单类型
- * @param {string} target_dirpath 表单数据目录地址
- * @param {(count: number) => number} adder 给 counter 自增的回调方法
- */
-function insert_board(type, target_dirpath, adder) {
-    const dirpath = path.resolve(
-        root, target_dirpath
-    ), dirent_list = get_dirpath_children(
-        dirpath, {
-            "include_directory": false
-        }
-    );
-
-    console.log(`正在开始分析 ${target_dirpath} 目录下的曲目列表文件（共有 ${dirent_list.length} 个文件）`);
-
-    for (let index = 0; index < dirent_list.length; index++) {
-        const dirent = dirent_list[index];
-
-        console.log(`目前正在处理 ./${path.relative(
-            root, dirent.filepath
-        ).split(path.sep).filter(item => item !== "..").join("/")} 文件`);
+    for (let index = 0; index < special.length; index++) {
+        const config = special[index];
         
-        insert_normal_board_rank(
-            type, journal_mapping[
-                path.basename(dirent.parentPath)
-            ], dirent.filepath, dirent.name, adder
+        insert_special_board_rank(
+            config.path, config.date,
+            index + 1, adder
         );
     }
-}
 
-/**
- * 插入每日快照数据
- * 
- * @param {string} filepath 文件绝对路径
- * @param {string} filename 文件名名称
- * @param {(count: number) => number} adder 给 counter 自增的回调方法 
- */
-function insert_snapshot_list(filepath, filename, adder) {
-    const content = read_xlsx(filepath), datetime = get_date_string(
-        filename
-    );
-
-    console.log(`Counter: ${content.length}, Filename: ${filename}, Datetime: ${datetime}`);
-
-    adder(content.length);
-
-    content.forEach(data => {
-        if (!data.bvid) return;
-
-        const id = {
-            "platform": gen_id("Platform", data.bvid)
-        };
-
-        memory.data.snapshot.set(
-            gen_id("Record", id.platform + datetime), {
-                "target": id.platform, "view": data.view, "like": data.like,
-                "coin": data.coin, "favorite": data.favorite, "recorded_at": get_iso_time_text(),
-                "snapshot_at": datetime
-            }
-        );
-    })
-}
-
-/**
- * 插入每日快照数据
- * 
- * @param {string} target_dirpath 目标表单数据目录地址
- * @param {(count: number) => number} adder 给 counter 自增的回调方法
- */
-function insert_snapshot(target_dirpath, adder) {
-    const dirpath = path.resolve(
-        root, target_dirpath
-    ), dirent_list = get_dirpath_children(
-        dirpath, {
-            "include_directory": false
-        }
-    );
-
-    console.log(`正在开始分析 ${target_dirpath} 目录下的曲目列表文件（共有 ${dirent_list.length} 个文件）`);
-
-    for (let index = 0; index < dirent_list.length; index++) {
-        const dirent = dirent_list[index];
-
-        console.log(`目前正在处理 ./${path.relative(
-            root, dirent.filepath
-        ).split(path.sep).filter(item => item !== "..").join("/")} 文件`);
-        
-        insert_snapshot_list(
-            dirent.filepath, dirent.name, adder
-        );
-    }
+    console.log(`目标文件已经全部分析完毕，共构建了 ${counter} 个有效映射关系`);
 }
 
 if (history) {
+    console.log("正在开始历史期刊文件");
+
     let counter = 0;
 
     const adder = (count = 1) => counter += count;
 
     const { add, total, change } = history;
 
-    if (change) insert_board("main", change, adder);
     if (add) insert_board("new", add, adder);
 
     if (total) insert_snapshot(total, adder);
 
+    if (change) insert_board("main", change, adder);
+
     console.log(`目标文件已经全部分析完毕，共构建了 ${counter} 个有效映射关系`);
-}
-
-/**
- * 在数据库中创建标记关系
- * 
- * @param {object} data 决定标记关系的数据
- * @param {(count: number) => number} adder 给 counter 自增的回调方法
- */
-function insert_mark(data, adder) {
-    const identifier = gen_id("Record", data.type + data.target + data.value);
-
-    if (!memory.data.mark.has(identifier)) memory.data.mark.set(
-        identifier, Object.assign(data, {
-            "set_at": get_iso_time_text()
-        })
-    ), adder();
-    
-    return {
-        "_id": identifier, "target": memory.data.mark
-    };
-}
-
-/**
- * 将易于人类理解的时长（45, 2:12, 13:14:14）转换成易于计算机理解的时长
- * 
- * @param {string} human_duration 需要转换的人类易于理解的时长
- * @returns {number} 计算机容易理解的时长
- */
-function human_duration_to_duration(human_duration) {
-    let part = human_duration.split(/:0{0,1}/), result = 0;
-
-    for (let index = part.length - 1; index >= 0; index--) {
-        result += Number(part[index]) * 60 ** (part.length - index - 1);
-    }
-
-    return result;
-}
-
-/**
- * 在数据库中插入关联视频数据并构建关联关系（使用原始条目数据）
- * 
- * @param {object} data 原始条目数据
- * @param {(count: number) => number} adder 给 counter 自增的回调方法
- */
-function insert_platform(data, adder) {
-    const target = {
-        "song": gen_id("Song", memory.video.get(data.bvid) || data.name),
-        "video": gen_id("Platform", data.bvid)
-    };
-
-    const shortener = url => path.basename(new URL(url).pathname);
-
-    adder();
-
-    memory.data.platform.set(target.video, {
-        "page": Math.floor(data.page ?? -1), // 这个 Math.floor 是真有必要
-        "thumbnail": data.image_url ? "BB://I/" + shortener(data.image_url) : "No Image",
-        "copyright": data.copyright ?? -1, "duration": data.duration ? human_duration_to_duration(
-            data.duration.replace("分", ":").replace("秒", "")
-        ) : -1, "recorded_at": get_iso_time_text(), "published_at": get_iso_time_text(
-            new Date(data.pubdate), text => text.replace(/\.\d{3}/, "")
-        ), "link": "BB://V/" + data.bvid, "title": data.title
-    });
-
-    insert_mark({
-        "type": "platform",
-        "value": target.video,
-        "target": target.song
-    }, adder);
-}
-
-/**
- * 在数据库中插入曲目数据（使用原始条目数据）
- * 
- * @param {object} data 原始条目数据
- * @param {(count: number) => number} adder 给 counter 自增的回调方法
- */
-function insert_song(data, adder) {
-    const song_name = memory.video.get(data.bvid) || data.name;
-    const song_id = gen_id("Song", song_name), entries = Object.entries(data);
-
-    insert_platform(data, adder);
-
-    adder();
-    memory.data.song.set(song_id, {
-        "name": song_name, "type": data.type || "Unmarked",
-        "add_at": get_iso_time_text(), "id": song_id
-    });
-
-    for (let index = 0; index < entries.length; index++) {
-        const entry = entries[index], key = entry[0];
-        
-        if (!base.list.includes(key)) continue;
-
-        entry[1].toString().split("、").map(name => {
-            let field = base.map[key];
-
-            name = name.trim();
-
-            if (!name) return;
-
-            const id = {
-                "video": gen_id("Platform", data.bvid),
-                "target": gen_id(cap(field), name)
-            }, inserted_data = {
-                "id": id.target, name,
-                "add_at": get_iso_time_text()
-            }, marked_data = {
-                "type": field,
-                "value": id.target,
-                "target": song_id
-            };
-
-            if (field === "uploader") marked_data.target = id.video;
-            if (field === "vocalist") inserted_data.color = get_singer_color_by_name(name);
-            
-            if (!memory.data[field].get(id.target)) memory.data[field].set(
-                id.target, inserted_data
-            ), adder();
-            
-            insert_mark(marked_data, adder);
-        });
-    }
 }
 
 const memory_entries = Object.entries(memory.data);
@@ -722,11 +850,14 @@ const memory_entries = Object.entries(memory.data);
 let total = 0, task = {};
 
 for (let index = 0; index < memory_entries.length; index++) {
-    const entry = memory_entries[index], list = Array.from(entry[1]).map(item => Object.assign(
-        item[1], { "id": item[0] }
-    ));
+    const entry = memory_entries[index], list = Array.from(entry[1]).map(item =>
+        Object.assign(
+            item[1], { "id": item[0] }
+        )
+    );
 
-    total += list.length, task[entry[0]] = list;
+    total += list.length;
+    task[entry[0]] = list;
 }
 
 console.log("一共生成了 " + total + " 个条目，正在准备插入数据库");
@@ -750,17 +881,19 @@ function bulk_insert(table_name, data_list, instance) {
         `INSERT OR REPLACE INTO ${table} ( ${columns} ) VALUES ( ${placeholders} )`
     );
 
-    instance.transaction((list) => {
-        for (const target of list) {
+    instance.transaction((items, columns) => {
+        for (const current of items) {
+            const values = columns.map(item =>
+                current[item] ?? null
+            );
+
             try {
-                statement.run(
-                    Object.values(target)
-                );
+                statement.run(values);
             } catch (error) {
-                console.log(Object.values(target));
+                console.log(values);
             }
         }
-    })(data_list);
+    })(data_list, Object.keys(data_list[0]));
 }
 
 instance.pragma("synchronous = OFF");
@@ -769,7 +902,9 @@ instance.pragma("journal_mode = WAL");
 Object.entries(task).forEach(entry => {
     if (entry[1].length < 1) return;
 
-    const table_name = cap(entry[0]) + "_Table";
+    const table_name = entry[0].split("_").map(
+        item => cap(item)
+    ).join("_") + "_Table";
 
     console.log(table_name + " 表单正在准备开始插入");
 
@@ -786,10 +921,10 @@ console.log("正在尝试更新期刊信息原始数据定义文件");
 const result = {
     "rank": instance.prepare(`
         SELECT
-            board, issue, COUNT(*) AS count
+            board, issue, part, COUNT(*) AS count
         FROM Rank_Table
-        GROUP BY board, issue
-        ORDER BY board, issue
+        GROUP BY board, issue, part
+        ORDER BY board, issue, part
     `).all(),
     "snapshot": instance.prepare(`
         SELECT
@@ -799,29 +934,74 @@ const result = {
     `).all()
 };
 
-const filepath = path.resolve(
-    __dirname, "../service/define/default.json"
-), content = JSON.parse(
-    fs.readFileSync(filepath, "UTF-8")
+const filepath = {
+    "define": path.resolve(
+        __dirname, "../service/define/default.json"
+    ),
+    "collcate": path.resolve(
+        __dirname, "./define/collate.json"
+    )
+};
+
+const content = JSON.parse(
+    fs.readFileSync(
+        filepath.define, "UTF-8"
+    )
 );
 
 Object.entries(classification(
     result.rank, item => item.board
-)).forEach(([board, list]) => {
+)).forEach(([ board, list ]) => {
     content.metadata.board[board].catalog =
-        list.map(({ issue, count }) => ({
-            "date": memory.issue.get(board
-                .replace(/-(?:new|main)/, "")
-            )[issue], issue, count
-        }));
+        Object.entries(classification(
+            list, (item) => item.issue
+        )).map(([ issue, items ]) => {
+            let total = 0;
+
+            const parts = {}, metadata = {};
+
+            items.map(({ part, count }) => {
+                total += count;
+
+                parts[part] = count;
+            });
+
+            metadata.issue = Number(issue);
+
+            if (board === "vocaloid-special") {
+                const data = special[issue - 1];
+
+                metadata.date = data.date;
+                metadata.name = data.name;
+            } else {
+                const data = memory.issue.get(board)[issue];
+
+                metadata.date = data.date;
+                metadata.name = content.metadata.board[board].name + " #" + issue;
+            }
+
+            return Object.assign(metadata, {
+                "part": parts, total
+            });
+        });
 });
 
-content.metadata.snapshot = result.snapshot;
+content.metadata.snapshot = result.snapshot.map(
+    (item, index) => Object.assign(
+        { index }, item
+    )
+);
 
 fs.writeFileSync(
-    filepath, JSON.stringify(
+    filepath.define, JSON.stringify(
         content, null, 4
     )
+);
+
+fs.writeFileSync(
+    filepath.collcate, JSON.stringify(
+        collate.index, null, 4
+    ), "UTF-8"
 );
 
 console.log("成功更新期刊信息原始数据定义文件");

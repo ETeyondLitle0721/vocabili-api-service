@@ -1,7 +1,9 @@
-import fs from "fs"; import url from "url";
-import SQLite3 from "better-sqlite3"; import path from "path";
+import fs from "fs";
+import url from "url";
+import path from "path";
+import SQLite3 from "better-sqlite3";
 import DatabaseOperator from "../../../depend/operator/database.js";
-import { text_transformer as capitalize, get_type } from "../../../depend/core.js";
+import { text_transformer as cap, get_type } from "../../../depend/core.js";
 
 const root = path.resolve(".");
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
@@ -69,10 +71,10 @@ const update_define = debounce(
 const field = "default";
 const database = {
     /** @type {string} */
-    "filepath": config.global.database[field].filepath
+    "path": config.global.database[field].path
 };
 
-let instance = new SQLite3(database.filepath, {
+let instance = new SQLite3(database.path, {
     "timeout": 1000,
     "readonly": false
 });
@@ -112,8 +114,8 @@ export function get_board_metadata_info_by_board_id(target) {
  */
 export function get_target_info_by_id(type, list) {
     const table_list = get_type(type).second === "array" ? type.map(item => {
-        return capitalize(item) + "_Table";
-    }) : [ capitalize(type) + "_Table" ];
+        return cap(item) + "_Table";
+    }) : [ cap(type) + "_Table" ];
 
     return operator.select_item(table_list, {
         "where": {
@@ -204,6 +206,7 @@ export function get_rank_by_song_id(config) {
  * @param {number} config.count 每页数量
  * @param {number} config.index 页索引
  * @param {number} config.issue 期数
+ * @param {string} config.part 子刊名称
  * @returns 查询结果
  */
 export function get_board_song_list(config) {
@@ -217,6 +220,11 @@ export function get_board_song_list(config) {
                 "column": "board",
                 "operator": "equal",
                 "value": options.board
+            },
+            {
+                "column": "part",
+                "operator": "equal",
+                "value": options.part
             },
             {
                 "column": "issue",

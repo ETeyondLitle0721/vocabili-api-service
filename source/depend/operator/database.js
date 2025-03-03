@@ -965,13 +965,13 @@ export class DatabaseOperator {
      * @typedef {(SQLite3.RunResult|Object<string, SQLite3.RunResult>)} RunResult
      * 
      * @param {InstancePasser} passer 可以用于监听所有操作的回调函数
-     * @param {DatabaseInstance} instanse 操纵数据库的时候处理方法
+     * @param {DatabaseInstance} instance 操纵数据库的时候处理方法
      * @returns {DatabaseOperator} 实例化好的 DatabaseOperator 类
      */
-    constructor(instanse = new SQLite3(), passer) {
+    constructor(instance = new SQLite3(), passer) {
         this.passer = passer;
 
-        this.instanse = instanse;
+        this.instance = instance;
         /** @type {Map<string, SQLite3.Statement>} */
         this.statement = new Map();
         this.generator = get_generator();
@@ -996,7 +996,7 @@ export class DatabaseOperator {
         if (this.statement.has(sentence)) {
             statement = this.statement.get(sentence);
         } else {
-            statement = this.instanse.prepare(sentence);
+            statement = this.instance.prepare(sentence);
 
             this.statement.set(sentence, statement);
         }

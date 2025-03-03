@@ -216,6 +216,7 @@ GET /get_list/vocalist?count=10&index=1
 - `issue` (number[]): 期数列表。
 - `count` (number): 每页返回的曲目数量，默认为50。
 - `index` (number): 页码，默认为1。
+- `part` (string): 子刊名称。
 
 **响应数据**:
 
@@ -270,6 +271,7 @@ GET /get_list/vocalist?count=10&index=1
       "id": "board_id_1",
       "name": "榜单名称",
       "date": "2023-10-01",
+      "part": "子刊名称",
       "issue": 1,
       "count": 100
     }
@@ -287,7 +289,7 @@ GET /get_info/board?board=vocaoid-weekly-main&issue=1&count=10&index=1
 
 ### 5. 获取最新榜单信息
 
-**路由地址**: `/get_info/board/_current`  
+**路由地址**: `/get_info/board/_latest`  
 **请求方法**: GET / POST  
 **描述**: 获取指定榜单的最新一期信息。
 
@@ -296,6 +298,7 @@ GET /get_info/board?board=vocaoid-weekly-main&issue=1&count=10&index=1
 - `board` (string): 榜单ID。
 - `count` (number): 每页返回的曲目数量，默认为50。
 - `index` (number): 页码，默认为1。
+- `part` (string): 子刊名称。
 
 **响应数据**:
 与 `/get_info/board` 相同。
@@ -303,7 +306,7 @@ GET /get_info/board?board=vocaoid-weekly-main&issue=1&count=10&index=1
 **示例请求**:
 
 ```
-GET /get_info/board/_current?board=vocaoid-weekly-main&count=10&index=1
+GET /get_info/board/_current?board=vocaoid-weekly&count=10&index=1&part=new
 ```
 
 ---
@@ -573,6 +576,50 @@ GET /get_info/metadata/board?target=vocaoid-weekly-main&set-cache=3600
 
 ---
 
+### 12. 检查榜单条目是否存在
+
+**路由地址**: `/check/exists/board-entry`  
+**请求方法**: GET / POST  
+**描述**: 检查榜单条目是否存在。
+
+**请求参数**:
+
+- `board` (string): 榜单ID。
+- `issue` (number[]): 需要检查的期数。
+- `part` (string): 子刊名称，默认 `main`。
+
+**响应数据**:
+
+```json
+{
+  "code": "OK",
+  "time": "2023-10-01T12:00:00.000Z",
+  "status": "success",
+  "data": {
+    "result": [
+      {
+        "issue": "期数",
+        "part": "子刊",
+        "exists": 是否存在（布尔值）
+      }
+    ],
+    "metadata": {
+      "name": "榜单名称",
+      "board": "榜单代号",
+      "count": "榜单发刊总数"
+    }
+  }
+}
+```
+
+**示例请求**:
+
+```
+GET /check/exists/board-entry?board=vocaloid-daily&part=new&issue=1,2,3,4
+```
+
+---
+
 ### 12. 404 错误处理
 
 **路由地址**: `*`  
@@ -614,6 +661,7 @@ GET /get_info/metadata/board?target=vocaoid-weekly-main&set-cache=3600
 | `PARAMETER_VALUE_ILLEGAL`  | 参数值非法                               | 请求中的参数值不符合预期的格式或类型。                               |
 | `BOARD_NOT_EXISTS`         | 目标榜单不存在                           | 请求中指定的榜单不存在。                                             |
 | `ISSUE_NOT_EXISTS`         | 目标刊目不存在                           | 请求中指定的榜单期数不存在。                                         |
+| `PART_NOT_EXISTS`         | 目标刊目不存在指定子刊                           | 请求中指定的子刊不存在。                                         |
 | `NO_ENTRY_EXISTS`          | 没有找到有效条目                         | 请求的目标资源没有任何有效条目。                                     |
 | `NOT_FOUND_VALID_VALUE`    | 没有找到有效值                           | 请求中缺少有效的参数值。                                             |
 

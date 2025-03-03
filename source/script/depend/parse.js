@@ -1,22 +1,22 @@
 /**
- * @typedef {import("../service/core/service.js").GeneralObject} GeneralObject
- */
-
-/**
- * 解析 Process.argv 里面的参数
+ * 解析命令行参数（field=value）
  * 
  * @param {string[]} content 参数列表
- * @returns {GeneralObject} 解析结果
+ * @param {(field: string, text: string) => any} parser 参数解析器
+ * @returns {Object<string, string>} 解析结果
  */
-export function command_parser(content) {
+export function command_parser(content, parser = (_, text) => text) {
     const result = {};
 
     for (let index = 0; index < content.length; index++) {
-        const element = content[index], part = element.split("=").map(item => item.trim());
+        const current = content[index];
+        const parts = current.split("=").map(item => item.trim());
         
-        if (part.length !== 2) continue;
+        if (parts.length !== 2) continue;
 
-        result[part[0]] = part[1];
+        result[parts[0]] = parser(
+            parts[0], parts[1]
+        );
     }
 
     return result;

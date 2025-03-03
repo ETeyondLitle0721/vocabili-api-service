@@ -645,23 +645,35 @@ export function append_rank_field(
  * @returns {(T & U)} 合并结果
  */
 export function object_merge(target, source, clone = true, depth = -1) {
-    if (clone) {
-        target = deep_clone(target);
-    }
+    if (clone) target = deep_clone(target);
 
     if (depth === 0) {
         return Object.assign(target, source);
     }
 
+    const is_object = (source, target, key) => {
+        if (typeof source[key] !== "object") {
+            return false;
+        }
+
+        if (typeof target[key] !== "object") {
+            return false;
+        }
+        
+        return true;
+    };
+
     for (const key in source) {
-        if (source.hasOwnProperty(key)) {
-            if (typeof source[key] === "object" && typeof target[key] === "object") {
-                object_merge(
-                    target[key], source[key], depth - 1
-                );
-            } else {
-                target[key] = source[key];
-            }
+        if (!source.hasOwnProperty(key)) {
+            continue;
+        }
+
+        if (is_object(source, target. key)) {
+            target[key] = object_merge(
+                target[key], source[key], true, depth - 1
+            );
+        } else {
+            target[key] = source[key];
         }
     }
 

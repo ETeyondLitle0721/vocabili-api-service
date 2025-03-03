@@ -26,7 +26,7 @@ if (!service.config) {
 }
 
 try {
-    const { name = "start", script } = service.config;
+    const { name = "start", start: script } = service.config;
 
     (await import(
         "file://" + path.resolve(
@@ -35,6 +35,8 @@ try {
     )).default[name]();
 } catch (error) {
     console.error("尝试启动服务时出现问题");
+
+    console.error(error);
 
     throw error;
 }

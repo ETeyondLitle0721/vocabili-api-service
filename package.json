@@ -1,6 +1,6 @@
 {
 	"name": "vocacili-api-service",
-	"version": "3.5.1",
+	"version": "3.6.0",
 	"description": "这是一个主要由 NodeJS 开发的 Vocacili 项目的 API 服务源代码储存仓库",
 	"keywords": [
 		"NodeJS",
@@ -43,6 +43,7 @@
 		"better-sqlite3": "^11.8.1",
 		"cors": "^2.8.5",
 		"express": "^4.21.2",
+		"fast-levenshtein": "^3.0.0",
 		"node": "^18.20.6",
 		"xlsx": "^0.18.5"
 	}

@@ -1,0 +1,375 @@
+{
+    "/get_info/song": {
+        "target": {
+            "mode": "count",
+            "options": {
+                "maximum": 200
+            }
+        }
+    },
+    "/get_list/song/by_:type": {
+        "type": [
+            {
+                "mode": "count",
+                "options": {
+                    "maximum": 1
+                }
+            },
+            {
+                "mode": "list",
+                "options": {
+                    "list": [
+                        "pool",
+                        "uploader",
+                        "vocalist",
+                        "producer",
+                        "synthesizer"
+                    ]
+                }
+            }
+        ],
+        "target": {
+            "mode": "count",
+            "options": {
+                "maximum": 1
+            }
+        },
+        "count": {
+            "mode": "number",
+            "options": {
+                "type": "integer",
+                "range": {
+                    "minimum": 1,
+                    "maximum": 50
+                }
+            }
+        },
+        "index": {
+            "mode": "number",
+            "options": {
+                "type": "integer",
+                "range": {
+                    "minimum": 1,
+                    "maximum": 131072
+                }
+            }
+        }
+    },
+    "/get_list/:type": {
+        "type": [
+            {
+                "mode": "count",
+                "options": {
+                    "maximum": 1
+                }
+            },
+            {
+                "mode": "list",
+                "options": {
+                    "list": [
+                        "song",
+                        "board",
+                        "uploader",
+                        "vocalist",
+                        "producer",
+                        "synthesizer"
+                    ]
+                }
+            }
+        ],
+        "count": {
+            "mode": "number",
+            "options": {
+                "type": "integer",
+                "range": {
+                    "minimum": 1,
+                    "maximum": 50
+                }
+            }
+        },
+        "index": {
+            "mode": "number",
+            "options": {
+                "type": "integer",
+                "range": {
+                    "minimum": 1,
+                    "maximum": 131072
+                }
+            }
+        }
+    },
+    "/get_info/board": {
+        "part": {
+            "mode": "count",
+            "options": {
+                "maximum": 1
+            }
+        },
+        "board": {
+            "mode": "count",
+            "options": {
+                "maximum": 1
+            }
+        },
+        "issue": {
+            "mode": "number",
+            "options": {
+                "type": "integer",
+                "range": {
+                    "minimum": -131072,
+                    "maximum": 131072
+                }
+            }
+        },
+        "count": {
+            "mode": "number",
+            "options": {
+                "type": "integer",
+                "range": {
+                    "minimum": 1,
+                    "maximum": 200
+                }
+            }
+        },
+        "index": {
+            "mode": "number",
+            "options": {
+                "type": "integer",
+                "range": {
+                    "minimum": 1,
+                    "maximum": 131072
+                }
+            }
+        }
+    },
+    "/get_info/board/_latest": {
+        "part": {
+            "mode": "count",
+            "options": {
+                "maximum": 1
+            }
+        },
+        "board": {
+            "mode": "count",
+            "options": {
+                "maximum": 1
+            }
+        },
+        "count": {
+            "mode": "number",
+            "options": {
+                "type": "integer",
+                "range": {
+                    "minimum": 1,
+                    "maximum": 200
+                }
+            }
+        },
+        "index": {
+            "mode": "number",
+            "options": {
+                "type": "integer",
+                "range": {
+                    "minimum": 1,
+                    "maximum": 131072
+                }
+            }
+        }
+    },
+    "/get_info/metadata/board": {
+        "set-cache": {
+            "mode": "number",
+            "options": {
+                "range": {
+                    "minimum": 0,
+                    "maximum": 131072
+                }
+            }
+        },
+        "target": {
+            "mode": "count",
+            "options": {
+                "maximum": 1
+            }
+        }
+    },
+    "/get_history/song/rank": {
+        "board": {
+            "mode": "count",
+            "options": {
+                "maximum": 1
+            }
+        },
+        "target": {
+            "mode": "count",
+            "options": {
+                "maximum": 5
+            }
+        },
+        "count": {
+            "mode": "number",
+            "options": {
+                "type": "integer",
+                "range": {
+                    "minimum": -1,
+                    "maximum": 300
+                }
+            }
+        },
+        "index": {
+            "mode": "number",
+            "options": {
+                "type": "integer",
+                "range": {
+                    "minimum": 1,
+                    "maximum": 131072
+                }
+            }
+        }
+    },
+    "/get_history/platform/count": {
+        "target": {
+            "mode": "count",
+            "options": {
+                "maximum": 1
+            }
+        },
+        "count": {
+            "mode": "number",
+            "options": {
+                "type": "integer",
+                "range": {
+                    "minimum": -1,
+                    "maximum": 300
+                }
+            }
+        },
+        "index": {
+            "mode": "number",
+            "options": {
+                "type": "integer",
+                "range": {
+                    "minimum": 1,
+                    "maximum": 131072
+                }
+            }
+        }
+    },
+    "/search/song/by_name": {
+        "target": {
+            "mode": "count",
+            "options": {
+                "maximum": 1
+            }
+        },
+        "count": {
+            "mode": "number",
+            "options": {
+                "type": "integer",
+                "range": {
+                    "minimum": 1,
+                    "maximum": 50
+                }
+            }
+        },
+        "index": {
+            "mode": "number",
+            "options": {
+                "type": "integer",
+                "range": {
+                    "minimum": 1,
+                    "maximum": 131072
+                }
+            }
+        }
+    },
+    "/search/song/by_platform": {
+        "count": {
+            "mode": "number",
+            "options": {
+                "type": "integer",
+                "range": {
+                    "minimum": 1,
+                    "maximum": 50
+                }
+            }
+        },
+        "index": {
+            "mode": "number",
+            "options": {
+                "type": "integer",
+                "range": {
+                    "minimum": 1,
+                    "maximum": 131072
+                }
+            }
+        }
+    },
+    "/search/:type/by_name": {
+        "type": [
+            {
+                "mode": "count",
+                "options": {
+                    "maximum": 1
+                }
+            },
+            {
+                "mode": "list",
+                "options": {
+                    "list": [
+                        "uploader",
+                        "vocalist",
+                        "producer",
+                        "synthesizer"
+                    ]
+                }
+            }
+        ],
+        "target": {
+            "mode": "count",
+            "options": {
+                "maximum": 1
+            }
+        },
+        "count": {
+            "mode": "number",
+            "options": {
+                "type": "integer",
+                "range": {
+                    "minimum": 1,
+                    "maximum": 50
+                }
+            }
+        },
+        "index": {
+            "mode": "number",
+            "options": {
+                "type": "integer",
+                "range": {
+                    "minimum": 1,
+                    "maximum": 131072
+                }
+            }
+        }
+    },
+    "/check/exists/board-entry": {
+        "board": {
+            "mode": "count",
+            "options": {
+                "maximum": 1
+            }
+        },
+        "part": {
+            "mode": "count",
+            "options": {
+                "maximum": 1
+            }
+        },
+        "issue": {
+            "mode": "count",
+            "options": {
+                "maximum": 10
+            }
+        }
+    }
+}

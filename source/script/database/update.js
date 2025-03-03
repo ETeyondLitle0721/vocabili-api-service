@@ -1,6 +1,14 @@
-import fs from "fs"; import url from "url"; import xlsx from "xlsx"; import path from "path";
-import SQLite3 from "better-sqlite3"; import { command_parser } from "../depend/parse.js";
-import { compute_hamc, get_type, quote_string, split_group, text_transformer as cap, append_rank_field, classification, unique_array } from "../../depend/core.js";
+import fs from "fs";
+import url from "url";
+import xlsx from "xlsx";
+import path from "path";
+import SQLite3 from "better-sqlite3";
+import { command_parser } from "../depend/parse.js";
+import {
+    compute_hamc, get_type, quote_string,
+    split_group, text_transformer as cap,
+    append_rank_field, classification
+} from "../../depend/core.js";
 import DatabaseOperator from "../../depend/operator/database.js";
 
 const root = path.resolve("."), shell = command_parser(process.argv);
@@ -26,11 +34,12 @@ const config = {
 };
 
 const database = {
-    "filepath": config.global.database[field].filepath
+    "path": config.global.database[field].path
 };
+
 const charset = "0123456789qazwsxedcrfvtgbyhnujmikolpQAZWSXEDCRFVTGBYHNUJMIKOLP-_";
 
-const instance = new SQLite3(database.filepath, { 
+const instance = new SQLite3(database.path, { 
     "timeout": 1000, "readonly": false
 });
 
@@ -46,7 +55,14 @@ const instance = new SQLite3(database.filepath, {
  * @returns {(Object<string, (number|string)>)[]} 读取出来的数据
  */
 function read_xlsx(filepath, target = 0) {
-    const workbook = xlsx.readFile(filepath), type = get_type(target);
+    if (filepath.endsWith(".json")) return JSON.parse(
+        fs.readFileSync(
+            filepath, "UTF-8"
+        )
+    );
+
+    const type = get_type(target);
+    const workbook = xlsx.readFile(filepath);
 
     if (type.first !== "function") {
         if (type.first === "string") {
@@ -62,10 +78,14 @@ function read_xlsx(filepath, target = 0) {
         }
     }
 
-    return xlsx.utils.sheet_to_json(
+    const result = xlsx.utils.sheet_to_json(
         workbook.Sheets[target(
             workbook.SheetNames
         )]
+    );
+    
+    return result ?? read_xlsx(
+        filepath, target, rename
     );
 }
 
@@ -101,6 +121,7 @@ Date.prototype.clone = function () {
 
     return result;
 };
+
 
 /**
  * 获取接下来的时间节点
@@ -214,47 +235,116 @@ function gen_id(branch, text) {
 }
 
 /**
- * 在内存中插入榜单数据
+ * 在内存中插入普通榜单数据
  * 
- * @param {("new"|"main")} type 榜单类别
+ * @param {("new"|"main")} part 子榜单类别
  * @param {("daily"|"weekly"|"monthly")} source 目标文件来源
  * @param {string} filepath 文件绝对路径
- * @param {string} filename 文件名名称
+ * @param {string} filename 目标文件名称
  * @param {(count: number) => number} adder 给 counter 自增的回调方法
  */
-function insert_normal_board_rank(type, source, filepath, filename, adder) {
-    const content = read_xlsx(filepath), datetime = get_date_string(
-        filename
-    ), board_name = [ "vocaloid-" + source, "vocaloid-" + source + "-" + type ];
+function insert_normal_board_rank(part = "main", source, filepath, filename, adder) {
+    const date = get_date_string(filename);
+    const board = "vocaloid-" + source;
+    const dataset = read_xlsx(filepath);
 
-    console.log(`Type: ${type}, Source: ${source}, Counter: ${content.length}, Filename: ${filename}, Datetime: ${datetime}`);
+    console.log(`Part: ${part}, Type: ${source}, Counter: ${dataset.length}, Filename: ${filename}, Datetime: ${date}`);
 
-    adder(content.length);
+    adder(dataset.length);
 
-    append_rank_field(
-        content, [
-            "point", "view", "coin", "like", "favorite"
-        ]
-    ).forEach(data => {
-        const id = {
-            "song": gen_id("Song", memory.video.get(data.bvid) || data.name || data.title)
-        };
+    append_rank_field(dataset, [
+        "point", "view", "coin", "like", "favorite"
+    ]).forEach(data => {
+        // console.log(data, get_song_name(data));
 
-        // console.log(source + ": " + datetime + " => " + memory.issue.get(board_name[0])[datetime]);
+        const song_id = gen_id("Song", get_song_name(data));
 
         memory.data.rank.set(
-            gen_id("Record", board_name[1] + id.song + datetime), {
-                "board": board_name[1], "issue": memory.issue.get(board_name[0])[datetime],
-                "target": id.song, "rank": data.rank || data._rank.point + 1, "view_rank": data.view_rank || data._rank.view + 1,
-                "like_rank": data.like_rank || data._rank.like + 1, "coin_rank": data.coin_rank || data._rank.coin + 1, "point": data.point,
-                "favorite_rank": data.favorite_rank || data._rank.favorite + 1, "like_change": data.like,
-                "coin_change": data.coin, "view_change": data.view, "favorite_change": data.favorite,
-                "recorded_at": get_iso_time_text(), "platform": gen_id("Platform", data.bvid), "count": data.count ?? -1
+            gen_id("Record", board + song_id + date + part), {
+                "target": song_id, "point": data.point,
+                "count": data.count ?? -1, board, part,
+                "issue": memory.issue.get(board)[date],
+                "platform": gen_id("Platform", data.bvid),
+                "recorded_at": get_iso_time_text(),
+                "rank": data.rank || data._rank.point + 1,
+                "coin_change": data.coin, "view_change": data.view,
+                "favorite_change": data.favorite, "like_change": data.like,
+                "view_rank": data.view_rank || data._rank.view + 1,
+                "like_rank": data.like_rank || data._rank.like + 1,
+                "coin_rank": data.coin_rank || data._rank.coin + 1,
+                "favorite_rank": data.favorite_rank || data._rank.favorite + 1
             }
         );
 
-        insert_song(data, adder);
+        if (URL.canParse(data.image_url)) {
+            insert_song(data, adder);
+        }
     });
+}
+
+/**
+ * 在内存中插入特殊榜单数据
+ * 
+ * @param {string} filepath 文件绝对路径
+ * @param {string} datetime 目标刊物发刊时间
+ * @param {number} issue 目标刊物的期号
+ * @param {(count: number) => number} adder 给 counter 自增的回调方法
+ */
+function insert_special_board_rank(filepath, datetime, issue, adder) {
+    const data = {};
+    const board = "vocaloid-special";
+
+    console.log(`Type: ${filepath}, Datetime: ${datetime}, Issue: ${issue}`);
+
+    let sheets = [];
+
+    const temp = read_xlsx(filepath, (list) => {
+        sheets = list;
+
+        for (let index = 1; index < sheets.length; index++) {
+            const sheet = sheets[index];
+            
+            data[sheet] = read_xlsx(
+                filepath, sheet
+            );
+        }
+
+        return sheets[0];
+    });
+
+    data[sheets[0]] = temp;
+
+    for (let [ sheet, dataset ] of Object.entries(data)) {
+        const part = sheet === "Sheet1" ? "main" : sheet;
+
+        // console.log(dataset)
+
+        adder(dataset.length);
+
+        append_rank_field(dataset, [
+            "point", "view", "coin", "like", "favorite"
+        ]).forEach(data => {
+            const song_id = gen_id("Song", get_song_name(data));
+
+            memory.data.rank.set(
+                gen_id("Record", board + song_id + datetime), {
+                    "target": song_id, "point": data.point, part,
+                    "count": data.count ?? -1, board, issue,
+                    "recorded_at": get_iso_time_text(),
+                    "platform": gen_id("Platform", data.bvid),
+                    "rank": data.rank || data._rank.point + 1,
+                    "coin_change": data.coin, "view_change": data.view,
+                    "favorite_change": data.favorite, "like_change": data.like,
+                    "view_rank": data.view_rank || data._rank.view + 1,
+                    "like_rank": data.like_rank || data._rank.like + 1,
+                    "coin_rank": data.coin_rank || data._rank.coin + 1,
+                    "favorite_rank": data.favorite_rank || data._rank.favorite + 1
+                }
+            );
+
+            insert_song(data, adder);
+        });
+    }
 }
 
 /**
@@ -276,9 +366,8 @@ function get_iso_time_text(instance = new Date(), handler = text => text) {
  * @param {(count: number) => number} adder 给 counter 自增的回调方法 
  */
 function insert_snapshot_list(filepath, filename, adder) {
-    const content = read_xlsx(filepath), datetime = get_date_string(
-        filename
-    );
+    const content = read_xlsx(filepath);
+    const datetime = get_date_string(filename);
 
     console.log(`Counter: ${content.length}, Filename: ${filename}, Datetime: ${datetime}`);
 
@@ -287,17 +376,23 @@ function insert_snapshot_list(filepath, filename, adder) {
     content.forEach(data => {
         if (!data.bvid) return;
 
-        const id = {
-            "platform": gen_id("Platform", data.bvid)
-        };
+        const platform_id = gen_id("Platform", data.bvid);
 
         memory.data.snapshot.set(
-            gen_id("Record", id.platform + datetime), {
-                "target": id.platform, "view": data.view, "like": data.like,
-                "coin": data.coin, "favorite": data.favorite, "recorded_at": get_iso_time_text(),
-                "snapshot_at": datetime
+            gen_id("Record", platform_id + datetime), {
+                "target": platform_id, "snapshot_at": datetime,
+                "view": data.view, "like": data.like,
+                "coin": data.coin, "favorite": data.favorite,
+                "recorded_at": get_iso_time_text()
             }
         );
+
+        memory.data.latest_snapshot.set(platform_id, {
+            "target": platform_id, "snapshot_at": datetime,
+            "view": data.view, "like": data.like,
+            "coin": data.coin, "favorite": data.favorite,
+            "recorded_at": get_iso_time_text()
+        });
     })
 }
 
@@ -308,16 +403,24 @@ function insert_snapshot_list(filepath, filename, adder) {
  * @param {(count: number) => number} adder 给 counter 自增的回调方法
  */
 function insert_mark(data, adder) {
-    const identifier = gen_id("Record", data.type + data.target + data.value);
+    const { type, value, target } = data;
 
-    if (!memory.data.mark.has(identifier)) memory.data.mark.set(
-        identifier, Object.assign(data, {
-            "set_at": get_iso_time_text()
-        })
-    ), adder();
+    data = Object.assign(data, {
+        "set_at": get_iso_time_text()
+    });
+
+    const id = gen_id("Mark", type + value + target);
+
+    if (!memory.data.mark.has(id)) {
+        adder();
+
+        memory.data.mark.set(
+            id, data
+        );
+    }
     
     return {
-        "_id": identifier, "target": memory.data.mark
+        "id": id, "data": data
     };
 }
 
@@ -328,7 +431,8 @@ function insert_mark(data, adder) {
  * @returns {number} 计算机容易理解的时长
  */
 function human_duration_to_duration(human_duration) {
-    let part = human_duration.split(/:0{0,1}/), result = 0;
+    let result = 0;
+    const part = human_duration.split(/:0{0,1}/);
 
     for (let index = part.length - 1; index >= 0; index--) {
         result += Number(part[index]) * 60 ** (part.length - index - 1);
@@ -345,22 +449,29 @@ function human_duration_to_duration(human_duration) {
  */
 function insert_platform(data, adder) {
     const target = {
-        "song": gen_id("Song", memory.video.get(data.bvid) || data.name),
+        "song": gen_id("Song", get_song_name(data)),
         "video": gen_id("Platform", data.bvid)
     };
 
-    const shortener = url => path.basename(new URL(url).pathname);
+    const shortener = url => {
+        if (URL.canParse(url)) {
+            return "BB://I/" + path.basename(new URL(url).pathname)
+        }
+
+        return null;
+    }
 
     adder();
 
     memory.data.platform.set(target.video, {
-        "page": Math.floor(data.page ?? -1), // 这个 Math.floor 是真有必要
-        "thumbnail": data.image_url ? "BB://I/" + shortener(data.image_url) : "No Image",
-        "copyright": data.copyright ?? -1, "duration": data.duration ? human_duration_to_duration(
+        "title": data.title, "page": Math.floor(data.page ?? -1), // 这个 Math.floor 是真有必要
+        "thumbnail": data.image_url ? shortener(data.image_url) : "No Image",
+        "copyright": data.copyright ?? -1, "link": "BB://V/" + data.bvid,
+        "duration": data.duration ? human_duration_to_duration(
             data.duration.replace("分", ":").replace("秒", "")
         ) : -1, "recorded_at": get_iso_time_text(), "published_at": get_iso_time_text(
             new Date(data.pubdate), text => text.replace(/\.\d{3}/, "")
-        ), "link": "BB://V/" + data.bvid, "title": data.title
+        )
     });
 
     insert_mark({
@@ -370,6 +481,40 @@ function insert_platform(data, adder) {
     }, adder);
 }
 
+const collate = {
+    "index": JSON.parse(
+        fs.readFileSync(path.resolve(
+            __dirname, "./define/collate.json"
+        ), "UTF-8")
+    )
+};
+
+collate.bvids = Object.keys(collate.index);
+collate.names = Object.values(collate.index);
+
+/**
+ * 获取曲目名称
+ * 
+ * @param {object} data 曲目信息记录项
+ * @returns {string} 曲目名称
+ */
+function get_song_name(data) {
+    const { bvid, name } = data;
+
+    if (
+        !collate.bvids.includes(bvid) &&
+        collate.names.includes(name)
+    ) {
+        collate.index[bvid] = collate[collate.bvids[
+            collate.names.indexOf(name)
+        ]] ?? name;
+    } else if (!collate.index[bvid]) {
+        collate.index[bvid] = name;
+    }
+
+    return collate.index[bvid];
+}
+
 /**
  * 在数据库中插入曲目数据（使用原始条目数据）
  * 
@@ -377,24 +522,26 @@ function insert_platform(data, adder) {
  * @param {(count: number) => number} adder 给 counter 自增的回调方法
  */
 function insert_song(data, adder) {
-    const song_name = memory.video.get(data.bvid) || data.name;
-    const song_id = gen_id("Song", song_name), entries = Object.entries(data);
+    const entries = Object.entries(data);
+    const song_id = gen_id("Song", get_song_name(data));
+
+    adder();
+
+    memory.data.song.set(song_id, {
+        "name": data.name, // 写入真实曲名
+        "type": data.type || "Unmarked",
+        "add_at": get_iso_time_text()
+    });
 
     insert_platform(data, adder);
 
-    adder();
-    memory.data.song.set(song_id, {
-        "name": song_name, "type": data.type || "Unmarked",
-        "add_at": get_iso_time_text(), "id": song_id
-    });
-
     for (let index = 0; index < entries.length; index++) {
-        const entry = entries[index], key = entry[0];
+        const entry = entries[index];
         
-        if (!base.list.includes(key)) continue;
+        if (!base.list.includes(entry[0])) continue;
 
-        entry[1].toString().split("、").map(name => {
-            let field = base.map[key];
+        entry[1].toString().split("、").forEach(name => {
+            const field = base.map[entry[0]];
 
             name = name.trim();
 
@@ -403,57 +550,32 @@ function insert_song(data, adder) {
             const id = {
                 "video": gen_id("Platform", data.bvid),
                 "target": gen_id(cap(field), name)
-            }, inserted_data = {
-                "id": id.target, name,
-                "add_at": get_iso_time_text()
-            }, marked_data = {
-                "type": field,
-                "value": id.target,
-                "target": song_id
+            }, _data = {
+                "mark": {
+                    "type": field,
+                    "value": id.target,
+                    "target": song_id
+                },
+                "insert": {
+                    "id": id.target, "name": name,
+                    "add_at": get_iso_time_text()
+                }
             };
 
-            if (field === "uploader") marked_data.target = id.video;
-            if (field === "vocalist") inserted_data.color = -1;
+            if (field === "uploader") _data.mark.target = id.video;
+            if (field === "vocalist") _data.insert.color = -1;
 
-            if (!memory.data[field].get(id.target)) memory.data[field].set(
-                id.target, inserted_data
-            ), adder();
+            if (!memory.data[field].get(id.target)) {
+                adder();
 
-            insert_mark(marked_data, adder);
+                memory.data[field].set(
+                    id.target, _data.insert
+                );
+            }
+
+            insert_mark(_data.mark, adder);
         });
     }
-}
-
-/**
- * 批量插入数据
- * 
- * @typedef {import("../../depend/operator/database.js").GeneralObject} GeneralObject
- * 
- * @param {string} table_name 需要插入数据的表单的名称
- * @param {GeneralObject[]} data_list 需要插入的数据
- * @param {SQLite3.Database} instance 数据库实例化对象
- */
-function bulk_insert(table_name, data_list, instance) {
-    const table = quote_string(table_name, "double");
-    const sample = Object.keys(data_list[0]);
-    const columns = sample.map(item => quote_string(item, "double")).join(", ");
-    const placeholders = sample.fill("?").join(", ");
-
-    const statement = instance.prepare(
-        `INSERT OR ${table_name === "Vocalist_Table" ? "IGNORE" : "REPLACE" } INTO ${table} ( ${columns} ) VALUES ( ${placeholders} )`
-    );
-
-    instance.transaction((list) => {
-        for (const target of list) {
-            try {
-                statement.run(
-                    Object.values(target)
-                );
-            } catch (error) {
-                console.log(Object.values(target));
-            }
-        }
-    })(data_list);
 }
 
 const base = {
@@ -470,13 +592,13 @@ const base = {
 
 const memory = {
     "issue": new Map(), "video": new Map(), "data": {
+        "song": new Map(), "rank": new Map(), "mark": new Map(),
         "platform": new Map(), "vocalist": new Map(), "snapshot": new Map(),
-        "synthesizer": new Map(), "uploader": new Map(), "song": new Map(),
-        "producer": new Map(), "rank": new Map(), "mark": new Map()
+        "synthesizer": new Map(), "uploader": new Map(), "producer": new Map()
     }
 };
 
-const { standard } = config.manifest;
+const { standard, special } = config.manifest;
 
 if (standard) {
     const entries = Object.entries(standard);
@@ -501,7 +623,7 @@ if (standard) {
 }
 
 if (shell) {
-    const { new: add, main, total, mode } = shell;
+    const { new: add, main, mode, total } = shell;
 
     let counter = 0;
 
@@ -509,25 +631,38 @@ if (shell) {
 
     String.prototype.my_split = function () {
         return this.split(",").map(item => item.trim());
+    };
+
+    if (mode === "special") {
+        special[+shell.issue - 1] = {
+            "name": shell.name,
+            "date": shell.date
+        };
+
+        if (file) insert_special_board_rank(
+            path.resolve(
+                root, filepath
+            ), shell.date, +shell.issue, adder
+        );
+    } else {
+        if (add) add.my_split().map(filepath => insert_normal_board_rank(
+            "new", mode, path.resolve(
+                root, filepath
+            ), path.basename(filepath), adder
+        ));
+    
+        if (main) main.my_split().map(filepath => insert_normal_board_rank(
+            "main", mode, path.resolve(
+                root, filepath
+            ), path.basename(filepath), adder
+        ));
+    
+        if (total) total.my_split().map(filepath => insert_snapshot_list(
+            path.resolve(
+                root, filepath
+            ), path.basename(filepath), adder
+        ));
     }
-
-    if (add) add.my_split().map(filepath => insert_normal_board_rank(
-        "new", mode, path.resolve(
-            root, filepath
-        ), path.basename(filepath), adder
-    ));
-
-    if (main) main.my_split().map(filepath => insert_normal_board_rank(
-        "main", mode, path.resolve(
-            root, filepath
-        ), path.basename(filepath), adder
-    ));
-
-    if (total) total.my_split().map(filepath => insert_snapshot_list(
-        path.resolve(
-            root, filepath
-        ), path.basename(filepath), adder
-    ));
 
     console.log(`目标文件已经全部分析完毕，共构建了 ${counter} 个有效映射关系`);
 }
@@ -544,6 +679,40 @@ for (let index = 0; index < memory_entries.length; index++) {
     total += list.length, task[entry[0]] = list;
 }
 
+/**
+ * 批量插入数据
+ * 
+ * @typedef {import("../../depend/operator/database.js").GeneralObject} GeneralObject
+ * 
+ * @param {string} table_name 需要插入数据的表单的名称
+ * @param {GeneralObject[]} data_list 需要插入的数据
+ * @param {SQLite3.Database} instance 数据库实例化对象
+ */
+function bulk_insert(table_name, data_list, instance) {
+    const table = quote_string(table_name, "double");
+    const sample = Object.keys(data_list[0]);
+    const columns = sample.map(item => quote_string(item, "double")).join(", ");
+    const placeholders = sample.fill("?").join(", ");
+
+    const statement = instance.prepare(
+        `INSERT OR IGNORE INTO ${table} ( ${columns} ) VALUES ( ${placeholders} )`
+    );
+
+    instance.transaction((items, columns) => {
+        for (const current of items) {
+            const values = columns.map(item =>
+                current[item] ?? null
+            );
+
+            try {
+                statement.run(values);
+            } catch (error) {
+                console.log(values);
+            }
+        }
+    })(data_list, Object.keys(data_list[0]));
+}
+
 console.log("一共生成了 " + total + " 个条目，正在准备插入数据库");
 
 instance.pragma("synchronous = OFF");
@@ -553,14 +722,24 @@ const operator = new DatabaseOperator(instance);
 
 console.log("共计找到了 " + memory.data.song.size +  " 个曲目数据，即将尝试删除数据...");
 
+const song_ids = [
+    ...memory.data.song
+].map(([id]) => id);
+
+operator.delete_item("Song_Table", {
+    "target": {
+        "column": "id",
+        "operator": "within",
+        "value": song_ids
+    }
+});
+
 operator.delete_item("Mark_Table", {
     "target": [
         {
             "column": "target",
             "operator": "within",
-            "value": [
-                ...memory.data.song
-            ].map(([key]) => key)
+            "value": song_ids
         },
         {
             "column": "type",
@@ -592,10 +771,10 @@ console.log("正在尝试更新期刊信息原始数据定义文件（一般不�
 const result = {
     "rank": instance.prepare(`
         SELECT
-            board, issue, COUNT(*) AS count
+            board, issue, part, COUNT(*) AS count
         FROM Rank_Table
-        GROUP BY board, issue
-        ORDER BY board, issue
+        GROUP BY board, issue, part
+        ORDER BY board, issue, part
     `).all(),
     "snapshot": instance.prepare(`
         SELECT
@@ -605,29 +784,76 @@ const result = {
     `).all()
 };
 
-const filepath = path.resolve(
-    __dirname, "../service/define/default.json"
-), content = JSON.parse(
-    fs.readFileSync(filepath, "UTF-8")
+const filepath = {
+    "define": path.resolve(
+        __dirname, "../service/define/default.json"
+    ),
+    "collcate": path.resolve(
+        __dirname, "./define/collate.json"
+    )
+};
+
+const content = JSON.parse(
+    fs.readFileSync(
+        filepath.define, "UTF-8"
+    )
 );
 
 Object.entries(classification(
     result.rank, item => item.board
-)).forEach(([board, list]) => {
+)).forEach(([ board, list ]) => {
     content.metadata.board[board].catalog =
-        list.map(({ issue, count }) => ({
-            "date": memory.issue.get(board
-                .replace(/-(?:new|main)/, "")
-            )[issue], issue, count
-        }));
+        Object.entries(classification(
+            list, (item) => item.issue
+        )).map(([ issue, items ]) => {
+            let total = 0;
+
+            const parts = {}, metadata = {};
+
+            items.map(({ part, count }) => {
+                total += count;
+
+                parts[part] = count;
+            });
+
+            metadata.issue = Number(issue);
+
+            if (board === "vocaloid-special") {
+                const data = special[issue - 1];
+
+                metadata.date = data.date;
+                metadata.name = data.name;
+            } else {
+                const data = {
+                    "date": memory.issue.get(board)[issue]
+                };
+
+                metadata.date = data.date;
+                metadata.name = content.metadata.board[board].name + " #" + issue;
+            }
+
+            return Object.assign(metadata, {
+                "part": parts, total
+            });
+        });
 });
 
-content.metadata.snapshot = result.snapshot;
+content.metadata.snapshot = result.snapshot.map(
+    (item, index) => Object.assign(
+        { index }, item
+    )
+);
 
 fs.writeFileSync(
-    filepath, JSON.stringify(
+    filepath.define, JSON.stringify(
         content, null, 4
     )
+);
+
+fs.writeFileSync(
+    filepath.collcate, JSON.stringify(
+        collate.index, null, 4
+    ), "UTF-8"
 );
 
 console.log("成功更新期刊信息原始数据定义文件");

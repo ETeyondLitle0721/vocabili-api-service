@@ -3,11 +3,6 @@
     "service": {
         "index": "./source/define/service.json",
         "options": {
-            "website": {
-                "host": "127.0.0.1",
-                "port": 51000,
-                "public": "./source/website/"
-            },
             "interface": {
                 "host": "127.0.0.1",
                 "port": 51001,
@@ -20,14 +15,18 @@
             }
         }
     },
+    "language": {
+        "default": "zh-HK",
+        "filepath": "./source/define/language.json"
+    },
     "database": {
         "default": {
-            "filepath": "./assets/database/default.db",
-            "framework": "./source/define/db-fw.json"
+            "path": "./assets/database/default.db",
+            "schema": "./source/define/database/schema.json"
         },
         "problem": {
-            "filepath": "./assets/database/problem.db",
-            "framework": "./source/define/db-fw.json"
+            "path": "./assets/database/problem.db",
+            "schema": "./source/define/database/schema.json"
         }
     }
 }

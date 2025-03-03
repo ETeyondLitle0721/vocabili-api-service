@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import { quote_string } from "../../../depend/core.js";
+import { quote_string, unique_array } from "../../../depend/core.js";
 
 const root = path.resolve(".");
 
@@ -13,47 +13,50 @@ const config = {
 };
 
 /**
+ * 切割目标参数和并表达式为数组
+ * 
+ * @param {(string|string[])} value 需要解析的参数合并表达式
+ * @returns {string[]} 解析出来的参数数组
+ */
+function split_value(value) {
+    if (!Array.isArray(value)) {
+        value = [ value ];
+    }
+
+    const list = unique_array(value.map(
+        item => item.split(",").map(
+            item => item.trim()
+        )
+    ).flat());
+
+    return list.filter(
+        item => item !== ""
+    );
+}
+
+
+/**
  * 解析请求体中的参数
  * 
  * @param {Request} request 需要解析的请求体
  * @returns {GeneralObject} 解析到的参数
  */
 export function parse_parameter(request) {
-    /**
-     * 切割目标参数和并表达式为数组
-     * 
-     * @param {string} value 需要解析的参数合并表达式
-     * @returns {string[]} 解析出来的参数数组
-     */
-    function split_value(value) {
-        const result = Array.from(new Set([value].flat().map((item) => {
-            return item.split(",").map((item) => {
-                return item.trim()
-            });
-        }).flat())).filter((item) => {
-            return item !== "";
-        });
-
-        if (result.length === 1) {
-            if (isFinite(result[0])) return Number(result[0]);
-        }
-
-        return result;
-    }
-
     const parameter = Object.assign(
         request.query, request.params
     );
 
-    return Object.fromEntries(
-        Object.entries(parameter).map(entry => {
-            return [
-                entry[0], entry[1] ? split_value(
-                    entry[1]
-                ) : []
-            ];
-        })
-    );
+    for (const [ key, value ] of Object.entries(parameter)) {
+        if (!value) {
+            parameter[key] = [];
+
+            continue;
+        }
+
+        parameter[key] = split_value(value);
+    }
+
+    return parameter;
 }
 
 /**
@@ -68,23 +71,32 @@ export function parse_parameter(request) {
  * @returns 检查结果
  */
 export function check_parameter(instance, name, receive, target, mode, options) {
-    let result = { "invalid": true };
+    const res = instance.response;
 
-    const prefix = `目标参数(Name=${name.toUpperCase()})所传递的参数`;
+    const param = {}, result = {
+        "invalid": true
+    };
+
+    const prefix = res.get_local_text(
+        "CHECK_PARAMETER_PREFIX", {
+            "TARGET_PARAMETER": res.get_local_text(
+                "TARGET_PARAMETER", {
+                    "name": name.toUpperCase(),
+                }
+            )
+        }
+    );
 
     if (mode === "number") {
         if (target === undefined) {
             result.code = "TARGET_NOT_EXISTS";
-            result.message = prefix + `被要求必须指定，但是实际上没有传递参数。`;
         } else if (!isFinite(target)) {
             result.code = "TARGET_NOT_NUMBER";
-            result.message = prefix + "不是一个合法的数字（允许二、八、十、十六进制数值）。";
         } else {
             target = Number(target);
 
             if (options.type === "integer" && target % 1 !== 0) {
                 result.code = "NUMBER_NOT_INTEGER";
-                result.message = prefix + `被要求为是一个整数，但是 ${quote_string(target)} 实际并非一个整数。`;
             }
 
             if (options.range) {
@@ -92,9 +104,13 @@ export function check_parameter(instance, name, receive, target, mode, options) 
 
                 if (minimum > target || maximum < target) {
                     result.code = "NUMBER_OUT_OF_RANGE";
-                    result.message = prefix + `被要求符合大于 ${minimum} 并且同时小于 ${maximum}，但是 ${target} 并不满足条件。`;
+
+                    param.minimum = minimum;
+                    param.maximum = maximum;
                 }
             }
+
+            param.target = quote_string(target);
         }
     }
                     
@@ -103,7 +119,6 @@ export function check_parameter(instance, name, receive, target, mode, options) 
 
         if (length === 0) {
             result.code = "TARGET_NOT_EXISTS";
-            result.message = prefix + `被要求必须指定，但是实际上没有传递参数。`;
         }
 
         if (options.range) {
@@ -112,10 +127,11 @@ export function check_parameter(instance, name, receive, target, mode, options) 
             if (maximum < length) {
                 if (maximum === 1) {
                     result.code = "DISALLOW_MULTIPLE_TARGET";
-                    result.message = prefix + `不允许多目标表达式。`;
                 } else {
-                    result.code = mode.toUpperCase() + "_OUT_OF_RANGE";
-                    result.message = prefix + `传递的参数数量太多了，最多只能为 ${maximum} 个，但是目前有 ${length} 个参数被传递。`;
+                    result.code = "COUNT_OUT_OF_RANGE";
+
+                    param.length = length;
+                    param.maximum = maximum;
                 }
             }
         }
@@ -126,14 +142,21 @@ export function check_parameter(instance, name, receive, target, mode, options) 
         
         if (!options.list.includes(target)) {
             result.code = "PARAMETER_VALUE_ILLEGAL";
-            result.message = prefix + `被要求必须是 ${options.list.map(item => {
+
+            param.enum = options.list.map(item => {
                 return quote_string(item, "double");
-            }).join(", ")} 之中的一个，但是 ${quote_string(target, "double")} 并不是。`;
+            }).join(", ");
+            param.target = quote_string(target, "double");
         }
     }
 
-    if (result.code) instance.response.send(build_response(
-        instance, { receive }, result.code, result.message
+    result.message = prefix + res.get_local_text(
+        result.code, param
+    );
+
+    if (result.code) res.send(build_response(
+        instance, { receive },
+        result.code, result.message
     ));
 
     return !result.code;
@@ -148,10 +171,12 @@ export function check_parameter(instance, name, receive, target, mode, options) 
  * @param {string} message 传递的消息
  * @returns 构建出来的响应体
  */
-export function build_response(instance, data = {}, code = "OK", message = "一切正常") {
+export function build_response(instance, data = {}, code = "OK", message) {
     const { request } = instance, result = {
         "code": code, "time": new Date(), "data": data.data,
-        "status": code === "OK" ? "success" : "failed", "message": message
+        "status": code === "OK" ? "success" : "failed",
+        "message": typeof message === "string" ?
+            message : instance.response.get_local_text(code, message)
     };
 
     if (data.extra) result.extra = data.extra;

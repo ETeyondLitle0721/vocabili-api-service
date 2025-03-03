@@ -19,26 +19,28 @@ const field = process.argv[2] || "default";
 
 const database = {
     /** @type {string} */
-    "filepath": config.database[field].filepath,
+    "path": config.database[field].path,
     /** @type { { "table": TableCreateOptions[], "index": IndexCreateOptions[] } } */
-    "framework": JSON.parse(
+    "schema": JSON.parse(
         fs.readFileSync(path.resolve(
-            root, config.database[field].framework
+            root, config.database[field].schema
         ), "UTF-8")
     )
 };
 
 const operator = new DatabaseOperator(
-    new SQLite3(database.filepath, {
+    new SQLite3(database.path, {
         "timeout": 1000,
         "readonly": false
     })
 );
 
-for (let index = 0; index < database.framework.table.length; index++) {
-    const options = database.framework.table[index];
+const { table: tables, index: indexes } = database.schema;
 
-    console.log("正在创建 " + options.name + " 表单");
+for (let index = 0; index < tables.length; index++) {
+    const options = tables[index];
+
+    console.log("正在创建名称为 " + options.name + " 的表单");
 
     operator.create_table(
         options.name, options
@@ -47,10 +49,10 @@ for (let index = 0; index < database.framework.table.length; index++) {
 
 console.log("所有表单创建完毕");
 
-for (let index = 0; index < database.framework.index.length; index++) {
-    const options = database.framework.index[index];
+for (let index = 0; index < indexes.length; index++) {
+    const options = indexes[index];
 
-    console.log("正在创建 " + options.name + " 索引");
+    console.log("正在创建名称为 " + options.name + " 的索引");
 
     operator.create_index(
         options.name, options

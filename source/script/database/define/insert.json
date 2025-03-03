@@ -8,7 +8,7 @@
         "total": "./assets/dataset/总量/",
         "change": "./assets/dataset/增量/"
     },
-    "specially": [
+    "special": [
         {
             "name": "熱異常 排行榜",
             "date": "2024-07-28",
@@ -52,7 +52,7 @@
         {
             "name": "虚拟歌手全世代 排行榜",
             "date": "2025-01-01",
-            "path": "./assets/dataset/特刊/20250101.xlsx"
+            "path": "./assets/dataset/特刊/2025.xlsx"
         },
         {
             "name": "梦ノ结唱 排行榜 #3",

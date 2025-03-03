@@ -1,5 +1,5 @@
 {
     "interface": {
-        "script": "./source/script/service/interface.js"
+        "start": "./source/script/service/interface.js"
     }
 }
