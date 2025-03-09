@@ -1,13 +1,9 @@
 {
 	"name": "vocacili-api-service",
-	"version": "3.6.0",
-	"description": "这是一个主要由 NodeJS 开发的 Vocacili 项目的 API 服务源代码储存仓库",
+	"version": "3.6.5",
+	"description": "这是一个主要由 Node.js 开发的 Vocacili 项目的 API 服务源代码储存仓库",
 	"keywords": [
-		"NodeJS",
 		"Node.js",
-		"JavaScript",
-		"JSONL",
-		"ND-JOSN",
 		"VOCALOID",
 		"SQlite3",
 		"Better-SQLite3",
@@ -32,7 +28,8 @@
 		"init:database": "node ./source/script/database/init.js",
 		"start:service": "node ./source/script/start.js",
 		"insert:database": "node ./source/script/database/insert.js",
-		"update:database": "node ./source/script/database/update.js"
+		"update:database": "node ./source/script/database/update.js",
+		"catalog:database": "node ./source/script/database/catalog.js"
 	},
 	"dependencies": {
 		"@types/better-sqlite3": "^7.6.12",
@@ -43,7 +40,6 @@
 		"better-sqlite3": "^11.8.1",
 		"cors": "^2.8.5",
 		"express": "^4.21.2",
-		"fast-levenshtein": "^3.0.0",
 		"node": "^18.20.6",
 		"xlsx": "^0.18.5"
 	}

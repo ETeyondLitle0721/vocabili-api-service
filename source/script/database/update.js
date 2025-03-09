@@ -2,16 +2,18 @@ import fs from "fs";
 import url from "url";
 import xlsx from "xlsx";
 import path from "path";
+import * as updater from "./updater.js";
 import SQLite3 from "better-sqlite3";
 import { command_parser } from "../depend/parse.js";
 import {
     compute_hamc, get_type, quote_string,
     split_group, text_transformer as cap,
-    append_rank_field, classification
+    append_rank_field
 } from "../../depend/core.js";
 import DatabaseOperator from "../../depend/operator/database.js";
 
-const root = path.resolve("."), shell = command_parser(process.argv);
+const root = path.resolve(".");
+const shell = command_parser(process.argv);
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 
 /**
@@ -262,7 +264,7 @@ function insert_normal_board_rank(part = "main", source, filepath, filename, add
         memory.data.rank.set(
             gen_id("Record", board + song_id + date + part), {
                 "target": song_id, "point": data.point,
-                "count": data.count ?? -1, board, part,
+                "count": typeof data.count === "number" ? data.count : -1, board, part,
                 "issue": memory.issue.get(board)[date],
                 "platform": gen_id("Platform", data.bvid),
                 "recorded_at": get_iso_time_text(),
@@ -329,7 +331,7 @@ function insert_special_board_rank(filepath, datetime, issue, adder) {
             memory.data.rank.set(
                 gen_id("Record", board + song_id + datetime), {
                     "target": song_id, "point": data.point, part,
-                    "count": data.count ?? -1, board, issue,
+                    "count": typeof data.count === "number" ? data.count : -1, board, issue,
                     "recorded_at": get_iso_time_text(),
                     "platform": gen_id("Platform", data.bvid),
                     "rank": data.rank || data._rank.point + 1,
@@ -386,13 +388,6 @@ function insert_snapshot_list(filepath, filename, adder) {
                 "recorded_at": get_iso_time_text()
             }
         );
-
-        memory.data.latest_snapshot.set(platform_id, {
-            "target": platform_id, "snapshot_at": datetime,
-            "view": data.view, "like": data.like,
-            "coin": data.coin, "favorite": data.favorite,
-            "recorded_at": get_iso_time_text()
-        });
     })
 }
 
@@ -722,9 +717,7 @@ const operator = new DatabaseOperator(instance);
 
 console.log("共计找到了 " + memory.data.song.size +  " 个曲目数据，即将尝试删除数据...");
 
-const song_ids = [
-    ...memory.data.song
-].map(([id]) => id);
+const song_ids = [...memory.data.song].map(([id]) => id);
 
 operator.delete_item("Song_Table", {
     "target": {
@@ -766,94 +759,15 @@ Object.entries(task).forEach(entry => {
 });
 
 console.log("数据条目全部插入完毕");
-console.log("正在尝试更新期刊信息原始数据定义文件（一般不需要长时间）");
 
-const result = {
-    "rank": instance.prepare(`
-        SELECT
-            board, issue, part, COUNT(*) AS count
-        FROM Rank_Table
-        GROUP BY board, issue, part
-        ORDER BY board, issue, part
-    `).all(),
-    "snapshot": instance.prepare(`
-        SELECT
-            snapshot_at AS date, COUNT(*) AS count
-        FROM Snapshot_Table
-        GROUP BY date
-    `).all()
-};
+import { close, get_song_info_by_id } from "../service/core/interface.js";
 
-const filepath = {
-    "define": path.resolve(
-        __dirname, "../service/define/default.json"
-    ),
-    "collcate": path.resolve(
-        __dirname, "./define/collate.json"
-    )
-};
+updater.define(instance, filepath.define, {
+    "get_song_info": get_song_info_by_id
+}, memory.issue, special);
 
-const content = JSON.parse(
-    fs.readFileSync(
-        filepath.define, "UTF-8"
-    )
-);
+updater.collate(collate.index, filepath.collate);
 
-Object.entries(classification(
-    result.rank, item => item.board
-)).forEach(([ board, list ]) => {
-    content.metadata.board[board].catalog =
-        Object.entries(classification(
-            list, (item) => item.issue
-        )).map(([ issue, items ]) => {
-            let total = 0;
-
-            const parts = {}, metadata = {};
-
-            items.map(({ part, count }) => {
-                total += count;
-
-                parts[part] = count;
-            });
-
-            metadata.issue = Number(issue);
-
-            if (board === "vocaloid-special") {
-                const data = special[issue - 1];
-
-                metadata.date = data.date;
-                metadata.name = data.name;
-            } else {
-                const data = {
-                    "date": memory.issue.get(board)[issue]
-                };
-
-                metadata.date = data.date;
-                metadata.name = content.metadata.board[board].name + " #" + issue;
-            }
-
-            return Object.assign(metadata, {
-                "part": parts, total
-            });
-        });
-});
-
-content.metadata.snapshot = result.snapshot.map(
-    (item, index) => Object.assign(
-        { index }, item
-    )
-);
-
-fs.writeFileSync(
-    filepath.define, JSON.stringify(
-        content, null, 4
-    )
-);
-
-fs.writeFileSync(
-    filepath.collcate, JSON.stringify(
-        collate.index, null, 4
-    ), "UTF-8"
-);
-
-console.log("成功更新期刊信息原始数据定义文件");
+close();
+instance.close();
+process.exit(0);

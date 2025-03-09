@@ -2,12 +2,13 @@ import url from "url";
 import xlsx from "xlsx";
 import path from "path";
 import SQLite3 from "better-sqlite3";
+import * as updater from "./updater.js";
 import fs, { Dirent } from "fs";
 import { command_parser } from "../depend/parse.js";
 import {
     compute_hamc, get_type, quote_string,
     split_group, text_transformer as cap,
-    append_rank_field, classification
+    append_rank_field
 } from "../../depend/core.js";
 
 const root = path.resolve("."), shell = command_parser(process.argv);
@@ -281,7 +282,7 @@ function insert_normal_board_rank(part = "main", source, filepath, filename, add
         memory.data.rank.set(
             gen_id("Record", board + song_id + date + part), {
                 "target": song_id, "point": data.point,
-                "count": data.count ?? -1, board, part,
+                "count": typeof data.count === "number" ? data.count : -1, board, part,
                 "issue": memory.issue.get(board)[date],
                 "platform": gen_id("Platform", data.bvid),
                 "recorded_at": get_iso_time_text(),
@@ -350,7 +351,7 @@ function insert_special_board_rank(filepath, datetime, issue, adder) {
             memory.data.rank.set(
                 gen_id("Record", board + song_id + datetime), {
                     "target": song_id, "point": data.point, part,
-                    "count": data.count ?? -1, board, issue,
+                    "count": typeof data.count === "number" ? data.count : -1, board, issue,
                     "recorded_at": get_iso_time_text(),
                     "platform": gen_id("Platform", data.bvid),
                     "rank": data.rank || data._rank.point + 1,
@@ -471,13 +472,6 @@ function insert_snapshot_list(filepath, filename, adder) {
                 "recorded_at": get_iso_time_text()
             }
         );
-
-        memory.data.latest_snapshot.set(platform_id, {
-            "target": platform_id, "snapshot_at": datetime,
-            "view": data.view, "like": data.like,
-            "coin": data.coin, "favorite": data.favorite,
-            "recorded_at": get_iso_time_text()
-        });
     })
 }
 
@@ -697,8 +691,7 @@ const memory = {
     "color": new Map(), "issue": new Map(), "video": new Map(), "data": {
         "platform": new Map(), "vocalist": new Map(), "snapshot": new Map(),
         "synthesizer": new Map(), "uploader": new Map(), "song": new Map(),
-        "producer": new Map(), "rank": new Map(), "mark": new Map(),
-        "latest_snapshot": new Map()
+        "producer": new Map(), "rank": new Map(), "mark": new Map()
     }
 };
 
@@ -916,92 +909,24 @@ Object.entries(task).forEach(entry => {
 });
 
 console.log("数据条目全部插入完毕");
-console.log("正在尝试更新期刊信息原始数据定义文件");
-
-const result = {
-    "rank": instance.prepare(`
-        SELECT
-            board, issue, part, COUNT(*) AS count
-        FROM Rank_Table
-        GROUP BY board, issue, part
-        ORDER BY board, issue, part
-    `).all(),
-    "snapshot": instance.prepare(`
-        SELECT
-            snapshot_at AS date, COUNT(*) AS count
-        FROM Snapshot_Table
-        GROUP BY date
-    `).all()
-};
 
 const filepath = {
     "define": path.resolve(
         __dirname, "../service/define/default.json"
     ),
-    "collcate": path.resolve(
+    "collate": path.resolve(
         __dirname, "./define/collate.json"
     )
 };
 
-const content = JSON.parse(
-    fs.readFileSync(
-        filepath.define, "UTF-8"
-    )
-);
+import { close, get_song_info_by_id } from "../service/core/interface.js";
 
-Object.entries(classification(
-    result.rank, item => item.board
-)).forEach(([ board, list ]) => {
-    content.metadata.board[board].catalog =
-        Object.entries(classification(
-            list, (item) => item.issue
-        )).map(([ issue, items ]) => {
-            let total = 0;
+updater.define(instance, filepath.define, {
+    "get_song_info": get_song_info_by_id
+}, memory.issue, special);
 
-            const parts = {}, metadata = {};
+updater.collate(collate.index, filepath.collate);
 
-            items.map(({ part, count }) => {
-                total += count;
-
-                parts[part] = count;
-            });
-
-            metadata.issue = Number(issue);
-
-            if (board === "vocaloid-special") {
-                const data = special[issue - 1];
-
-                metadata.date = data.date;
-                metadata.name = data.name;
-            } else {
-                const data = memory.issue.get(board)[issue];
-
-                metadata.date = data.date;
-                metadata.name = content.metadata.board[board].name + " #" + issue;
-            }
-
-            return Object.assign(metadata, {
-                "part": parts, total
-            });
-        });
-});
-
-content.metadata.snapshot = result.snapshot.map(
-    (item, index) => Object.assign(
-        { index }, item
-    )
-);
-
-fs.writeFileSync(
-    filepath.define, JSON.stringify(
-        content, null, 4
-    )
-);
-
-fs.writeFileSync(
-    filepath.collcate, JSON.stringify(
-        collate.index, null, 4
-    ), "UTF-8"
-);
-
-console.log("成功更新期刊信息原始数据定义文件");
+close();
+instance.close();
+process.exit(0);

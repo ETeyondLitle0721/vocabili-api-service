@@ -1,7 +1,7 @@
 {
     "debug": true,
     "service": {
-        "index": "./source/define/service.json",
+        "define": "./source/define/service.json",
         "options": {
             "interface": {
                 "host": "127.0.0.1",

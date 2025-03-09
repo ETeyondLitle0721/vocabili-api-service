@@ -10,7 +10,9 @@ export function command_parser(content, parser = (_, text) => text) {
 
     for (let index = 0; index < content.length; index++) {
         const current = content[index];
-        const parts = current.split("=").map(item => item.trim());
+        const parts = current.split("=").map(
+            item => item.trim()
+        );
         
         if (parts.length !== 2) continue;
 
