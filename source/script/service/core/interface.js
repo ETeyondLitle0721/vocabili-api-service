@@ -531,8 +531,6 @@ export function get_board_entry_info(issue, board = "vocaoid-weekly", count = 50
         }
     };
 
-    console.log(metadata.issue)
-
     const last_rank = get_rank_by_song_id({
         board, count,
         "issue": metadata.board.catalog[
@@ -820,8 +818,8 @@ function get_similarity(a, b, options = {}) {
 
 const weight = {
     "Unmarked": 0,
-    "翻唱": 0.5, "原创": 1,
-    "串烧": 0.5, "本家重置": 0.5
+    "翻唱": 0.6, "原创": 1,
+    "串烧": 0.5, "本家重置": 0.75
 };
 
 /**
