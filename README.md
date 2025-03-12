@@ -2,7 +2,7 @@
 
 ### 1. 获取曲目信息
 
-**路由地址**: `/get_info/song`  
+**路由地址**: `/info/song`  
 **请求方法**: GET / POST  
 **描述**: 根据曲目ID列表获取曲目的详细信息。
 
@@ -71,14 +71,14 @@
 **示例请求**:
 
 ```
-GET /get_info/song?target=song_id_1,song_id_2
+GET /info/song?target=song_id_1,song_id_2
 ```
 
 ---
 
 ### 2. 获取曲目列表（通过关联信息）
 
-**路由地址**: `/get_list/song/by_:type`  
+**路由地址**: `/list/song/by_:type`  
 **请求方法**: GET / POST  
 **描述**: 根据关联类型（如上传者、歌手、制作人等）获取曲目列表。
 
@@ -156,14 +156,14 @@ GET /get_info/song?target=song_id_1,song_id_2
 **示例请求**:
 
 ```
-GET /get_list/song/by_vocalist?target=vocalist_id_1&count=10&index=1
+GET /list/song/by_vocalist?target=vocalist_id_1&count=10&index=1
 ```
 
 ---
 
 ### 3. 获取目标列表
 
-**路由地址**: `/get_list/:type`  
+**路由地址**: `/list/:type`  
 **请求方法**: GET / POST  
 **描述**: 获取指定类型的目标列表（如曲目、榜单、上传者、歌手等）。
 
@@ -199,14 +199,14 @@ GET /get_list/song/by_vocalist?target=vocalist_id_1&count=10&index=1
 **示例请求**:
 
 ```
-GET /get_list/vocalist?count=10&index=1
+GET /list/vocalist?count=10&index=1
 ```
 
 ---
 
 ### 4. 获取榜单信息
 
-**路由地址**: `/get_info/board`  
+**路由地址**: `/info/board`  
 **请求方法**: GET / POST  
 **描述**: 获取指定榜单的详细信息。
 
@@ -282,14 +282,14 @@ GET /get_list/vocalist?count=10&index=1
 **示例请求**:
 
 ```
-GET /get_info/board?board=vocaoid-weekly-main&issue=1&count=10&index=1
+GET /info/board?board=vocaoid-weekly&part=main&issue=1&count=10&index=1
 ```
 
 ---
 
 ### 5. 获取最新榜单信息
 
-**路由地址**: `/get_info/board/_latest`  
+**路由地址**: `/info/board/_latest`  
 **请求方法**: GET / POST  
 **描述**: 获取指定榜单的最新一期信息。
 
@@ -301,19 +301,19 @@ GET /get_info/board?board=vocaoid-weekly-main&issue=1&count=10&index=1
 - `part` (string): 子刊名称。
 
 **响应数据**:
-与 `/get_info/board` 相同。
+与 `/info/board` 相同。
 
 **示例请求**:
 
 ```
-GET /get_info/board/_current?board=vocaoid-weekly&count=10&index=1&part=new
+GET /info/board/_current?board=vocaoid-weekly&count=10&index=1&part=new
 ```
 
 ---
 
 ### 6. 获取曲目历史排名信息
 
-**路由地址**: `/get_history/song/rank`  
+**路由地址**: `/history/song/rank`  
 **请求方法**: GET / POST  
 **描述**: 获取曲目在指定榜单中的历史排名信息。
 
@@ -350,7 +350,7 @@ GET /get_info/board/_current?board=vocaoid-weekly&count=10&index=1&part=new
         "favorite": 4
       },
       "issue": 1,
-      "board": "vocaoid-weekly-main"
+      "board": "vocaoid-weekly"
     }
   ]
 }
@@ -359,14 +359,14 @@ GET /get_info/board/_current?board=vocaoid-weekly&count=10&index=1&part=new
 **示例请求**:
 
 ```
-GET /get_history/song/rank?target=song_id_1&issue=1&board=vocaoid-weekly-main&count=10&index=1
+GET /history/song/rank?target=song_id_1&issue=1&board=vocaoid-weekly&part=main&count=10&index=1
 ```
 
 ---
 
 ### 7. 获取曲目历史统计量信息
 
-**路由地址**: `/get_history/platform/count`  
+**路由地址**: `/history/platform/count`  
 **请求方法**: GET / POST  
 **描述**: 获取曲目在平台上的历史统计量信息（如播放量、点赞数等）。
 
@@ -403,7 +403,7 @@ GET /get_history/song/rank?target=song_id_1&issue=1&board=vocaoid-weekly-main&co
 **示例请求**:
 
 ```
-GET /get_history/platform/count?target=song_id_1&count=10&index=1
+GET /history/platform/count?target=song_id_1&count=10&index=1
 ```
 
 ---
@@ -470,14 +470,13 @@ GET /search/song/by_name?target=曲目名称&count=10&index=1
 
 ### 9. 通过平台标题搜索曲目
 
-**路由地址**: `/search/song/by_platform`  
+**路由地址**: `/search/song/by_title`  
 **请求方法**: GET / POST  
-**描述**: 根据平台标题或BVID搜索曲目。
+**描述**: 根据视频标题。
 
 **请求参数**:
 
-- `title` (string): 平台标题。
-- `bvid` (string): 平台BVID。
+- `target` (string): 视频标题。
 - `count` (number): 每页返回的曲目数量，默认为25。
 - `index` (number): 页码，默认为1。
 
@@ -487,7 +486,7 @@ GET /search/song/by_name?target=曲目名称&count=10&index=1
 **示例请求**:
 
 ```
-GET /search/song/by_platform?title=标题&bvid=BVID&count=10&index=1
+GET /search/song/by_title?target=标题&count=10&index=1
 ```
 
 ---
@@ -538,7 +537,7 @@ GET /search/vocalist/by_name?target=歌手名称&count=10&index=1
 
 ### 11. 获取榜单元数据信息
 
-**路由地址**: `/get_info/metadata/board`  
+**路由地址**: `/info/metadata/board`  
 **请求方法**: GET / POST  
 **描述**: 获取指定榜单的元数据信息。
 
@@ -571,7 +570,7 @@ GET /search/vocalist/by_name?target=歌手名称&count=10&index=1
 **示例请求**:
 
 ```
-GET /get_info/metadata/board?target=vocaoid-weekly-main&set-cache=3600
+GET /info/metadata/board?target=vocaoid-weekly&part=new
 ```
 
 ---
@@ -702,7 +701,7 @@ GET /check/exists/board-entry?board=vocaloid-daily&part=new&issue=1,2,3,4
                 "accept": "application/json"
             },
             "address": "127.0.0.1", // 客户端IP地址
-            "resource": "/get_info/song" // 请求资源路径
+            "resource": "/info/song" // 请求资源路径
         }
     }
 }
