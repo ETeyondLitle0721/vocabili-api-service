@@ -26,7 +26,9 @@ import {
     get_song_rank_history_info_by_id,
     get_platform_count_history_info_by_id,
     search_target_by_name,
-    check_exists_board_entry
+    check_exists_board_entry,
+    search_song_by_name,
+    search_song_by_title
 } from "./core/interface.js";
 
 const root = path.resolve(".");
@@ -339,7 +341,7 @@ app.register("/info/board/_latest", (request, response) => {
         param[key] = value[0];
     }
 
-    const metadata = get_board_metadata_info_by_id(param.board);
+    const metadata = get_board_metadata_by_id(param.board);
 
     if (!metadata) {
         return response.send(
@@ -457,12 +459,12 @@ app.register("/history/platform/count", (request, response) => {
     }, "OK"));
 });
 
-app.register("/search/song", (request, response) => {
+app.register("/search/song/by_name", (request, response) => {
     /**
-     * @type {{ "target": string, "count": number, "index": number }}
+     * @type {{ "target": string, "count": number, "index": number, "threshold": number }}
      */
     const param = parse_param(request, {
-        "count": 25, "index": 1
+        "count": 25, "index": 1, "threshold": 0.2
     }), receive = process.uptime();
     const instance = { response, request };
 
@@ -474,17 +476,57 @@ app.register("/search/song", (request, response) => {
 
     return response.send(build_response(instance, {
         param, receive, "data": search_song_by_name(
-            param.target, +param.count, +param.index
+            param.target, +param.threshold, +param.count, +param.index
         )
     }, "OK"));
 });
 
-app.register("/search/:type/by_name", (request, response) => {
+app.register("/search/song/by_title", (request, response) => {
     /**
-     * @type {{ "target": string, "count": number, "index": number, "type": string }}
+     * @type {{ "target": string, "count": number, "index": number, "threshold": number }}
+     */
+    const param = parse_param(request, {
+        "count": 25, "index": 1, "threshold": 0.2
+    }), receive = process.uptime();
+    const instance = { response, request };
+
+    if (!check_param(param, receive, instance)) return;
+
+    for (const [ key, value ] of Object.entries(param)) {
+        param[key] = value[0];
+    }
+
+    return response.send(build_response(instance, {
+        param, receive, "data": search_song_by_title(
+            param.target, +param.threshold, +param.count, +param.index
+        )
+    }, "OK"));
+});
+
+app.register("/search/song/by_filter", (request, response) => {
+    /**
+     * @type {{ "count": number, "index": number }}
      */
     const param = parse_param(request, {
         "count": 25, "index": 1
+    }), receive = process.uptime();
+    const instance = { response, request };
+
+    return response.send(
+        build_response(instance, {
+            param, receive
+        }, "NOT_IMPLEMENTED_YET", {
+            "endpoint": "/search/song/by_filter"
+        })
+    );
+});
+
+app.register("/search/:type/by_name", (request, response) => {
+    /**
+     * @type {{ "target": string, "count": number, "index": number, "threshold": number }}
+     */
+    const param = parse_param(request, {
+        "count": 25, "index": 1, "threshold": 0.2
     }), receive = process.uptime();
     const instance = { response, request };
 
@@ -496,7 +538,7 @@ app.register("/search/:type/by_name", (request, response) => {
 
     return response.send(build_response(instance, {
         param, receive, "data": search_target_by_name(
-            param.type, param.target, +param.count, +param.index
+            param.type, param.target, +param.threshold, +param.count, +param.index
         )
     }, "OK"));
 });
@@ -580,8 +622,6 @@ export default {
 
 function exit() {
     close();
-
-    instance.close();
 
     process.exit(1);
 }

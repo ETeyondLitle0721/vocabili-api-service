@@ -28,6 +28,7 @@
 		"init:database": "node ./source/script/database/init.js",
 		"start:service": "node ./source/script/start.js",
 		"insert:database": "node ./source/script/database/insert.js",
+		"clean:database": "node ./source/script/database/clean.js",
 		"update:database": "node ./source/script/database/update.js",
 		"catalog:database": "node ./source/script/database/catalog.js"
 	},

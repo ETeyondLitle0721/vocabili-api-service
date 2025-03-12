@@ -760,6 +760,15 @@ Object.entries(task).forEach(entry => {
 
 console.log("数据条目全部插入完毕");
 
+const filepath = {
+    "define": path.resolve(
+        __dirname, "../service/define/default.json"
+    ),
+    "collate": path.resolve(
+        __dirname, "./define/collate.json"
+    )
+};
+
 import { close, get_song_info_by_id } from "../service/core/interface.js";
 
 updater.define(instance, filepath.define, {

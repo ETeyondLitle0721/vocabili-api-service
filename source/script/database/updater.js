@@ -129,6 +129,7 @@ export function define(instance, filepath, depend, map, special) {
             }
     
             entries[index] = Object.assign(metadata, {
+                "index": index,
                 "part": parts, total
             });
         }

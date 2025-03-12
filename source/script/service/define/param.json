@@ -1,5 +1,5 @@
 {
-    "/get_info/song": {
+    "/info/song": {
         "target": {
             "mode": "count",
             "options": {
@@ -7,7 +7,7 @@
             }
         }
     },
-    "/get_list/song/by_:type": {
+    "/list/song/by_:type": {
         "type": [
             {
                 "mode": "count",
@@ -55,7 +55,7 @@
             }
         }
     },
-    "/get_list/:type": {
+    "/list/:type": {
         "type": [
             {
                 "mode": "count",
@@ -98,7 +98,7 @@
             }
         }
     },
-    "/get_info/board": {
+    "/info/board": {
         "part": {
             "mode": "count",
             "options": {
@@ -142,7 +142,7 @@
             }
         }
     },
-    "/get_info/board/_latest": {
+    "/info/board/_latest": {
         "part": {
             "mode": "count",
             "options": {
@@ -176,7 +176,7 @@
             }
         }
     },
-    "/get_info/metadata/board": {
+    "/info/metadata/board": {
         "set-cache": {
             "mode": "number",
             "options": {
@@ -193,7 +193,7 @@
             }
         }
     },
-    "/get_history/song/rank": {
+    "/history/song/rank": {
         "board": {
             "mode": "count",
             "options": {
@@ -227,7 +227,7 @@
             }
         }
     },
-    "/get_history/platform/count": {
+    "/history/platform/count": {
         "target": {
             "mode": "count",
             "options": {
@@ -281,9 +281,18 @@
                     "maximum": 131072
                 }
             }
+        },
+        "threshold": {
+            "mode": "number",
+            "options": {
+                "range": {
+                    "minimum": 0,
+                    "maximum": 1
+                }
+            }
         }
     },
-    "/search/song/by_platform": {
+    "/search/song/by_title": {
         "count": {
             "mode": "number",
             "options": {
@@ -301,6 +310,15 @@
                 "range": {
                     "minimum": 1,
                     "maximum": 131072
+                }
+            }
+        },
+        "threshold": {
+            "mode": "number",
+            "options": {
+                "range": {
+                    "minimum": 0,
+                    "maximum": 1
                 }
             }
         }
@@ -348,6 +366,15 @@
                 "range": {
                     "minimum": 1,
                     "maximum": 131072
+                }
+            }
+        },
+        "threshold": {
+            "mode": "number",
+            "options": {
+                "range": {
+                    "minimum": 0,
+                    "maximum": 1
                 }
             }
         }

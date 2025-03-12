@@ -132,9 +132,7 @@ export function pagination(count, index) {
  * @returns {BoardMetadata} 获取到的元信息
  */
 export function get_board_metadata_by_id(target) {
-    const metadata = config.current.metadata.board[target];
-
-    return metadata ?? {};
+    return config.current.metadata.board[target];
 }
 
 /**
@@ -199,7 +197,7 @@ export function get_rank_by_song_id(config) {
             {
                 "column": "target",
                 "operator": "within",
-                "value": options.target
+                "value": config.target
             }
         ]
     };
@@ -502,18 +500,12 @@ export function parse_song_rank_info(song) {
  * @returns 获取到的排行榜信息
  */
 export function get_board_entry_info(issue, board = "vocaoid-weekly", count = 50, index = 1, part) {
-    const list = get_board_entry_song_list({
-        issue, count, index, board, part
-    });
     const depend = get_depend_board_entry_info();
-    const metadata = {
-        "board": get_board_metadata_by_id(board)
-    };
+    const metadata = { "board": get_board_metadata_by_id(board) };
+    const list = get_board_entry_song_list({ issue, count, index, board, part });
 
     metadata.issue = metadata.board.catalog.find(
-        item => {
-            return item.issue === issue;
-        }
+        item => item.issue === issue
     );
 
     const song_ids = list.map(item => item.target);
@@ -538,6 +530,8 @@ export function get_board_entry_info(issue, board = "vocaoid-weekly", count = 50
             "count": metadata.issue.part[list[0].part]
         }
     };
+
+    console.log(metadata.issue)
 
     const last_rank = get_rank_by_song_id({
         board, count,
@@ -636,68 +630,6 @@ export function get_song_rank_history_info_by_id(target, issue, board, count = 5
             "issue": item.issue, "board": item.board
         })
     );
-}
-
-/**
- * 通过曲目 Platform 数据的 BVID 或者 Title 查询对应的曲目数据
- * 
- * @param {object} target 需要查询的目标
- * @param {string} target.bvid 需要包含的 BVID 之中的文本
- * @param {string} target.title 需要包含的 Title 之中的文本
- * @param {number} count 要获取多少个
- * @param {number} index 当前的页数
- * @returns 获取到的曲目列表
- */
-export function search_song_by_platform_title(target, count = 50, index = 1) {
-    const { bvid = "", title = "" } = target;
-
-    const where = [
-        {
-            "column": "title",
-            "operator": "like",
-            "value": `%${title}%`,
-            "collate": "nocase"
-        },
-        {
-            "column": "link",
-            "operator": "like",
-            "value": `BB://V/%${bvid}%`,
-            "collate": "nocase"
-        }
-    ];
-
-    const platform = database.select_item("Platform_Table", {
-        where, "control": {
-            "result": {
-                "limit": count,
-                "offset": count * (index - 1)
-            }
-        }
-    });
-    
-    const mark = database.select_item("Mark_Table", {
-        "where": [
-            {
-                "column": "type",
-                "operator": "equal",
-                "value": "platform"
-            },
-            {
-                "column": "value",
-                "operator": "within",
-                "value": platform.map(item => item.id)
-            }
-        ]
-    });
-
-    return {
-        "total": database.count_item(
-            "Platform_Table", { where }
-        )[0]["COUNT(*)"],
-        "result": get_song_info_by_id(
-            mark.map(item => item.target)
-        )
-    };
 }
 
 /**
@@ -873,8 +805,6 @@ function get_levenshtein_distance(a, b) {
  * @param {string} b 第二段文本
  * @param {object} options 计算时应用的配置
  * @param {boolean} options.case 是否忽略大小写
- * @param {boolean} options.trim 是否忽略空白字符
- * @param {boolean} options.normalize 是否忽略 Unicode 标准化
  * @returns {number} 计算出来的相似度
  */
 function get_similarity(a, b, options = {}) {
@@ -883,154 +813,146 @@ function get_similarity(a, b, options = {}) {
         b = b.toLowerCase();
     }
 
-    if (options.trim === true) {
-        a = a.trim();
-        b = b.trim();
-    }
-
-    if (options.normalize === true) {
-        a = a.normalize();
-        b = b.normalize();
-    }
-
     const distance = get_levenshtein_distance(a, b);
 
     return 1 - distance / Math.max(a.length, b.length);
-};
-
-/**
- * 判断第二个集合是否为第一个集合的子集
- * 
- * @param {Array} a 第一个集合
- * @param {Array} b 第二个集合
- * @returns {boolean} 判断结果
- */
-function is_subset(a, b) {
-    return b.every(item => a.includes(item));
 }
+
+const weight = {
+    "Unmarked": 0,
+    "翻唱": 0.5, "原创": 1,
+    "串烧": 0.5, "本家重置": 0.5
+};
 
 /**
  * 通过曲目 Song 数据的 Name 查询对应的曲目数据
  * 
- * @param {Object<string, (number|string|boolean)>} filter 需要查询的目标
+ * @param {string} target 需要查询的目标
+ * @param {number} threshold 相似度阈值
  * @param {number} count 要获取多少个
  * @param {number} index 当前的页数
- * @returns 获取到的曲目列表
+ * @returns 查询的返回结果
  */
-export function search_song_by_name(filter, count = 50, index = 1) {
+export function search_song_by_name(target, threshold = 0.2, count = 50, index = 1) {
     const result = [];
-
-    const { text, _case = "match", threshold = 0.2 } = filter;
 
     config.current.catalog.song.forEach(item => {
         const similarity = get_similarity(
-            item.metadata.name, text, {
-                "case": _case === "match"
-            }
+            item.metadata.name, target, { "case": false }
         );
 
         if (similarity >= threshold) {
-            item.similarity.name = similarity;
-
-            for (const [ field, value ] of filter) {
-                if (![
-                    "vocalist", "synthesizer", "producer"
-                ].includes(field)) continue;
-
-                const set = item.metadata.target[field];
-                
-                if (!is_subset(set, value)) {
-                    return;
-                }
-            }
-
-            item.platform.forEach(platform => {
-                platform.publish = new Date(platform.publish)
+            result.push({
+                "rate": similarity,
+                "target": item
             });
-
-            result.push(item);
         }
     });
 
-    const { order = "desc", field = "similarity" } = filter;
+    result.sort((a, b) => {
+        return b.rate - a.rate;
+    });
 
     result.sort((a, b) => {
-        const value = [];
-
-        if (field === "similarity") {
-            value[0] = a.similarity.name;
-            value[1] = b.similarity.name;
-        }
-
-        if ([ "publish", "duration" ].includes(field)) {
-            const get_platform = item => item.platform;
-
-            if (field === "publish") {
-                value[0] = get_platform(a).publish;
-                value[1] = get_platform(b).publish;
-            }
-
-            if (field === "duration") {
-                value[0] = get_platform(a).duration;
-                value[1] = get_platform(b).duration;
-            }
-        }
-
-        if (order === "asc") {
-            return value[0] - value[1];
-        }
-
-        return value[1] - value[0];
+        return weight[a.target.type] - weight[b.target.type];
     });
 
     const slice = pagination(count, index);
 
-    return result.slice(slice.offset, slice.offset + slice.limit);
+    return {
+        "total": result.length,
+        "result": get_song_info_by_id(result.slice(
+            slice.offset, slice.offset + slice.limit
+        ).map(item => item.target.metadata.id)).map(
+            (item, index) => Object.assign(item, {
+                "similarity": result[index].rate
+            })
+        )
+    };
+}
+
+/**
+ * 通过曲目 Song 数据的 Title 查询对应的曲目数据
+ * 
+ * @param {string} target 需要查询的目标
+ * @param {number} threshold 相似度阈值
+ * @param {number} count 要获取多少个
+ * @param {number} index 当前的页数
+ * @returns 查询的返回结果
+ */
+export function search_song_by_title(target, threshold = 0.2, count = 50, index = 1) {
+    const result = [];
+
+    config.current.catalog.song.forEach(item => {
+        const similarity = get_similarity(
+            item.platform.title, target, { "case": false }
+        );
+
+        if (similarity >= threshold) {
+            result.push({
+                "rate": similarity,
+                "target": item
+            });
+        }
+    });
+
+    result.sort((a, b) => {
+        return b.rate - a.rate;
+    });
+
+    result.sort((a, b) => {
+        return weight[a.target.type] - weight[b.target.type];
+    });
+
+    const slice = pagination(count, index);
+
+    return {
+        "total": result.length,
+        "result": get_song_info_by_id(result.slice(
+            slice.offset, slice.offset + slice.limit
+        ).map(item => item.target.metadata.id)).map(
+            (item, index) => Object.assign(item, {
+                "similarity": result[index].rate
+            })
+        )
+    };
 }
 
 /**
  * 通过目标数据的 Name 查询对应的目标列表
  * 
  * @param {("uploader"|"vocalist"|"producer"|"synthesizer")} type 目标类型
- * @param {string} name 目标名称
+ * @param {string} target 需要查询的目标
+ * @param {number} threshold 相似度阈值
  * @param {number} count 要获取多少个
  * @param {number} index 当前的页数
- * @returns 获取到的目标列表
+ * @returns 查询的返回结果
  */
-export function search_target_by_name(type, name, count, index) {
-    const where = {
-        "column": "name",
-        "operator": "like",
-        "value": `%${name}%`,
-        "collate": "nocase"
-    };
+export function search_target_by_name(type, target, threshold = 0.2, count = 50, index = 1) {
+    const result = [];
 
-    const table = capitalize(type) + "_Table";
+    config.current.catalog[type].forEach(item => {
+        const similarity = get_similarity(
+            item.name, target, { "case": false }
+        );
 
-    const list = database.select_item(table, {
-        where, "control": {
-            "result": pagination(count, index)
+        if (similarity >= threshold) {
+            result.push({
+                "rate": similarity,
+                "target": item
+            });
         }
     });
 
-    let result = list.map(item => ({
-        "id": item.id,
-        "name": item.name
-    }));
+    result.sort((a, b) => {
+        return b.rate - a.rate;
+    });
 
-    if (type === "vocalist") {
-        result = list.map(item => ({
-            "id": item.id,
-            "name": item.name,
-            "color": item.color
-        }));
-    }
+    const slice = pagination(count, index);
 
     return {
-        "total": database.count_item(
-            table, { where }
-        )[0]["COUNT(*)"],
-        "result": result
+        "total": result.length,
+        "result": result.slice(slice.offset, slice.offset + slice.limit)
     };
 }
 
