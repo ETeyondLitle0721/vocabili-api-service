@@ -2,3 +2,4 @@
 /node_modules/
 /package-lock.json
 /source/script/service/define/default.json
+/source/script/database/define/collate.json
