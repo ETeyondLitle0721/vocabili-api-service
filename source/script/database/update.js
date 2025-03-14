@@ -87,7 +87,7 @@ function read_xlsx(filepath, target = 0) {
     );
     
     return result ?? read_xlsx(
-        filepath, target, rename
+        filepath, target
     );
 }
 
@@ -618,7 +618,7 @@ if (standard) {
 }
 
 if (shell) {
-    const { new: add, main, mode, total } = shell;
+    const { new: add, main, mode, file, total } = shell;
 
     let counter = 0;
 
@@ -634,29 +634,42 @@ if (shell) {
             "date": shell.date
         };
 
-        if (file) insert_special_board_rank(
-            path.resolve(
-                root, filepath
-            ), shell.date, +shell.issue, adder
-        );
+        if (file) {
+            insert_special_board_rank(
+                path.resolve(
+                    file, filepath
+                ), shell.date, +shell.issue, adder
+            );
+        }
     } else {
-        if (add) add.my_split().map(filepath => insert_normal_board_rank(
-            "new", mode, path.resolve(
-                root, filepath
-            ), path.basename(filepath), adder
-        ));
+        if (add) {
+            add.my_split().map(
+                filepath => insert_normal_board_rank(
+                    "new", mode, path.resolve(
+                        root, filepath
+                    ), path.basename(filepath), adder
+                )
+            );
+        }
     
-        if (main) main.my_split().map(filepath => insert_normal_board_rank(
-            "main", mode, path.resolve(
-                root, filepath
-            ), path.basename(filepath), adder
-        ));
+        if (main) {
+            main.my_split().map(
+                filepath => insert_normal_board_rank(
+                    "main", mode, path.resolve(
+                        root, filepath
+                    ), path.basename(filepath), adder
+                )
+            );
+        }
     
-        if (total) total.my_split().map(filepath => insert_snapshot_list(
-            path.resolve(
-                root, filepath
-            ), path.basename(filepath), adder
-        ));
+        if (total) {
+            total.my_split().map(
+                filepath => insert_snapshot_list(
+                    path.resolve(root, filepath),
+                    path.basename(filepath), adder
+                )
+            );
+        }
     }
 
     console.log(`目标文件已经全部分析完毕，共构建了 ${counter} 个有效映射关系`);
@@ -702,7 +715,7 @@ function bulk_insert(table_name, data_list, instance) {
             try {
                 statement.run(values);
             } catch (error) {
-                console.log(values);
+                console.log(values, error);
             }
         }
     })(data_list, Object.keys(data_list[0]));

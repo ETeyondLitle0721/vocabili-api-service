@@ -26,7 +26,8 @@ import {
     get_platform_count_history_by_id,
     search_target_by_name,
     search_song_by_name,
-    search_song_by_title
+    search_song_by_title,
+    search_song_by_filter
 } from "./core/interface.js";
 
 const root = path.resolve(".");
@@ -475,6 +476,10 @@ app.register("/metadata/board/part", (request, response) => {
         );
     }
 
+    const target = metadata.catalog.find(
+        item => item.issue === +param.issue
+    );
+
     if (!target.part[param.part]) {
         return response.send(
             build_response(instance, {
@@ -597,21 +602,50 @@ app.register("/search/song/by_filter", (request, response) => {
      * @type {{ "count": number, "index": number }}
      */
     const param = parse_param(request, {
-        "count": 25, "index": 1
+        "count": 25, "index": 1, "order": "asc", "sort": "default"
     }), receive = process.uptime();
     const instance = { response, request };
+
+    // 此处仅实现了 "count" 和 "index" 以及 "order" 和 "sort" 的检查
+    if (!check_param(param, receive, instance)) return;
+
+    const filter = {};
+
+    for (const [ field, value ] of Object.entries(param)) {
+        if ([
+            "vocalist", "producer", "keywords", "uploader", "synthesizer"
+        ].includes(field)) {
+            filter[field] = value;
+        }
+
+        if ([ "copyright", "type" ].includes(field)) {
+            if (!check_parameter(
+                instance, field, receive, value, "count", {
+                    "range": { "maximum": 1 }
+                }
+            )) return;
+
+            filter[field] = value[0];
+        }
+
+        if (field.startsWith("publish_date")) {
+            if (!check_parameter(
+                instance, field, receive, value[0], "date"
+            )) return;
+
+            filter[field] = new Date(value[0]).toISOString();
+        }
+    }
 
     for (const [ key, value ] of Object.entries(param)) {
         param[key] = value[0];
     }
 
-    return response.send(
-        build_response(instance, {
-            param, receive
-        }, "NOT_IMPLEMENTED_YET", {
-            "endpoint": "/search/song/by_filter"
-        })
-    );
+    return response.send(build_response(instance, {
+        param, receive, "data": search_song_by_filter(
+            filter, param.sort, param.order, +param.count, +param.index
+        )
+    }, "OK"));
 });
 
 app.register("/search/:type/by_name", (request, response) => {

@@ -1,4 +1,4 @@
-import fs, { symlink } from "fs";
+import fs from "fs";
 import url from "url";
 import path from "path";
 import SQLite3 from "better-sqlite3";
@@ -20,15 +20,6 @@ const config = {
         fs.readFileSync(path.resolve(
             __dirname, "./define/insert.json"
         ), "UTF-8")
-    )
-};
-
-const filepath = {
-    "define": path.resolve(
-        __dirname, "../service/define/default.json"
-    ),
-    "collate": path.resolve(
-        __dirname, "./define/collate.json"
     )
 };
 

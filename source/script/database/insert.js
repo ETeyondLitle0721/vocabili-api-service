@@ -3,7 +3,7 @@ import xlsx from "xlsx";
 import path from "path";
 import SQLite3 from "better-sqlite3";
 import * as updater from "./updater.js";
-import fs, { Dirent } from "fs";
+import fs from "fs";
 import { command_parser } from "../depend/parse.js";
 import {
     compute_hamc, get_type, quote_string,
@@ -389,7 +389,7 @@ function get_iso_time_text(instance = new Date(), handler = text => text) {
  * @param {boolean} options.recursive 是否递归获取
  * @param {boolean} options.with_type 是否包含文件类型的知名符号（Symbol(type)）
  * @param {BufferEncoding} options.encoding 目标名称的编码
- * @returns {(Dirent & { "filepath": string })[]} 获取到的目标的列表
+ * @returns {(fs.Dirent & { "filepath": string })[]} 获取到的目标的列表
  */
 function get_dirpath_children(dirpath, options) {
     const {
@@ -883,7 +883,7 @@ function bulk_insert(table_name, data_list, instance) {
             try {
                 statement.run(values);
             } catch (error) {
-                console.log(values);
+                console.log(values, error);
             }
         }
     })(data_list, Object.keys(data_list[0]));

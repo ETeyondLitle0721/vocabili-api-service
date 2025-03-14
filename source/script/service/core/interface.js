@@ -901,7 +901,7 @@ export function search_song_by_name(target, threshold = 0.2, count = 50, index =
     });
 
     result.sort((a, b) => {
-        return weight[a.target.type] - weight[b.target.type];
+        return weight[b.metadata.type] - weight[a.metadata.type];
     });
 
     const slice = pagination(count, index);
@@ -948,7 +948,7 @@ export function search_song_by_title(target, threshold = 0.2, count = 50, index 
     });
 
     result.sort((a, b) => {
-        return weight[a.target.type] - weight[b.target.type];
+        return weight[b.metadata.type] - weight[a.metadata.type];
     });
 
     const slice = pagination(count, index);
@@ -966,7 +966,7 @@ export function search_song_by_title(target, threshold = 0.2, count = 50, index 
 }
 
 /**
- * 通过曲目 Song 数据的 Title 查询对应的曲目数据
+ * 通过曲目 Song 数据并结合 Filter 查询对应的曲目数据
  * 
  * @param {object} filter 需要查询的目标
  * @param {string} sort 排序字段
@@ -979,6 +979,11 @@ export function search_song_by_filter(filter, sort, order, count = 50, index = 1
     const result = [];
 
     config.current.catalog.song.forEach(item => {
+        if (!Object.keys(filter).length) {
+            result.push(item);
+            return;
+        }
+
         let flag = false;
 
         for (const [ field, value ] of Object.entries(filter)) {
@@ -1042,20 +1047,24 @@ export function search_song_by_filter(filter, sort, order, count = 50, index = 1
 
         // 按照播放量数据
 
-        if (sort.startsWith("count")) {
-            const type = sort.slice(6); // count.xxx 的 xxx 部分
+        if (sort.startsWith("stat")) {
+            const type = sort.slice(5); // stat.xxx 的 xxx 部分
 
-            basis.a = a.platform.count[type] || 0;
-            basis.b = b.platform.count[type] || 0;
+            if (!a.platform.stat) return;
+
+            if (!b.platform.stat) return;
+
+            basis.a = a.platform.stat[type];
+            basis.b = b.platform.stat[type];
         }
 
         // 按照上榜次数（周榜、日榜）
 
         if (sort.startsWith("count")) {
-            const type = sort.slice(6); // board.xxx 的 xxx 部分
+            const type = sort.slice(6); // count.xxx 的 xxx 部分
 
-            basis.a = a.count[type] || 0;
-            basis.b = b.count[type] || 0;
+            basis.a = a.count[type];
+            basis.b = b.count[type];
         }
 
         // 按照视频持续时长
@@ -1072,11 +1081,20 @@ export function search_song_by_filter(filter, sort, order, count = 50, index = 1
             basis.b = b.platform.page;
         }
 
+        if (sort === "default") {
+            basis.a = 0;
+            basis.b = 0;
+        }
+
         if (order === "desc") {
             return basis.b - basis.a; // 倒序
         }
 
         return basis.a - basis.b; // 正序
+    });
+
+    result.sort((a, b) => {
+        return weight[b.metadata.type] - weight[a.metadata.type];
     });
 
     const slice = pagination(count, index);

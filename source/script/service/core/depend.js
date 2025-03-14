@@ -151,14 +151,22 @@ export function check_parameter(instance, name, receive, target, mode, options) 
         }
     }
 
+    if (mode === "date") {
+        if (Number.isNaN(Date.parse(target))) {
+            result.code = "INVALID_DATE_STRING";
+        }
+    }
+
     result.message = prefix + res.get_local_text(
         result.code, param
     );
 
-    if (result.code) res.send(build_response(
-        instance, { receive },
-        result.code, result.message
-    ));
+    if (result.code) {
+        res.send(build_response(
+            instance, { receive },
+            result.code, result.message
+        ));
+    }
 
     return !result.code;
 }

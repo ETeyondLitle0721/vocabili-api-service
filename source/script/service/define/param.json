@@ -284,6 +284,12 @@
         }
     },
     "/search/song/by_title": {
+        "target": {
+            "mode": "count",
+            "options": {
+                "maximum": 1
+            }
+        },
         "count": {
             "mode": "number",
             "options": {
@@ -498,6 +504,62 @@
                         "minimum": -131072,
                         "maximum": 131072
                     }
+                }
+            }
+        ]
+    },
+    "/search/song/by_filter": {
+        "count": {
+            "mode": "number",
+            "options": {
+                "type": "integer",
+                "range": {
+                    "minimum": 1,
+                    "maximum": 50
+                }
+            }
+        },
+        "index": {
+            "mode": "number",
+            "options": {
+                "type": "integer",
+                "range": {
+                    "minimum": 1,
+                    "maximum": 131072
+                }
+            }
+        },
+        "order": {
+            "mode": "list",
+            "options": {
+                "list": [
+                    "asc",
+                    "desc"
+                ]
+            }
+        },
+        "sort": [
+            {
+                "mode": "count",
+                "options": {
+                    "maximum": 1
+                }
+            },
+            {
+                "mode": "list",
+                "options": {
+                    "list": [
+                        "publish_date",
+                        "stat.view",
+                        "stat.like",
+                        "stat.favorite",
+                        "stat.coin",
+                        "duration",
+                        "count.weekly",
+                        "count.daily",
+                        "page",
+                        "default"
+                    ]
                 }
             }
         ]
