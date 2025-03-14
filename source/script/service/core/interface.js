@@ -966,6 +966,130 @@ export function search_song_by_title(target, threshold = 0.2, count = 50, index 
 }
 
 /**
+ * 通过曲目 Song 数据的 Title 查询对应的曲目数据
+ * 
+ * @param {object} filter 需要查询的目标
+ * @param {string} sort 排序字段
+ * @param {("asc"|"desc")} order 排序方式
+ * @param {number} count 要获取多少个
+ * @param {number} index 当前的页数
+ * @returns 查询的返回结果
+ */
+export function search_song_by_filter(filter, sort, order, count = 50, index = 1) {
+    const result = [];
+
+    config.current.catalog.song.forEach(item => {
+        let flag = false;
+
+        for (const [ field, value ] of Object.entries(filter)) {
+            if ([ "vocalist", "producer", "uploader", "synthesizer" ].includes(field)) {
+                const list = item.metadata[field];
+
+                // 检查 value 是否为 list 的子集
+
+                if (Array.isArray(value) && value.every(item => list.includes(item))) {
+                    flag = true;
+                }
+            }
+
+            if (field.startsWith("publish_date")) {
+                const type = field.slice(13); // publish_date.xxx 的 xxx 部分
+
+                const publish_date = new Date(item.platform.publish);
+
+                if (type === "end") {
+                    flag = publish_date <= value;
+                }
+
+                if (type === "start") {
+                    flag = publish_date >= value;
+                }
+            }
+
+            if (field === "copyright") {
+                flag = item.platform.copyright === value;
+            }
+
+            if (field === "type") {
+                flag = item.metadata.type === value;
+            }
+
+            if (field === "keywords") {
+                const name = item.metadata.name.toLowerCase();
+
+                // 检查 value 中都所有部分是否包含在 name 之中（不区分大小写）
+
+                flag = value.every(
+                    item => name.includes(item.toLowerCase())
+                );
+            }
+        }
+
+        if (!flag) return;
+
+        result.push(item);
+    });
+
+    result.sort((a, b) => {
+        let basis = {}; // 排序的依据
+
+        // 按照发布日期
+
+        if (sort === "publish_date") {
+            basis.a = new Date(a.platform.publish).getTime();
+            basis.b = new Date(b.platform.publish).getTime();
+        }
+
+        // 按照播放量数据
+
+        if (sort.startsWith("count")) {
+            const type = sort.slice(6); // count.xxx 的 xxx 部分
+
+            basis.a = a.platform.count[type] || 0;
+            basis.b = b.platform.count[type] || 0;
+        }
+
+        // 按照上榜次数（周榜、日榜）
+
+        if (sort.startsWith("count")) {
+            const type = sort.slice(6); // board.xxx 的 xxx 部分
+
+            basis.a = a.count[type] || 0;
+            basis.b = b.count[type] || 0;
+        }
+
+        // 按照视频持续时长
+
+        if (sort === "duration") {
+            basis.a = a.platform.duration;
+            basis.b = b.platform.duration;
+        }
+
+        // 按照视频分页数量
+
+        if (sort === "page") {
+            basis.a = a.platform.page;
+            basis.b = b.platform.page;
+        }
+
+        if (order === "desc") {
+            return basis.b - basis.a; // 倒序
+        }
+
+        return basis.a - basis.b; // 正序
+    });
+
+    const slice = pagination(count, index);
+
+    return {
+        "total": result.length,
+        "result": get_song_info_by_id(result.slice(
+            slice.offset, slice.offset + slice.limit
+        ).map(item => item.metadata.id))
+    };
+}
+
+/**
  * 通过目标数据的 Name 查询对应的目标列表
  * 
  * @param {("uploader"|"vocalist"|"producer"|"synthesizer")} type 目标类型
