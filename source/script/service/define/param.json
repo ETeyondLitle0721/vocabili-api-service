@@ -111,16 +111,24 @@
                 "maximum": 1
             }
         },
-        "issue": {
-            "mode": "number",
-            "options": {
-                "type": "integer",
-                "range": {
-                    "minimum": -131072,
-                    "maximum": 131072
+        "issue": [
+            {
+                "mode": "count",
+                "options": {
+                    "maximum": 1
+                }
+            },
+            {
+                "mode": "number",
+                "options": {
+                    "type": "integer",
+                    "range": {
+                        "minimum": -131072,
+                        "maximum": 131072
+                    }
                 }
             }
-        },
+        ],
         "count": {
             "mode": "number",
             "options": {
@@ -173,23 +181,6 @@
                     "minimum": 1,
                     "maximum": 131072
                 }
-            }
-        }
-    },
-    "/info/metadata/board": {
-        "set-cache": {
-            "mode": "number",
-            "options": {
-                "range": {
-                    "minimum": 0,
-                    "maximum": 131072
-                }
-            }
-        },
-        "target": {
-            "mode": "count",
-            "options": {
-                "maximum": 1
             }
         }
     },
@@ -379,7 +370,107 @@
             }
         }
     },
-    "/check/exists/board-entry": {
+    "/metadata/board": {
+        "board": {
+            "mode": "count",
+            "options": {
+                "maximum": 1
+            }
+        }
+    },
+    "/metadata/board/issue": {
+        "board": {
+            "mode": "count",
+            "options": {
+                "maximum": 1
+            }
+        },
+        "issue": [
+            {
+                "mode": "count",
+                "options": {
+                    "maximum": 1
+                }
+            },
+            {
+                "mode": "number",
+                "options": {
+                    "type": "integer",
+                    "range": {
+                        "minimum": -131072,
+                        "maximum": 131072
+                    }
+                }
+            }
+        ]
+    },
+    "/metadata/board/part": {
+        "board": {
+            "mode": "count",
+            "options": {
+                "maximum": 1
+            }
+        },
+        "issue": [
+            {
+                "mode": "count",
+                "options": {
+                    "maximum": 1
+                }
+            },
+            {
+                "mode": "number",
+                "options": {
+                    "type": "integer",
+                    "range": {
+                        "minimum": -131072,
+                        "maximum": 131072
+                    }
+                }
+            }
+        ],
+        "part": {
+            "mode": "count",
+            "options": {
+                "maximum": 1
+            }
+        }
+    },
+    "/check/exist/board": {
+        "board": {
+            "mode": "count",
+            "options": {
+                "maximum": 1
+            }
+        }
+    },
+    "/check/exist/board/issue": {
+        "board": {
+            "mode": "count",
+            "options": {
+                "maximum": 1
+            }
+        },
+        "issue": [
+            {
+                "mode": "count",
+                "options": {
+                    "maximum": 1
+                }
+            },
+            {
+                "mode": "number",
+                "options": {
+                    "type": "integer",
+                    "range": {
+                        "minimum": -131072,
+                        "maximum": 131072
+                    }
+                }
+            }
+        ]
+    },
+    "/check/exist/board/part": {
         "board": {
             "mode": "count",
             "options": {
@@ -392,11 +483,23 @@
                 "maximum": 1
             }
         },
-        "issue": {
-            "mode": "count",
-            "options": {
-                "maximum": 10
+        "issue": [
+            {
+                "mode": "count",
+                "options": {
+                    "maximum": 1
+                }
+            },
+            {
+                "mode": "number",
+                "options": {
+                    "type": "integer",
+                    "range": {
+                        "minimum": -131072,
+                        "maximum": 131072
+                    }
+                }
             }
-        }
+        ]
     }
 }

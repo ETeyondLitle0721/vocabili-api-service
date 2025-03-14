@@ -56,7 +56,7 @@ function debounce(fn, delay) {
     };
 }
 
-const updater = debounce((_event_type, _filename) => {
+const updater = debounce(() => {
     console.log(`监听到 ${filepath.define} 文件发生变化，正在尝试更新.....`);
 
     try {
@@ -280,6 +280,15 @@ export function get_board_entry_song_list(config) {
  * @returns 获取到的结果
  */
 function get_depend_song_info() {
+    /**
+     * 解析歌曲信息
+     * 
+     * @param {Object} song 歌曲原始数据对象
+     * @param {Object} mark 标记数据对象
+     * @param {Object} target 目标数据集合
+     * @param {Object} uploader 上传者信息集合
+     * @returns {Object} 包含元数据和平台信息的对象
+     */
     const parse_song = (song, mark, target, uploader) => {
         const song_mark = mark[song.id];
     
@@ -329,7 +338,15 @@ function get_depend_song_info() {
     
         return { metadata, platform };
     };
-    
+
+    /**
+     * 解析平台信息
+     * @param {string} id 平台ID
+     * 
+     * @param {Object} target 目标数据集合
+     * @param {Object} uploader 上传者信息集合
+     * @returns {Object} 平台详细信息对象
+     */
     const parse_platform = (id, target, uploader) => {
         const info = target[id];
     
@@ -354,6 +371,12 @@ function get_depend_song_info() {
         return result;
     };
     
+    /**
+     * 根据歌曲ID获取标记信息
+     * 
+     * @param {string[]} ids 歌曲ID数组
+     * @returns {Object} 按分类组织的标记信息对象
+     */
     const get_mark_by_song_ids = ids => Object.fromEntries(Object.entries(
         classification(
             get_mark_by_id(ids),
@@ -369,6 +392,12 @@ function get_depend_song_info() {
         ])))
     ])));
     
+    /**
+     * 根据标记信息获取目标数据
+     * 
+     * @param {Object} mark_info 标记信息对象
+     * @returns {Object} 目标数据映射表（ID到对象的映射）
+     */
     const get_target_by_mark_info = mark_info => Object.fromEntries(
         get_target_by_id(
             [ "producer", "vocalist", "synthesizer", "platform" ],
@@ -380,6 +409,12 @@ function get_depend_song_info() {
         )
     );
     
+    /**
+     * 根据标记信息获取上传者信息
+     * 
+     * @param {Object} mark_info 标记信息对象
+     * @returns {Object} 按分类组织的上传者信息
+     */
     const get_uploader_info_by_mark_info = mark_info => classification(
         get_mark_by_id(
             Object.values(mark_info).map(
@@ -404,6 +439,13 @@ function get_depend_song_info() {
  * @returns 获取到的结果
  */
 function get_depend_board_entry_info() {
+    /**
+     * 解析歌曲信息（排行榜条目用）
+     * 
+     * @param {Object} target 目标数据集合
+     * @param {Object} song 歌曲原始数据对象
+     * @returns {Object} 合并后的歌曲信息对象
+     */
     const parse_song = (target, song) => Object.assign(
         parse_song_rank_info(song), {
             "target": parse_target(
@@ -412,6 +454,13 @@ function get_depend_board_entry_info() {
         }
     );
 
+    /**
+     * 解析目标平台信息
+     * 
+     * @param {Object} target 目标数据对象
+     * @param {string} platform 平台ID
+     * @returns {Object} 修改后的目标数据对象
+     */
     const parse_target = (target, platform) => {
         for (const [ field, value ] of Object.entries(target)) {
             if (field === "platform") {
@@ -577,7 +626,7 @@ export function get_current_board_entry_info(board = "vocaoid-weekly", count = 5
  * @param {number} index 当前的页数
  * @returns 获取到的排行榜信息
  */
-export function get_platform_count_history_info_by_id(target, count = 50, index = 1) {
+export function get_platform_count_history_by_id(target, count = 50, index = 1) {
     const where = {
         "column": "target",
         "operator": "equal",
@@ -640,7 +689,7 @@ export function get_song_rank_history_info_by_id(target, issue, board, count = 5
  */
 export function get_target_list_by_type(type, count = 50, index = 1) {
     if (type === "board") {
-        const board = metadata_define.board;
+        const board = config.current.metadata.board;
 
         return Object.keys(board).filter((_, board_index) => 
             count === -1 || (
@@ -657,7 +706,7 @@ export function get_target_list_by_type(type, count = 50, index = 1) {
         });
     }
 
-    const table_name = capitalize(type) + "_Table";
+    const table_name = cap(type) + "_Table";
 
     const where = type === "song" ? {
         "column": "type",
@@ -963,168 +1012,128 @@ export function search_target_by_name(type, target, threshold = 0.2, count = 50,
  * @returns 获取到的曲目列表
  */
 export function get_song_list_by_pool_id(target, count = 50, index = 1) {
-    if (target.includes("-")) {
-        const part = target.split("-");
-        const [ type, pool ] = part;
+    const part = target.split("-");
+    const [ type, pool ] = part;
 
-        if (![ "view", "like", "coin", "favorite" ].includes(type)) {
-            return {
-                "total": -1,
-                "result": []
-            };
-        }
+    if (![ "view", "like", "coin", "favorite" ].includes(type)) {
+        return null;
+    }
 
-        function get_list(range, count, index) {
-            const where = [
-                {
-                    "column": "snapshot_at", "operator": "equal",
-                    "value": metadata_define.snapshot.at(-1).date
-                },
-                {
+    const latest = config.current.metadata.snapshot.at(-1);
+
+    
+    /**
+     * 获取指定 Pool 信息对应的曲目列表
+     * 
+     * @param {string} type 需要获取的 Pool 的类型
+     * @param {number} latest 需要获取的最新的 snapshot_at
+     * @param {number[]} range 需要获取的 Pool 的范围
+     * @param {number} count 要获取多少个
+     * @param {number} index 当前的页数
+     * @returns 获取到的曲目列表
+     */
+    function get_list(type, latest, range, count, index) {
+        const where = [
+            {
+                "column": "snapshot_at",
+                "operator": "equal",
+                "value": latest
+            },
+            {
+                "column": type,
+                "operator": "range",
+                "value": {
+                    "maximum": range[0],
+                    "minimum": range[1]
+                }
+            }
+        ];
+
+        const depend = get_depend_board_entry_info();
+
+        const result = database.select_item("Snapshot_Table", {
+            where, "control": {
+                "order": {
                     "column": type,
-                    "operator": "range",
-                    "value": {
-                        "maximum": range[0],
-                        "minimum": range[1]
-                    }
-                }
-            ];
-
-            const depend = get_depend_board_entry_info();
-
-            const result = database.select_item("Snapshot_Table", {
-                where, "control": {
-                    "order": {
-                        "column": type,
-                        "method": "descending"
-                    },
-                    "result": pagination(count, index)
-                }
-            });
-
-            const mapping = Object.fromEntries(
-                database.select_item("Mark_Table", {
-                    "where": [
-                        {
-                            "column": "type",
-                            "operator": "equal",
-                            "value": "platform"
-                        },
-                        {
-                            "column": "value",
-                            "operator": "within",
-                            "value": result.map(
-                                item => item.target
-                            )
-                        }
-                    ]
-                }).map(item => ([
-                    item.value, item.target
-                ]))
-            );
-
-            const info = Object.fromEntries(
-                get_song_info_by_id(
-                    unique_array(
-                        Object.values(mapping)
-                    )
-                ).map(item => ([
-                    item.metadata.id, item
-                ]))
-            );
-
-            return {
-                "total": database.count_item(
-                    "Snapshot_Table", { where }
-                )[0]["COUNT(*)"],
-                "result": result.map(
-                    (target, index) => ({
-                        "rank": index + 1,
-                        "count": {
-                            "view": target.view,
-                            "like": target.like,
-                            "coin": target.coin,
-                            "favorite": target.favorite
-                        },
-                        "target": depend.parse_target(
-                            info[mapping[target.target]],
-                            target.target
-                        )
-                    })
-                )
-            };
-        }
-
-        if ("ar".includes(pool[0].toLowerCase())) {
-            const amount = parseInt(pool.slice(1));
-
-            if (pool[0].toLowerCase() == "r") return get_list([
-                10 ** (amount + 4),
-                10 ** (amount + 3)
-            ], count, index);
-
-            if (pool[0].toLowerCase() == "a") return get_list([
-                10 ** (amount + 4),
-                10 ** (amount + 4) * 0.9
-            ], count, index);
-        }
-    }
-}
-
-/**
- * 检查目标有效性
- * 
- * @typedef CheckExistsEntry
- * @property {number} issue 目标的期数
- * @property {string} [part] 目标子刊
- * @property {boolean} exists 检查结果
- * 
- * @param {object} metadata 榜单元数据
- * @param {string} part 子刊代号
- * @param {number[]} issue 期数代号
- * @returns {CheckExistsEntry[]} 检查结果
- */
-export function check_exists_board_entry(metadata, part, issues) {
-    const result = [], mapping = new Map();
-
-    metadata.catalog.forEach(item => {
-        mapping.set(
-            item.issue.toString(), item
-        );
-    });
-
-    for (let index = 0; index < issues.length; index++) {
-        const issue = issues[index];
-
-        const target = mapping.get(issue);
-        
-        if (!target) {
-            result.push({
-                "issue": issue,
-                "exists": false
-            });
-
-            continue;
-        }
-
-        if (!target.part[part]) {
-            result.push({
-                issue, part,
-                "exists": false
-            });
-
-            continue;
-        }
-
-        result.push({
-            issue, part,
-            "exists": true
+                    "method": "descending"
+                },
+                "result": pagination(count, index)
+            }
         });
+
+        const mapping = Object.fromEntries(
+            database.select_item("Mark_Table", {
+                "where": [
+                    {
+                        "column": "type",
+                        "operator": "equal",
+                        "value": "platform"
+                    },
+                    {
+                        "column": "value",
+                        "operator": "within",
+                        "value": result.map(
+                            item => item.target
+                        )
+                    }
+                ]
+            }).map(item => ([
+                item.value, item.target
+            ]))
+        );
+
+        const info = Object.fromEntries(
+            get_song_info_by_id(
+                unique_array(
+                    Object.values(mapping)
+                )
+            ).map(item => ([
+                item.metadata.id, item
+            ]))
+        );
+
+        return {
+            "total": database.count_item(
+                "Snapshot_Table", { where }
+            )[0]["COUNT(*)"],
+            "result": result.map(
+                (target, index) => ({
+                    "rank": index + 1,
+                    "count": {
+                        "view": target.view,
+                        "like": target.like,
+                        "coin": target.coin,
+                        "favorite": target.favorite
+                    },
+                    "target": depend.parse_target(
+                        info[mapping[target.target]],
+                        target.target
+                    )
+                })
+            )
+        };
     }
 
-    return result;
+    if ("ar".includes(pool[0].toLowerCase())) {
+        const range = [];
+        const level = parseInt(pool.slice(1));
+
+        pool[0] = pool[0].toLowerCase();
+
+        range[0] = 10 ** (level + 4);
+
+        if (pool[0] == "r") {
+            range[1] = 10 ** (level + 3);
+        }
+
+        if (pool[0] == "a") {
+            range[1] = 10 ** (level + 4) * 0.9;
+        }
+
+        return get_list(type, latest.date, range, count, index);
+    }
 }
 
 export function close() {
     return instance.close();
-} 
+}

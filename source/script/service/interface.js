@@ -3,7 +3,6 @@ import url from "url";
 import cors from "cors";
 import path from "path";
 import ansi from "../../depend/utilities/sequence/ansi.js";
-import HTTP from "http";
 import express from "express";
 import template from "../../depend/utilities/template.js";
 import format_datetime, { datetime } from "../../depend/toolkit/formatter/datetime.js";
@@ -24,9 +23,8 @@ import {
     get_current_board_entry_info,
     get_board_metadata_by_id,
     get_song_rank_history_info_by_id,
-    get_platform_count_history_info_by_id,
+    get_platform_count_history_by_id,
     search_target_by_name,
-    check_exists_board_entry,
     search_song_by_name,
     search_song_by_title
 } from "./core/interface.js";
@@ -227,7 +225,7 @@ app.register("/list/song/by_:type", (request, response) => {
      */
     const param = parse_param(request, {
         "count": 50, "index": 1
-    }), receive = process.uptime();
+    }), receive = config.uptime();
     const instance = { response, request };
 
     if (!check_param(param, receive, instance)) return;
@@ -275,7 +273,7 @@ app.register("/list/:type", (request, response) => {
 
 app.register("/info/board", (request, response) => {
     /**
-     * @type {{ "board": string, "count": number, "index": number, "issue": number[], "part": string }}
+     * @type {{ "board": string, "count": number, "index": number, "issue": number, "part": string }}
      */
     const param = parse_param(request, {
         "count": 50, "index": 1, "part": "main"
@@ -288,7 +286,7 @@ app.register("/info/board", (request, response) => {
         param[key] = value[0];
     }
 
-    const metadata = get_board_metadata_info_by_id(param.board);
+    const metadata = get_board_metadata_by_id(param.board);
 
     if (!metadata) {
         return response.send(
@@ -374,9 +372,9 @@ app.register("/info/board/_latest", (request, response) => {
     }, "OK"));
 });
 
-app.register("/info/metadata/board", (request, response) => {
+app.register("/metadata/board", (request, response) => {
     /**
-     * @type {{ "target": string }}
+     * @type {{ "board": string  }}
      */
     const param = parse_param(request);
     const receive = process.uptime();
@@ -388,16 +386,105 @@ app.register("/info/metadata/board", (request, response) => {
         param[key] = value[0];
     }
 
-    const metadata = get_board_metadata_by_id(param.target);
+    const metadata = get_board_metadata_by_id(param.board);
 
     if (!metadata) {
-        return response.send(build_response(instance, {
-            param, receive, "data": null
-        }, "BOARD_NOT_EXISTS", "目标榜单不存在。"));
+        return response.send(
+            build_response(instance, {
+                param, receive
+            }, "BOARD_NOT_EXISTS")
+        );
     }
 
     return response.send(build_response(instance, {
         param, receive, "data": metadata
+    }, "OK"));
+});
+
+app.register("/metadata/board/issue", (request, response) => {
+    /**
+     * @type {{ "board": string, "issue": number }}
+     */
+    const param = parse_param(request);
+    const receive = process.uptime();
+    const instance = { response, request };
+
+    if (!check_param(param, receive, instance)) return;
+
+    for (const [ key, value ] of Object.entries(param)) {
+        param[key] = value[0];
+    }
+
+    const metadata = get_board_metadata_by_id(param.board);
+
+    if (!metadata) {
+        return response.send(
+            build_response(instance, {
+                param, receive
+            }, "BOARD_NOT_EXISTS")
+        );
+    }
+
+    if (!metadata) {
+        return response.send(
+            build_response(instance, {
+                param, receive
+            }, "BOARD_NOT_EXISTS")
+        );
+    }
+
+    const target = metadata.catalog.find(
+        item => item.issue === +param.issue
+    );
+
+    if (!target) {
+        return response.send(
+            build_response(instance, {
+                param, receive
+            }, "ISSUE_NOT_EXISTS")
+        );
+    }
+
+    return response.send(build_response(instance, {
+        param, receive, "data": target
+    }, "OK"));
+});
+
+app.register("/metadata/board/part", (request, response) => {
+    /**
+     * @type {{ "board": string, "issue": number, "part": string }}
+     */
+    const param = parse_param(request, {
+        "part": "main"
+    }), receive = process.uptime();
+    const instance = { response, request };
+
+    if (!check_param(param, receive, instance)) return;
+
+    for (const [ key, value ] of Object.entries(param)) {
+        param[key] = value[0];
+    }
+
+    const metadata = get_board_metadata_by_id(param.board);
+
+    if (!metadata) {
+        return response.send(
+            build_response(instance, {
+                param, receive
+            }, "BOARD_NOT_EXISTS")
+        );
+    }
+
+    if (!target.part[param.part]) {
+        return response.send(
+            build_response(instance, {
+                param, receive 
+            }, "PART_NO_EXISTS")
+        );
+    }
+
+    return response.send(build_response(instance, {
+        param, receive, "data": target.part[param.part]
     }, "OK"));
 });
 
@@ -426,13 +513,15 @@ app.register("/history/song/rank", (request, response) => {
     if (!check_param(param, receive, instance)) return;
 
     for (const [ key, value ] of Object.entries(param)) {
-        param[key] = value[0];
+        if (key !== "issue") {
+            param[key] = value[0];
+        }
     }
 
     return response.send(build_response(instance, {
         param, receive, "data": get_song_rank_history_info_by_id(
-            param.target, +param.issue, param.board,
-            +param.count, +param.index
+            param.target, param.issue.map(item => parseFloat(item)),
+            param.board, +param.count, +param.index
         )
     }, "OK"));
 });
@@ -453,7 +542,7 @@ app.register("/history/platform/count", (request, response) => {
     }
 
     return response.send(build_response(instance, {
-        param, receive, "data": get_platform_count_history_info_by_id(
+        param, receive, "data": get_platform_count_history_by_id(
             param.target, +param.count, +param.index
         )
     }, "OK"));
@@ -512,6 +601,10 @@ app.register("/search/song/by_filter", (request, response) => {
     }), receive = process.uptime();
     const instance = { response, request };
 
+    for (const [ key, value ] of Object.entries(param)) {
+        param[key] = value[0];
+    }
+
     return response.send(
         build_response(instance, {
             param, receive
@@ -543,7 +636,59 @@ app.register("/search/:type/by_name", (request, response) => {
     }, "OK"));
 });
 
-app.register("/check/exists/board-entry", (request, response) => {
+app.register("/check/exist/board", (request, response) => {
+    /**
+     * @type {{ "board": string }}
+     */
+    const param = parse_param(request);
+    const receive = process.uptime();
+    const instance = { response, request };
+
+    if (!check_param(param, receive, instance)) return;
+
+    for (const [ key, value ] of Object.entries(param)) {
+        param[key] = value[0];
+    }
+
+    const metadata = get_board_metadata_by_id(param.board);
+
+    return response.send(build_response(instance, {
+        param, receive, "data": !!metadata
+    }, "OK"));
+});
+
+app.register("/check/exist/board/issue", (request, response) => {
+    /**
+     * @type {{ "board": string, "issue": number }}
+     */
+    const param = parse_param(request);
+    const receive = process.uptime();
+    const instance = { response, request };
+
+    if (!check_param(param, receive, instance)) return;
+
+    for (const [ key, value ] of Object.entries(param)) {
+        param[key] = value[0];
+    }
+
+    let result = false;
+
+    const metadata = get_board_metadata_by_id(param.board);
+
+    if (metadata) {
+        metadata.catalog.forEach(item => {
+            if (item.issue === +param.issue) {
+                result = true;
+            }
+        });
+    }
+
+    return response.send(build_response(instance, {
+        param, receive, "data": result
+    }, "OK"));
+});
+
+app.register("/check/exist/board/part", (request, response) => {
     /**
      * @type {{ "board": string, "issue": number, "part": string }}
      */
@@ -553,26 +698,26 @@ app.register("/check/exists/board-entry", (request, response) => {
 
     if (!check_param(param, receive, instance)) return;
 
+    for (const [ key, value ] of Object.entries(param)) {
+        param[key] = value[0];
+    }
+
+    let result = false;
+
     const metadata = get_board_metadata_by_id(param.board);
 
-    if (!metadata) return response.send(
-        build_response(instance, {
-            param, receive
-        }, "BOARD_NOT_EXISTS")
-    );
-
-    const result = check_exists_board_entry(
-        metadata, param.part[0], param.issue
-    );
+    if (metadata) {
+        metadata.catalog.forEach(item => {
+            if (item.issue === +param.issue) {
+                if (item.part[param.part]) {
+                    result = true;
+                }
+            }
+        });
+    }
 
     return response.send(build_response(instance, {
-        param, receive, "data": {
-            result, "metadata": {
-                "name": metadata.name,
-                "board": param.board[0],
-                "count": metadata.catalog.length
-            }
-        }
+        param, receive, "data": result
     }, "OK"));
 });
 
