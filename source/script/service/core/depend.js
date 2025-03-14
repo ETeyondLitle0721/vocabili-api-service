@@ -1,3 +1,4 @@
+import os from "os";
 import fs from "fs";
 import path from "path";
 import { quote_string, unique_array } from "../../../depend/core.js";
@@ -191,15 +192,29 @@ export function build_response(instance, data = {}, code = "OK", message) {
             "debug": {
                 "timing": {
                     "receive": new Date(performance.timeOrigin + data.receive * 1000),
-                    "current": new Date(), "consume": 
-                        consume * 1000 < 1 ? parseInt(consume * 1000000) + "us" :
-                        parseInt(consume * 1000000) / 1000 + "ms"
+                    "current": new Date(),
+                    "consume": consume
                 },
                 "request": {
                     "parmas": parse_parameter(request),
                     "headers": request.headers,
                     "address": request.ip,
                     "resource": request.path
+                },
+                "usage": {
+                    "cpu": {
+                        "user": process.cpuUsage().user,
+                        "system": process.cpuUsage().system,
+                        "idle": process.cpuUsage().idle
+                    },
+                    "uptime": process.uptime(),
+                    "memory": process.memoryUsage().rss
+                },
+                "system": {
+                    "memory": {
+                        "free": os.freemem(),
+                        "total": os.totalmem()
+                    }
                 }
             }
         }
