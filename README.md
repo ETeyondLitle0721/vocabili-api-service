@@ -213,7 +213,6 @@ GET /search/song/by_title?target=标题&count=10&index=1
 - `order` (string): 结果的排序方法。
 - `count` (number): 每页返回的曲目数量，默认为25。
 - `index` (number): 页码，默认为1。
-- `threshold` (number): 匹配阈值，范围 [0, 1]，默认为 0.2。
 
 **示例请求**:
 
