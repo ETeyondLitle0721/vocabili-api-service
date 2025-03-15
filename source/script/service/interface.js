@@ -375,7 +375,7 @@ app.register("/info/board/_latest", (request, response) => {
 
 app.register("/metadata/board", (request, response) => {
     /**
-     * @type {{ "board": string  }}
+     * @type {{ "target": string  }}
      */
     const param = parse_param(request);
     const receive = process.uptime();
@@ -387,7 +387,7 @@ app.register("/metadata/board", (request, response) => {
         param[key] = value[0];
     }
 
-    const metadata = get_board_metadata_by_id(param.board);
+    const metadata = get_board_metadata_by_id(param.target);
 
     if (!metadata) {
         return response.send(

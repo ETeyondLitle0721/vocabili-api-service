@@ -1,7 +1,7 @@
 {
 	"name": "vocacili-api-service",
 	"version": "3.7.2",
-	"description": "这是一个主要由 Node.js 开发的 Vocacili 项目的 API 服务源代码储存仓库",
+	"description": "这是一个主要由 Node.js 开发的 Vocacili 项目的 API 服务源代码",
 	"keywords": [
 		"Node.js",
 		"VOCALOID",
@@ -23,7 +23,6 @@
 	"license": "MIT",
 	"author": "ETeyondLitle <eteyondlitle@gmail.com>",
 	"type": "module",
-	"main": "index.js",
 	"scripts": {
 		"init:database": "node ./source/script/database/init.js",
 		"start:service": "node ./source/script/start.js",

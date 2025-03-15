@@ -1,6 +1,6 @@
-## API 文档
+# API 文档
 
-### 1. 获取曲目信息
+## 1. 获取曲目信息
 
 **路由地址**: `/info/song`  
 **请求方法**: GET / POST  
@@ -10,73 +10,15 @@
 
 - `target` (string[]): 曲目ID列表，多个ID用逗号分隔。
 
-**响应数据**:
-
-```json
-{
-  "code": "OK",
-  "time": "2023-10-01T12:00:00.000Z",
-  "status": "success",
-  "data": [
-    {
-      "metadata": {
-        "id": "song_id_1",
-        "name": "曲目名称",
-        "type": "曲目类型",
-        "target": {
-          "vocalist": [
-            {
-              "id": "vocalist_id_1",
-              "name": "歌手名称",
-              "color": "颜色代码"
-            }
-          ],
-          "producer": [
-            {
-              "id": "producer_id_1",
-              "name": "制作人名称"
-            }
-          ],
-          "synthesizer": [
-            {
-              "id": "synthesizer_id_1",
-              "name": "合成器名称"
-            }
-          ]
-        }
-      },
-      "platform": [
-        {
-          "id": "platform_id_1",
-          "link": "https://b23.tv/...",
-          "publish": "发布时间",
-          "page": "页面信息",
-          "title": "标题",
-          "uploader": [
-            {
-              "id": "uploader_id_1",
-              "name": "上传者名称"
-            }
-          ],
-          "duration": "时长",
-          "thumbnail": "https://i0.hdslb.com/bfs/archive/...",
-          "copyright": "版权信息"
-        }
-      ]
-    }
-  ]
-}
-```
-
 **示例请求**:
 
-```
+```http
 GET /info/song?target=song_id_1,song_id_2
 ```
 
 ---
 
-### 2. 获取曲目列表（通过关联信息）
+## 2. 获取曲目列表（通过关联信息）
 
 **路由地址**: `/list/song/by_:type`  
 **请求方法**: GET / POST  
@@ -92,76 +34,15 @@ GET /info/song?target=song_id_1,song_id_2
 - `count` (number): 每页返回的曲目数量，默认为50。
 - `index` (number): 页码，默认为1。
 
-**响应数据**:
-
-```json
-{
-  "code": "OK",
-  "time": "2023-10-01T12:00:00.000Z",
-  "status": "success",
-  "data": {
-    "total": 100,
-    "result": [
-      {
-        "metadata": {
-          "id": "song_id_1",
-          "name": "曲目名称",
-          "type": "曲目类型",
-          "target": {
-            "vocalist": [
-              {
-                "id": "vocalist_id_1",
-                "name": "歌手名称",
-                "color": "颜色代码"
-              }
-            ],
-            "producer": [
-              {
-                "id": "producer_id_1",
-                "name": "制作人名称"
-              }
-            ],
-            "synthesizer": [
-              {
-                "id": "synthesizer_id_1",
-                "name": "合成器名称"
-              }
-            ]
-          }
-        },
-        "platform": [
-          {
-            "id": "platform_id_1",
-            "link": "https://b23.tv/...",
-            "publish": "发布时间",
-            "page": "页面信息",
-            "title": "标题",
-            "uploader": [
-              {
-                "id": "uploader_id_1",
-                "name": "上传者名称"
-              }
-            ],
-            "duration": "时长",
-            "thumbnail": "https://i0.hdslb.com/bfs/archive/...",
-            "copyright": "版权信息"
-          }
-        ]
-      }
-    ]
-  }
-}
-```
-
 **示例请求**:
 
-```
+```http
 GET /list/song/by_vocalist?target=vocalist_id_1&count=10&index=1
 ```
 
 ---
 
-### 3. 获取目标列表
+## 3. 获取目标列表
 
 **路由地址**: `/list/:type`  
 **请求方法**: GET / POST  
@@ -176,35 +57,15 @@ GET /list/song/by_vocalist?target=vocalist_id_1&count=10&index=1
 - `count` (number): 每页返回的目标数量，默认为20。
 - `index` (number): 页码，默认为1。
 
-**响应数据**:
-
-```json
-{
-  "code": "OK",
-  "time": "2023-10-01T12:00:00.000Z",
-  "status": "success",
-  "data": {
-    "total": 100,
-    "result": [
-      {
-        "id": "target_id_1",
-        "name": "目标名称",
-        "color": "颜色代码" // 仅当 type 为 vocalist 时存在
-      }
-    ]
-  }
-}
-```
-
 **示例请求**:
 
-```
+```http
 GET /list/vocalist?count=10&index=1
 ```
 
 ---
 
-### 4. 获取榜单信息
+## 4. 获取榜单信息
 
 **路由地址**: `/info/board`  
 **请求方法**: GET / POST  
@@ -218,76 +79,15 @@ GET /list/vocalist?count=10&index=1
 - `index` (number): 页码，默认为1。
 - `part` (string): 子刊名称。
 
-**响应数据**:
-
-```json
-{
-  "code": "OK",
-  "time": "2023-10-01T12:00:00.000Z",
-  "status": "success",
-  "data": {
-    "board": [
-      {
-        "rank": {
-          "view": 1,
-          "like": 2,
-          "coin": 3,
-          "board": 4,
-          "favorite": 5
-        },
-        "count": 100,
-        "change": {
-          "view": 1,
-          "like": 2,
-          "coin": 3,
-          "favorite": 4
-        },
-        "target": {
-          "metadata": {
-            "id": "song_id_1",
-            "name": "曲目名称",
-            "type": "曲目类型"
-          },
-          "platform": {
-            "id": "platform_id_1",
-            "link": "https://b23.tv/...",
-            "publish": "发布时间",
-            "page": "页面信息",
-            "title": "标题",
-            "uploader": [
-              {
-                "id": "uploader_id_1",
-                "name": "上传者名称"
-              }
-            ],
-            "duration": "时长",
-            "thumbnail": "https://i0.hdslb.com/bfs/archive/...",
-            "copyright": "版权信息"
-          }
-        }
-      }
-    ],
-    "metadata": {
-      "id": "board_id_1",
-      "name": "榜单名称",
-      "date": "2023-10-01",
-      "part": "子刊名称",
-      "issue": 1,
-      "count": 100
-    }
-  }
-}
-```
-
 **示例请求**:
 
-```
+```http
 GET /info/board?board=vocaoid-weekly&part=main&issue=1&count=10&index=1
 ```
 
 ---
 
-### 5. 获取最新榜单信息
+## 5. 获取最新榜单信息
 
 **路由地址**: `/info/board/_latest`  
 **请求方法**: GET / POST  
@@ -300,18 +100,15 @@ GET /info/board?board=vocaoid-weekly&part=main&issue=1&count=10&index=1
 - `index` (number): 页码，默认为1。
 - `part` (string): 子刊名称。
 
-**响应数据**:
-与 `/info/board` 相同。
-
 **示例请求**:
 
-```
+```http
 GET /info/board/_current?board=vocaoid-weekly&count=10&index=1&part=new
 ```
 
 ---
 
-### 6. 获取曲目历史排名信息
+## 6. 获取曲目历史排名信息
 
 **路由地址**: `/history/song/rank`  
 **请求方法**: GET / POST  
@@ -325,46 +122,15 @@ GET /info/board/_current?board=vocaoid-weekly&count=10&index=1&part=new
 - `count` (number): 每页返回的记录数量，默认为50。
 - `index` (number): 页码，默认为1。
 
-**响应数据**:
-
-```json
-{
-  "code": "OK",
-  "time": "2023-10-01T12:00:00.000Z",
-  "status": "success",
-  "data": [
-    {
-      "rank": {
-        "view": 1,
-        "like": 2,
-        "board": 3,
-        "coin": 4,
-        "favorite": 5
-      },
-      "target": "song_id_1",
-      "point": 100,
-      "change": {
-        "view": 1,
-        "like": 2,
-        "coin": 3,
-        "favorite": 4
-      },
-      "issue": 1,
-      "board": "vocaoid-weekly"
-    }
-  ]
-}
-```
-
 **示例请求**:
 
-```
+```http
 GET /history/song/rank?target=song_id_1&issue=1&board=vocaoid-weekly&part=main&count=10&index=1
 ```
 
 ---
 
-### 7. 获取曲目历史统计量信息
+## 7. 获取曲目历史统计量信息
 
 **路由地址**: `/history/platform/count`  
 **请求方法**: GET / POST  
@@ -376,39 +142,15 @@ GET /history/song/rank?target=song_id_1&issue=1&board=vocaoid-weekly&part=main&c
 - `count` (number): 每页返回的记录数量，默认为300。
 - `index` (number): 页码，默认为1。
 
-**响应数据**:
-
-```json
-{
-  "code": "OK",
-  "time": "2023-10-01T12:00:00.000Z",
-  "status": "success",
-  "data": {
-    "total": 100,
-    "result": [
-      {
-        "date": "2023-10-01",
-        "count": {
-          "view": 1000,
-          "like": 500,
-          "coin": 200,
-          "favorite": 100
-        }
-      }
-    ]
-  }
-}
-```
-
 **示例请求**:
 
-```
+```http
 GET /history/platform/count?target=song_id_1&count=10&index=1
 ```
 
 ---
 
-### 8. 通过曲目名称搜索曲目
+## 8. 通过曲目名称搜索曲目
 
 **路由地址**: `/search/song/by_name`  
 **请求方法**: GET / POST  
@@ -419,56 +161,17 @@ GET /history/platform/count?target=song_id_1&count=10&index=1
 - `target` (string): 曲目名称。
 - `count` (number): 每页返回的曲目数量，默认为25。
 - `index` (number): 页码，默认为1。
-
-**响应数据**:
-
-```json
-{
-  "code": "OK",
-  "time": "2023-10-01T12:00:00.000Z",
-  "status": "success",
-  "data": {
-    "total": 100,
-    "result": [
-      {
-        "metadata": {
-          "id": "song_id_1",
-          "name": "曲目名称",
-          "type": "曲目类型"
-        },
-        "platform": [
-          {
-            "id": "platform_id_1",
-            "link": "https://b23.tv/...",
-            "publish": "发布时间",
-            "page": "页面信息",
-            "title": "标题",
-            "uploader": [
-              {
-                "id": "uploader_id_1",
-                "name": "上传者名称"
-              }
-            ],
-            "duration": "时长",
-            "thumbnail": "https://i0.hdslb.com/bfs/archive/...",
-            "copyright": "版权信息"
-          }
-        ]
-      }
-    ]
-  }
-}
-```
+- `threshold` (number): 匹配阈值，范围 [0, 1]，默认为 0.2。
 
 **示例请求**:
 
-```
+```http
 GET /search/song/by_name?target=曲目名称&count=10&index=1
 ```
 
 ---
 
-### 9. 通过平台标题搜索曲目
+## 9. 通过标题搜索曲目
 
 **路由地址**: `/search/song/by_title`  
 **请求方法**: GET / POST  
@@ -479,19 +182,48 @@ GET /search/song/by_name?target=曲目名称&count=10&index=1
 - `target` (string): 视频标题。
 - `count` (number): 每页返回的曲目数量，默认为25。
 - `index` (number): 页码，默认为1。
-
-**响应数据**:
-与 `/search/song/by_name` 相同。
+- `threshold` (number): 匹配阈值，范围 [0, 1]，默认为 0.2。
 
 **示例请求**:
 
-```
+```http
 GET /search/song/by_title?target=标题&count=10&index=1
 ```
 
 ---
 
-### 10. 通过名称搜索目标
+## 10. 通过过滤器搜索曲目
+
+**路由地址**: `/search/song/by_filter`  
+**请求方法**: GET / POST  
+**描述**: 根据过滤器参数。
+
+**请求参数**:
+
+- `keywords` (string[]): 曲目名称的关键词列表。
+- `vocalist` (string[]): 曲目的演唱者信息匹配条件。
+- `uploader` (string[]): 曲目的上传者信息匹配条件。
+- `synthesizer` (string[]): 曲目的合成器信息匹配条件。
+- `producer` (string[]): 曲目的创作者信息匹配条件。
+- `publish_date.start` (string): 曲目的上传日期下限（ISO 8601 格式的时间字符串）。
+- `publish_date.end` (string): 曲目的上传日期上限（ISO 8601 格式的时间字符串）。
+- `type` (string): 曲目类型。
+- `copyright` (string): 版权状态。
+- `sort` (string): 结果的排序依据。
+- `order` (string): 结果的排序方法。
+- `count` (number): 每页返回的曲目数量，默认为25。
+- `index` (number): 页码，默认为1。
+- `threshold` (number): 匹配阈值，范围 [0, 1]，默认为 0.2。
+
+**示例请求**:
+
+```http
+GET /search/song/by_filter?keywords=你好,乌托邦&count=10&index=1
+```
+
+---
+
+## 11. 通过名称搜索目标
 
 **路由地址**: `/search/:type/by_name`  
 **请求方法**: GET / POST  
@@ -507,119 +239,129 @@ GET /search/song/by_title?target=标题&count=10&index=1
 - `count` (number): 每页返回的目标数量，默认为25。
 - `index` (number): 页码，默认为1。
 
-**响应数据**:
-
-```json
-{
-  "code": "OK",
-  "time": "2023-10-01T12:00:00.000Z",
-  "status": "success",
-  "data": {
-    "total": 100,
-    "result": [
-      {
-        "id": "target_id_1",
-        "name": "目标名称",
-        "color": "颜色代码" // 仅当 type 为 vocalist 时存在
-      }
-    ]
-  }
-}
-```
-
 **示例请求**:
 
-```
-GET /search/vocalist/by_name?target=歌手名称&count=10&index=1
+```http
+GET /search/vocalist/by_name?target=音&count=10&index=1
 ```
 
 ---
 
-### 11. 获取榜单元数据信息
+## 12. 获取榜单元数据信息
 
-**路由地址**: `/info/metadata/board`  
+**路由地址**: `/metadata/board`  
 **请求方法**: GET / POST  
 **描述**: 获取指定榜单的元数据信息。
 
 **请求参数**:
 
 - `target` (string): 榜单ID。
-- `set-cache` (number): 缓存时间，默认为0。
-
-**响应数据**:
-
-```json
-{
-  "code": "OK",
-  "time": "2023-10-01T12:00:00.000Z",
-  "status": "success",
-  "data": {
-    "id": "board_id_1",
-    "name": "榜单名称",
-    "catalog": [
-      {
-        "issue": 1,
-        "date": "2023-10-01",
-        "count": 100
-      }
-    ]
-  }
-}
-```
 
 **示例请求**:
 
-```
-GET /info/metadata/board?target=vocaoid-weekly&part=new
+```http
+GET /metadata/board?target=vocaoid-weekly&part=new
 ```
 
 ---
 
-### 12. 检查榜单条目是否存在
+## 13. 获取刊物元数据信息
 
-**路由地址**: `/check/exists/board-entry`  
+**路由地址**: `/metadata/board/issue`  
 **请求方法**: GET / POST  
-**描述**: 检查榜单条目是否存在。
+**描述**: 获取指定刊物的元数据信息。
 
 **请求参数**:
 
-- `board` (string): 榜单ID。
-- `issue` (number[]): 需要检查的期数。
-- `part` (string): 子刊名称，默认 `main`。
-
-**响应数据**:
-
-```json
-{
-  "code": "OK",
-  "time": "2023-10-01T12:00:00.000Z",
-  "status": "success",
-  "data": {
-    "result": [
-      {
-        "issue": "期数",
-        "part": "子刊",
-        "exists": 是否存在（布尔值）
-      }
-    ],
-    "metadata": {
-      "name": "榜单名称",
-      "board": "榜单代号",
-      "count": "榜单发刊总数"
-    }
-  }
-}
-```
+- `target` (string): 榜单ID。
+- `issue` (number): 刊物期数。
 
 **示例请求**:
 
-```
-GET /check/exists/board-entry?board=vocaloid-daily&part=new&issue=1,2,3,4
+```http
+GET /metadata/board/issue?target=vocaoid-weekly&issue=114
 ```
 
 ---
 
-### 12. 404 错误处理
+## 14. 获取子刊元数据信息
+
+**路由地址**: `/metadata/board/issue/part`  
+**请求方法**: GET / POST  
+**描述**: 获取指定子刊的元数据信息。
+
+**请求参数**:
+
+- `target` (string): 榜单ID。
+- `issue` (number): 刊物期数。
+- `part` (string): 子刊名称。
+
+**示例请求**:
+
+```http
+GET /metadata/board/part?target=vocaoid-weekly&issue=114&part=new
+```
+
+---
+
+## 15. 检查榜单的存在性
+
+**路由地址**: `/check/exist/board`  
+**请求方法**: GET / POST  
+**描述**: 检查指定榜单得存在性。
+
+**请求参数**:
+
+- `target` (string): 榜单ID。
+
+**示例请求**:
+
+```http
+GET /check/exist/board?target=vocaoid-weekly&part=new
+```
+
+---
+
+## 16. 检查刊物的存在性
+
+**路由地址**: `/check/exist/board/issue`  
+**请求方法**: GET / POST  
+**描述**: 检查指定刊物的存在性。
+
+**请求参数**:
+
+- `target` (string): 榜单ID。
+- `issue` (number): 刊物期数。
+
+**示例请求**:
+
+```http
+GET /check/exist/board/issue?target=vocaoid-weekly&issue=114
+```
+
+---
+
+## 17. 检查子刊的存在性
+
+**路由地址**: `/check/exist/board/issue/part`  
+**请求方法**: GET / POST  
+**描述**: 检查指定子刊的存在性。
+
+**请求参数**:
+
+- `target` (string): 榜单ID。
+- `issue` (number): 刊物期数。
+- `part` (string): 子刊名称。
+
+**示例请求**:
+
+```http
+GET /check/exist/board/part?target=vocaoid-weekly&issue=114&part=new
+```
+
+---
+
+## 18. 404 错误处理
 
 **路由地址**: `*`  
 **请求方法**: 所有方法  
@@ -705,4 +447,124 @@ GET /check/exists/board-entry?board=vocaloid-daily&part=new&issue=1,2,3,4
         }
     }
 }
+```
+
+## 命令列表
+
+### init:database
+```bash
+npm run init:database
+```
+
+- **功能**：初始化数据库表、索引结构
+
+---
+
+### start:service
+
+```bash
+npm run start:service
+```
+
+- **参数**：
+  - `target`：目标服务的识别码（当前仅支持 `interface`）
+
+- **功能**：启动本地服务
+- **数据源**：读取 `source/define/service.json`
+
+---
+
+### insert:database
+
+```bash
+npm run insert:database
+```
+
+- **功能**：执行数据库全量插入
+- **数据源**：读取 `source/script/database/define/insert.json`
+
+---
+
+### clean:database
+
+```bash
+npm run clean:database
+```
+
+- **功能**：清理数据库中无引用的实体
+
+---
+
+### locate:database
+
+```bash
+npm run locate:database mode=mark target=<ID>
+```
+
+- **功能**：通过识别码定位目标
+- **参数**：
+  - `mode`：定位模式（当前仅支持 `mark`）
+  - `target`：目标识别码（示例：`Synthesizer:M7DTLPKTNs`）
+- **交互特性**：需按回车键进行下一数据查找
+
+---
+
+### update:database
+
+```bash
+# 常规模式
+npm run update:database mode=<daily|weekly|yearly> [new=<path>] [main=<path>] [total=<path>]
+
+# 特刊模式
+npm run update:database mode=special file=<path> date=<YYYY-MM-DD> issue=<num> name="<name>"
+```
+
+- **功能**：更新数据库信息
+- **参数说明**：
+  - `mode`：插入模式（`daily`/`weekly`/`yearly`/`special`）
+  - 常规模式：
+    - `new`/`main`/`total`：xlsx 文件路径（可多路径逗号分隔）
+  - 特刊模式：
+    - `file`：特刊文件路径
+    - `date`：发刊日期
+    - `issue`：期数
+    - `name`：特刊名称（含空格需加引号）
+- **文件特性**：
+  - 支持相对路径（以项目根目录为基准）
+  - 特刊文件多 sheet 将被处理为不同 part
+
+---
+
+### catalog:database
+
+```bash
+npm run catalog:database
+```
+
+- **功能**：更新数据库 catalog 信息至定义文件
+
+---
+
+## 通用参数
+
+所有命令支持 `field` 参数：
+
+```bash
+--field=<database_name>
+```
+
+- **作用**：指定操作数据库（默认使用 `default`）
+- **配置位置**：`config.json` 的 `database` 字段
+
+## 示例集合
+
+```bash
+# 定位操作
+npm run locate:database mode=mark target=Synthesizer:M7DTLPKTNs
+
+# 周榜更新
+npm run update:database mode=weekly new=./新曲2025-03-15.xlsx main=./2025-03-15.xlsx
+
+# 特刊更新
+npm run update:database mode=special file=./热异常.xlsx date=2024-07-28 name="熱異常 排行榜"
 ```
