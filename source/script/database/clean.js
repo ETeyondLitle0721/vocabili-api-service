@@ -56,7 +56,7 @@ target.forEach(table => {
         if (!result.includes(row.id)) {
             target.push(row.id);
 
-            console.log(row, "没有被引用过");
+            console.log(row);
         }
     }
 
