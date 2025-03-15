@@ -988,11 +988,24 @@ export function search_song_by_filter(filter, sort, order, count = 50, index = 1
 
         for (const [ field, value ] of Object.entries(filter)) {
             if ([ "vocalist", "producer", "uploader", "synthesizer" ].includes(field)) {
-                const list = item.metadata[field];
+                const list = {
+                    "include": [], "exclude": []
+                };
 
-                // 检查 value 是否为 list 的子集
+                value.forEach(item => {
+                    if (item.startsWith("!")) {
+                        list.exclude.push(item.slice(1));
+                    } else {
+                        list.include.push(item);
+                    }
+                });
 
-                if (Array.isArray(value) && value.every(item => list.includes(item))) {
+                const temp = item.metadata.target[field];
+                
+                if (
+                    list.include.every(item => temp.includes(item)) &&
+                    list.exclude.every(item => !temp.includes(item))
+                ) {
                     flag = true;
                 }
             }
