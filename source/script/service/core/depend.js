@@ -118,12 +118,12 @@ export function check_parameter(instance, name, receive, target, mode, options) 
     if (mode === "count") {
         const length = target ? target.length : 0;
 
-        if (length === 0) {
+        if (length === 0 && options.minimum !== 0) {
             result.code = "TARGET_NOT_EXISTS";
         }
 
         if (options.range) {
-            const { maximum } = options.range;
+            const { maximum } = options;
 
             if (maximum < length) {
                 if (maximum === 1) {

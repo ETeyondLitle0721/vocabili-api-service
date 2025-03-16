@@ -3,7 +3,7 @@ import url from "url";
 import xlsx from "xlsx";
 import path from "path";
 import SQLite3 from "better-sqlite3";
-import { record } from "./depnd/record.js";
+import { record } from "../depend/record.js";
 import * as updater from "./depnd/update.js";
 import { command_parser } from "../depend/parse.js";
 import {

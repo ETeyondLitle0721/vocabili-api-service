@@ -3,7 +3,7 @@
     "history": {
         "record": {
             "script": {
-                "service:start": true,
+                "start:service": true,
                 "init:database": true,
                 "clean:database": true,
                 "update:database": true,

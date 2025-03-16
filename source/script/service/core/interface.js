@@ -196,8 +196,13 @@ export function get_rank_by_song_id(config) {
         "where": [
             {
                 "column": "target",
-                "operator": "within",
+                "operator": "equal",
                 "value": config.target
+            },
+            {
+                "column": "part",
+                "operator": "equal",
+                "value": config.part
             }
         ]
     };
@@ -205,7 +210,7 @@ export function get_rank_by_song_id(config) {
     if (config.board.length > 0) {
         options.where.push({
             "column": "board",
-            "operator": "within",
+            "operator": "equal",
             "value": config.board
         });
     }
@@ -218,17 +223,28 @@ export function get_rank_by_song_id(config) {
         });
     }
 
+    options.control = {};
+
     if (config.count > 0) {
-        options.control = {
-            "result": pagination(
-                config.count, config.index
-            )
-        };
+        options.control.result = pagination(
+            config.count, config.index
+        );
     }
 
-    return operator.select_item(
-        "Rank_Table", options
-    );
+    options.control.order = {
+        "column": "issue",
+        "method": {
+            "newest": "descending",
+            "oldest": "ascending"
+        } [ config.sort ]
+    };
+
+    return {
+        "where": options.where,
+        "result": operator.select_item(
+            "Rank_Table", options
+        )
+    };
 }
 
 /**
@@ -528,7 +544,7 @@ export function parse_song_rank_info(song) {
             "board": song.rank,
             "favorite": song.favorite_rank
         },
-        "count": song.count ?? -1,
+        "count": song.point ?? -1,
         "change": {
             "view": song.view_change,
             "like": song.like_change,
@@ -586,7 +602,7 @@ export function get_board_entry_info(issue, board = "vocaoid-weekly", count = 50
             metadata.issue.index - 1
         ].issue, // 获取上一期的期数
         "target": song_ids
-    });
+    }).result;
 
     for (let index = 0; index < last_rank.length; index++) {
         const current = last_rank[index];
@@ -622,11 +638,12 @@ export function get_current_board_entry_info(board = "vocaoid-weekly", count = 5
  * 获取曲目历史统计量信息
  * 
  * @param {string} target 需要曲目
+ * @param {("newest"|"oldest")} order 排序方法
  * @param {number} count 要获取多少个
  * @param {number} index 当前的页数
  * @returns 获取到的排行榜信息
  */
-export function get_platform_count_history_by_id(target, count = 50, index = 1) {
+export function get_platform_count_history_by_id(target, order, count = 50, index = 1) {
     const where = {
         "column": "target",
         "operator": "equal",
@@ -639,6 +656,13 @@ export function get_platform_count_history_by_id(target, count = 50, index = 1) 
                 "result": {
                     "limit": count,
                     "offset": count * (index - 1)
+                },
+                "order": {
+                    "column": "snapshot_at",
+                    "method": {
+                        "newest": "descending",
+                        "oldest": "ascending"
+                    } [ order ]
                 }
             }
         }
@@ -667,16 +691,25 @@ export function get_platform_count_history_by_id(target, count = 50, index = 1) 
  * @param {number} index 当前的页数
  * @returns 获取到的排行榜信息
  */
-export function get_song_rank_history_info_by_id(target, issue, board, count = 50, index = 1) {
-    const rank = get_rank_by_song_id({
-        count, index, target, issue, board
+export function get_song_rank_history_info_by_id(target, issue, sort, board, part, count = 50, index = 1) {
+    const info = get_rank_by_song_id({
+        count, index, target, issue, board, part, sort
     });
 
-    return rank.map(item => Object.assign(
+    const result = info.result.map(item => Object.assign(
         parse_song_rank_info(item), {
             "issue": item.issue, "board": item.board
         })
     );
+
+    return {
+        "total": operator.count_item(
+            "Rank_Table", {
+                "where": info.where
+            }
+        )[0]["COUNT(*)"],
+        "result": result
+    };
 }
 
 /**
@@ -883,7 +916,7 @@ const weight = {
 export function search_song_by_name(target, threshold = 0.2, count = 50, index = 1) {
     const result = [];
 
-    config.current.catalog.song.forEach(item => {
+    for (const item of config.current.catalog.song) {
         const similarity = get_similarity(
             item.metadata.name, target, { "case": false }
         );
@@ -894,7 +927,7 @@ export function search_song_by_name(target, threshold = 0.2, count = 50, index =
                 "target": item
             });
         }
-    });
+    }
 
     result.sort((a, b) => {
         return b.rate - a.rate;
@@ -932,7 +965,7 @@ export function search_song_by_name(target, threshold = 0.2, count = 50, index =
 export function search_song_by_title(target, threshold = 0.2, count = 50, index = 1) {
     const result = [];
 
-    config.current.catalog.song.forEach(item => {
+    for (const item of config.current.catalog.song) {
         const similarity = get_similarity(
             item.platform.title, target, { "case": false }
         );
@@ -943,7 +976,7 @@ export function search_song_by_title(target, threshold = 0.2, count = 50, index 
                 "target": item
             });
         }
-    });
+    }
 
     result.sort((a, b) => {
         return b.rate - a.rate;
@@ -987,20 +1020,15 @@ const define = {
 export function search_song_by_filter(filter, sort, order, count = 50, index = 1) {
     const result = [];
 
-    config.current.catalog.song.forEach(item => {
-        if (!Object.keys(filter).length) {
-            result.push(item);
-            return;
-        }
-
+    for (const item of config.current.catalog.song) {
         const publish = new Date(item.platform.publish);
 
         const { publish_start: start, publish_end: end } = filter;
 
         if (
-            (start && publish < start) ||
-            (end && publish > end)
-        ) return;
+            (end && publish > end) ||
+            (start && publish < start)
+        ) continue;
 
         if (filter.keywords) {
             const name = item.metadata.name.toLowerCase();
@@ -1009,7 +1037,7 @@ export function search_song_by_filter(filter, sort, order, count = 50, index = 1
                 item => name.includes(item.toLowerCase())
             );
 
-            if (!result) return;
+            if (!result) continue;
         }
 
         let flag = true;
@@ -1046,8 +1074,8 @@ export function search_song_by_filter(filter, sort, order, count = 50, index = 1
         if (flag) {
             result.push(item);
         }
-    });
-
+    }
+    
     result.sort((a, b) => {
         let basis = {}; // 排序的依据
 

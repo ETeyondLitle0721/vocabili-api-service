@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import SQLite3 from "better-sqlite3";
-import { record } from "./depnd/record.js";
+import { record } from "../depend/record.js";
 import DatabaseOperator from "../../depend/operator/database.js";
 
 const root = path.resolve(".");

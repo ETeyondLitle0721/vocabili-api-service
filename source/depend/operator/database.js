@@ -487,7 +487,9 @@ function _item_select(options = {}) {
         let column = control.order.column;
         const { method } = control.order;
 
-        if (!Array.isArray(column)) column = [ column ];
+        if (!Array.isArray(column)) {
+            column = [ column ];
+        }
 
         part.push([
             "ORDER BY", column.map(name => quote(name)).join(", "),
@@ -499,7 +501,9 @@ function _item_select(options = {}) {
         let column = control.group.column;
         const { method } = control.group;
 
-        if (!Array.isArray(column)) column = [ column ];
+        if (!Array.isArray(column)) {
+            column = [ column ];
+        }
 
         part.push([
             "GROUP BY", column.map(name => quote(name)).join(", "),
@@ -715,25 +719,32 @@ function _index_create(options = {}) {
     let statement = "CREATE";
     let flag = options.flag ?? [];
 
-    const { name, table, column: column_list } = options;
+    const { name, table, column: column_list, order } = options;
 
     if (flag) {
-        if (!Array.isArray(flag)) flag = [ flag ];
+        if (!Array.isArray(flag)) {
+            flag = [ flag ];
+        }
 
-        if (flag.includes("unique")) statement += " UNIQUE";
+        if (flag.includes("unique")) {
+            statement += " UNIQUE";
+        }
 
         statement += " INDEX";
 
-        if (flag.includes("if-not-exists")) statement += " IF NOT EXISTS";
+        if (flag.includes("if-not-exists")) {
+            statement += " IF NOT EXISTS";
+        }
     } else {
         statement += " INDEX";
     }
 
     const sentence = template.replace(
         "{{statement}} {{name}} ON {{table}} (\n{{column}}\n)", {
-            "name": quote(name), "table": quote(table),
+            "name": quote(name),
+            "table": quote(table),
             "column": column_list.map(name => {
-                return " ".repeat(indent) + name
+                return " ".repeat(indent) + name + (order ? " " + order.toUpperCase() : "");
             }).join(",\n"),
             "statement": statement
         }
@@ -755,10 +766,12 @@ function _index_create(options = {}) {
 function _index_drop(options = {}) {
     let statement = "DROP";
 
-    const { name, flag } = options;
+    let { name, flag } = options;
 
     if (flag) {
-        if (!Array.isArray(flag)) flag = [ flag ];
+        if (!Array.isArray(flag)) {
+            flag = [ flag ];
+        }
 
         statement += " INDEX";
 
@@ -904,7 +917,7 @@ function _transaction(options = {}) {
  * @returns {string} 获取调用函数的名称
  */
 function get_caller_name(error, depth = 2, extractor = text => {
-    const match = text.match(/at ([\w\.\#]+)/);
+    const match = text.match(/at ([\w.#]+)/);
 
     return match ? match[1] : "Unknown";
 }) {

@@ -118,6 +118,7 @@ GET /info/board/_latest?board=vocaloid-weekly&count=10&index=1&part=new
 
 - `target` (string): 曲目ID。
 - `sort` (string): 获取数据的时候获取顺序，默认为oldest。
+- `part` (string): 需要获取的子刊名称，默认为main。
 - `issue` (number[]): 期数列表。
 - `board` (string[]): 榜单ID列表。
 - `count` (number): 每页返回的记录数量，默认为50。

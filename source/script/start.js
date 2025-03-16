@@ -1,8 +1,12 @@
-import fs from "fs"; import path from "path";
+import fs from "fs";
+import path from "path";
+import { record } from "./depend/record.js";
 import { command_parser } from "./depend/parse.js";
 
 const root = path.resolve(".");
 const shell = command_parser(process.argv);
+
+record("start:service", shell);
 
 const config = JSON.parse(
     fs.readFileSync(path.resolve(

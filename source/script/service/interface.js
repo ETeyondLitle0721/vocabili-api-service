@@ -162,8 +162,16 @@ function check_param(param, receive, instance) {
 
     if (!route_rule) return true;
 
+    /**
+     * 检查一个字段是否符合规则
+     * 
+     * @param {string} field 字段名称
+     * @param {object} rule 字段值规则
+     * @param {string[]} value 字段值
+     * @returns {boolean} 是否符合规则
+     */
     function _check(field, rule, value) {
-        if (rule.mode !== "count") {
+        if (value && rule.mode !== "count") {
             value = value[0];
         }
 
@@ -495,12 +503,12 @@ app.register("/metadata/board/part", (request, response) => {
 
 app.register("/history/song/rank", (request, response) => {
     /**
-     * @type {{ "board": string, "count": number, "index": number, "issue": number[], "target": string }}
+     * @type {{ "board": string, "count": number, "index": number, "part": [], "issue": number[], "target": string, "sort": ("newest"|"oldest") }}
      */
     const param = Object.assign({
         "issue": []
     }, parse_param(request, {
-        "count": 50, "index": 1
+        "count": 50, "index": 1, "sort": "newest", "part": "main"
     })), receive = process.uptime();
     const instance = { response, request };
 
@@ -512,20 +520,28 @@ app.register("/history/song/rank", (request, response) => {
         }
     }
 
+    if (!get_board_metadata_by_id(param.board)) {
+        return response.send(
+            build_response(instance, {
+                param, receive
+            }, "BOARD_NOT_EXISTS")
+        );
+    }
+
     return response.send(build_response(instance, {
         param, receive, "data": get_song_rank_history_info_by_id(
             param.target, param.issue.map(item => parseFloat(item)),
-            param.board, +param.count, +param.index
+            param.sort, param.board, param.part, +param.count, +param.index
         )
     }, "OK"));
 });
 
 app.register("/history/platform/count", (request, response) => {
     /**
-     * @type {{ "count": number, "index": number, "target": string }}
+     * @type {{ "count": number, "index": number, "target": string, "sort": ("newest"|"oldest") }}
      */
     const param = parse_param(request, {
-        "count": 300, "index": 1
+        "count": 20, "index": 1, "sort": "newest"
     }), receive = process.uptime();
     const instance = { response, request };
 
@@ -537,7 +553,7 @@ app.register("/history/platform/count", (request, response) => {
 
     return response.send(build_response(instance, {
         param, receive, "data": get_platform_count_history_by_id(
-            param.target, +param.count, +param.index
+            param.target, param.sort, +param.count, +param.index
         )
     }, "OK"));
 });

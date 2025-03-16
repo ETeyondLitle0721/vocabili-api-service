@@ -191,6 +191,12 @@
                 "maximum": 1
             }
         },
+        "part": {
+            "mode": "count",
+            "options": {
+                "maximum": 1
+            }
+        },
         "issue": {
             "mode": "count",
             "options": {
