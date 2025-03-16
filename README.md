@@ -82,7 +82,7 @@ GET /list/vocalist?count=10&index=1
 **示例请求**:
 
 ```http
-GET /info/board?board=vocaoid-weekly&part=main&issue=1&count=10&index=1
+GET /info/board?board=vocaloid-weekly&part=main&issue=1&count=10&index=1
 ```
 
 ---
@@ -103,7 +103,7 @@ GET /info/board?board=vocaoid-weekly&part=main&issue=1&count=10&index=1
 **示例请求**:
 
 ```http
-GET /info/board/_current?board=vocaoid-weekly&count=10&index=1&part=new
+GET /info/board/_latest?board=vocaloid-weekly&count=10&index=1&part=new
 ```
 
 ---
@@ -125,7 +125,7 @@ GET /info/board/_current?board=vocaoid-weekly&count=10&index=1&part=new
 **示例请求**:
 
 ```http
-GET /history/song/rank?target=song_id_1&issue=1&board=vocaoid-weekly&part=main&count=10&index=1
+GET /history/song/rank?target=song_id_1&issue=1&board=vocaloid-weekly&part=main&count=10&index=1
 ```
 
 ---
@@ -259,7 +259,7 @@ GET /search/vocalist/by_name?target=音&count=10&index=1
 **示例请求**:
 
 ```http
-GET /metadata/board?target=vocaoid-weekly&part=new
+GET /metadata/board?target=vocaloid-weekly&part=new
 ```
 
 ---
@@ -278,7 +278,7 @@ GET /metadata/board?target=vocaoid-weekly&part=new
 **示例请求**:
 
 ```http
-GET /metadata/board/issue?target=vocaoid-weekly&issue=114
+GET /metadata/board/issue?target=vocaloid-weekly&issue=114
 ```
 
 ---
@@ -298,7 +298,7 @@ GET /metadata/board/issue?target=vocaoid-weekly&issue=114
 **示例请求**:
 
 ```http
-GET /metadata/board/part?target=vocaoid-weekly&issue=114&part=new
+GET /metadata/board/part?target=vocaloid-weekly&issue=114&part=new
 ```
 
 ---
@@ -316,7 +316,7 @@ GET /metadata/board/part?target=vocaoid-weekly&issue=114&part=new
 **示例请求**:
 
 ```http
-GET /check/exist/board?board=vocaoid-weekly
+GET /check/exist/board?board=vocaloid-weekly
 ```
 
 ---
@@ -335,7 +335,7 @@ GET /check/exist/board?board=vocaoid-weekly
 **示例请求**:
 
 ```http
-GET /check/exist/board/issue?board=vocaoid-weekly&issue=114
+GET /check/exist/board/issue?board=vocaloid-weekly&issue=114
 ```
 
 ---
@@ -355,7 +355,7 @@ GET /check/exist/board/issue?board=vocaoid-weekly&issue=114
 **示例请求**:
 
 ```http
-GET /check/exist/board/part?target=vocaoid-weekly&issue=114&part=new
+GET /check/exist/board/part?board=vocaloid-weekly&issue=114&part=new
 ```
 
 ---
