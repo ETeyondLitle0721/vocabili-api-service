@@ -316,7 +316,7 @@ GET /metadata/board/part?target=vocaoid-weekly&issue=114&part=new
 **示例请求**:
 
 ```http
-GET /check/exist/board?target=vocaoid-weekly&part=new
+GET /check/exist/board?board=vocaoid-weekly
 ```
 
 ---
@@ -335,7 +335,7 @@ GET /check/exist/board?target=vocaoid-weekly&part=new
 **示例请求**:
 
 ```http
-GET /check/exist/board/issue?target=vocaoid-weekly&issue=114
+GET /check/exist/board/issue?board=vocaoid-weekly&issue=114
 ```
 
 ---

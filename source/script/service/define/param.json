@@ -443,7 +443,7 @@
         }
     },
     "/check/exist/board": {
-        "board": {
+        "target": {
             "mode": "count",
             "options": {
                 "maximum": 1
