@@ -2,11 +2,14 @@ import fs from "fs";
 import url from "url";
 import path from "path";
 import SQLite3 from "better-sqlite3";
+import { record } from "./depnd/record.js";
 import { command_parser } from "../depend/parse.js";
 
 const root = path.resolve(".");
 const shell = command_parser(process.argv);
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
+
+record("clean:database");
 
 const field = shell.field || "default";
 

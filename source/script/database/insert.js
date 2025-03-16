@@ -1,9 +1,10 @@
+import fs from "fs";
 import url from "url";
 import xlsx from "xlsx";
 import path from "path";
 import SQLite3 from "better-sqlite3";
-import * as updater from "./updater.js";
-import fs from "fs";
+import { record } from "./depnd/record.js";
+import * as updater from "./depnd/update.js";
 import { command_parser } from "../depend/parse.js";
 import {
     compute_hamc, get_type, quote_string,
@@ -11,8 +12,11 @@ import {
     append_rank_field
 } from "../../depend/core.js";
 
-const root = path.resolve("."), shell = command_parser(process.argv);
+const root = path.resolve(".");
+const shell = command_parser(process.argv);
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
+
+record("insert:database");
 
 /**
  * @typedef {import("../../depend/operator/database.js").GeneralObject} GeneralObject
@@ -923,7 +927,7 @@ import { close, get_song_info_by_id } from "../service/core/interface.js";
 
 updater.define(instance, filepath.define, {
     "get_song_info": get_song_info_by_id
-}, memory.issue, special);
+}, memory, special);
 
 updater.collate(collate.index, filepath.collate);
 

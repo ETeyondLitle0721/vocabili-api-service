@@ -1,8 +1,12 @@
-import fs from "fs"; import path from "path";
+import fs from "fs";
+import path from "path";
 import SQLite3 from "better-sqlite3";
+import { record } from "./depnd/record.js";
 import DatabaseOperator from "../../depend/operator/database.js";
 
 const root = path.resolve(".");
+
+record("init:database");
 
 /**
  * @typedef {import("../../depend/operator/database.js").TableCreateOptions} TableCreateOptions

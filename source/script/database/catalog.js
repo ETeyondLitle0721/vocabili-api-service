@@ -2,13 +2,16 @@ import fs from "fs";
 import url from "url";
 import path from "path";
 import SQLite3 from "better-sqlite3";
-import * as updater from "./updater.js";
-import { close, get_song_info_by_id } from "../service/core/interface.js";
+import * as updater from "./depnd/update.js";
+import { record } from "./depnd/record.js";
 import { command_parser } from "../depend/parse.js";
+import { close, get_song_info_by_id } from "../service/core/interface.js";
 
 const root = path.resolve(".");
 const shell = command_parser(process.argv);
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
+
+record("catalog:database");
 
 const field = shell.field || "default";
 
@@ -174,7 +177,7 @@ if (standard) {
 
 updater.define(instance, filepath.define, {
     "get_song_info": get_song_info_by_id
-}, memory.issue, special);
+}, memory, special);
 
 close();
 process.exit(0);

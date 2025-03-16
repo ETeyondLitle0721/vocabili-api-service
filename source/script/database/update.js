@@ -2,8 +2,9 @@ import fs from "fs";
 import url from "url";
 import xlsx from "xlsx";
 import path from "path";
-import * as updater from "./updater.js";
 import SQLite3 from "better-sqlite3";
+import { record } from "./depnd/record.js";
+import * as updater from "./depnd/update.js";
 import { command_parser } from "../depend/parse.js";
 import {
     compute_hamc, get_type, quote_string,
@@ -21,6 +22,8 @@ const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
  */
 
 const field = shell.field || "default";
+
+record("update:database");
 
 const config = {
     "global": JSON.parse(
@@ -786,7 +789,7 @@ import { close, get_song_info_by_id } from "../service/core/interface.js";
 
 updater.define(instance, filepath.define, {
     "get_song_info": get_song_info_by_id
-}, memory.issue, special);
+}, memory, special);
 
 updater.collate(collate.index, filepath.collate);
 
