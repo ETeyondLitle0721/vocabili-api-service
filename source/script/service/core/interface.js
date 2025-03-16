@@ -1009,8 +1009,6 @@ export function search_song_by_filter(filter, sort, order, count = 50, index = 1
                 item => name.includes(item.toLowerCase())
             );
 
-            console.log(filter.keywords, name, result);
-
             if (!result) return;
         }
 
