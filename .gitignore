@@ -3,3 +3,5 @@
 /package-lock.json
 /source/script/service/define/default.json
 /source/script/database/define/collate.json
+/history/
+/source/script/service/stat
