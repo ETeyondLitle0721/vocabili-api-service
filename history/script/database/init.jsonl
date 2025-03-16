@@ -1,7 +1,0 @@
-{"time":"2025-03-16T10:07:07.611Z","command":"node ./source/script/database/init.js"}
-{"time":"2025-03-16T14:15:39.948Z","command":"node ./source/script/database/init.js"}
-{"time":"2025-03-16T14:16:45.143Z","command":"node ./source/script/database/init.js"}
-{"time":"2025-03-16T14:17:22.811Z","command":"node ./source/script/database/init.js"}
-{"time":"2025-03-16T14:17:51.345Z","command":"node ./source/script/database/init.js"}
-{"time":"2025-03-16T14:17:55.727Z","command":"node ./source/script/database/init.js"}
-{"time":"2025-03-16T14:28:43.002Z","command":"node ./source/script/database/init.js"}
