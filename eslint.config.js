@@ -8,17 +8,7 @@ export default [
 	pluginJs.configs.recommended,
 	{
 		languageOptions: {
-			ecmaVersion: "latest", // 让 ESLint 支持 ES2021+ 语法
-			sourceType: "module",
-			globals: {
-				process: "readonly",
-				global: "readonly",
-				__dirname: "readonly",
-				__filename: "readonly",
-				Buffer: "readonly",
-				setImmediate: "readonly",
-				clearImmediate: "readonly",
-			},
+			globals: globals.node
 		},
 	}
 ];
