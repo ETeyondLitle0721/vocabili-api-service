@@ -948,6 +948,8 @@ export function search_song_by_title(target, threshold = 0.2, count = 50, index 
     });
 
     result.sort((a, b) => {
+        if (!a.metadata ||  !b.metadata) return 0;
+        
         return weight[b.metadata.type] - weight[a.metadata.type];
     });
 
