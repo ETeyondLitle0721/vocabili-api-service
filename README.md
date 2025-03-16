@@ -117,6 +117,7 @@ GET /info/board/_latest?board=vocaloid-weekly&count=10&index=1&part=new
 **请求参数**:
 
 - `target` (string): 曲目ID。
+- `sort` (string): 获取数据的时候获取顺序，默认为oldest。
 - `issue` (number[]): 期数列表。
 - `board` (string[]): 榜单ID列表。
 - `count` (number): 每页返回的记录数量，默认为50。
@@ -125,7 +126,7 @@ GET /info/board/_latest?board=vocaloid-weekly&count=10&index=1&part=new
 **示例请求**:
 
 ```http
-GET /history/song/rank?target=song_id_1&issue=1&board=vocaloid-weekly&part=main&count=10&index=1
+GET /history/song/rank?target=song_id_1&issue=1&board=vocaloid-weekly&part=main&count=10&index=1&sort=oldest
 ```
 
 ---
@@ -139,13 +140,14 @@ GET /history/song/rank?target=song_id_1&issue=1&board=vocaloid-weekly&part=main&
 **请求参数**:
 
 - `target` (string): 曲目ID。
+- `sort` (string): 获取数据的时候获取顺序，默认为oldest。
 - `count` (number): 每页返回的记录数量，默认为300。
 - `index` (number): 页码，默认为1。
 
 **示例请求**:
 
 ```http
-GET /history/platform/count?target=song_id_1&count=10&index=1
+GET /history/platform/count?target=song_id_1&count=10&index=1&sort=oldest
 ```
 
 ---
@@ -205,8 +207,8 @@ GET /search/song/by_title?target=标题&count=10&index=1
 - `uploader` (string[]): 曲目的上传者信息匹配条件。
 - `synthesizer` (string[]): 曲目的合成器信息匹配条件。
 - `producer` (string[]): 曲目的创作者信息匹配条件。
-- `publish_date.start` (string): 曲目的上传日期下限（ISO 8601 格式的时间字符串）。
-- `publish_date.end` (string): 曲目的上传日期上限（ISO 8601 格式的时间字符串）。
+- `publish_end` (string): 曲目的上传日期上限（ISO 8601 格式的时间字符串）。
+- `publish_start` (string): 曲目的上传日期下限（ISO 8601 格式的时间字符串）。
 - `type` (string): 曲目类型。
 - `copyright` (string): 版权状态。
 - `sort` (string): 结果的排序依据。

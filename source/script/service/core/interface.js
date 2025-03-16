@@ -633,7 +633,7 @@ export function get_platform_count_history_by_id(target, count = 50, index = 1) 
         "value": target
     };
 
-    const history = database.select_item(
+    const history = operator.select_item(
         "Snapshot_Table", {
             where, "control": {
                 "result": {
@@ -645,7 +645,7 @@ export function get_platform_count_history_by_id(target, count = 50, index = 1) 
     );
 
     return {
-        "total": database.count_item(
+        "total": operator.count_item(
             "Snapshot_Table", { where }
         )[0]["COUNT(*)"],
         "result": history.map(item => ({
@@ -714,14 +714,14 @@ export function get_target_list_by_type(type, count = 50, index = 1) {
         "value": "Unmarked"
     } : {};
 
-    const result = database.select_item(table_name, {
+    const result = operator.select_item(table_name, {
         where, "control": {
             "result": pagination(count, index)
         }
     });
 
     return {
-        "total": database.count_item(
+        "total": operator.count_item(
             table_name, { where }
         )[0]["COUNT(*)"],
         "result": ((type, result) => {
@@ -765,14 +765,14 @@ export function get_song_list_by_mark(type, target, count = 50, index = 1) {
         }
     ];
 
-    const result = database.select_item("Mark_Table", {
+    const result = operator.select_item("Mark_Table", {
         where, "control": {
             "result": pagination(count, index)
         }
     });
 
     const mapping = type === "uploader" ? Object.fromEntries(
-        database.select_item("Mark_Table", {
+        operator.select_item("Mark_Table", {
             "where": [
                 {
                     "column": "type",
@@ -793,7 +793,7 @@ export function get_song_list_by_mark(type, target, count = 50, index = 1) {
     ) : {};
 
     return {
-        "total": database.count_item(
+        "total": operator.count_item(
             "Mark_Table", { where }
         )[0]["COUNT(*)"],
         "result": get_song_info_by_id(
@@ -901,6 +901,8 @@ export function search_song_by_name(target, threshold = 0.2, count = 50, index =
     });
 
     result.sort((a, b) => {
+        if (!a.metadata || !b.metadata) return 0;
+
         return weight[b.metadata.type] - weight[a.metadata.type];
     });
 
@@ -949,7 +951,7 @@ export function search_song_by_title(target, threshold = 0.2, count = 50, index 
 
     result.sort((a, b) => {
         if (!a.metadata ||  !b.metadata) return 0;
-        
+
         return weight[b.metadata.type] - weight[a.metadata.type];
     });
 
@@ -966,6 +968,11 @@ export function search_song_by_title(target, threshold = 0.2, count = 50, index 
         )
     };
 }
+
+const define = {
+    "list": [ "vocalist", "producer", "uploader", "synthesizer" ],
+    "equal": [ "type", "copyright" ]
+};
 
 /**
  * 通过曲目 Song 数据并结合 Filter 查询对应的曲目数据
@@ -986,10 +993,31 @@ export function search_song_by_filter(filter, sort, order, count = 50, index = 1
             return;
         }
 
-        let flag = false;
+        const publish = new Date(item.platform.publish);
+
+        const { publish_start: start, publish_end: end } = filter;
+
+        if (
+            (start && publish < start) ||
+            (end && publish > end)
+        ) return;
+
+        if (filter.keywords) {
+            const name = item.metadata.name.toLowerCase();
+
+            const result = filter.keywords.every(
+                item => name.includes(item.toLowerCase())
+            );
+
+            console.log(filter.keywords, name, result);
+
+            if (!result) return;
+        }
+
+        let flag = true;
 
         for (const [ field, value ] of Object.entries(filter)) {
-            if ([ "vocalist", "producer", "uploader", "synthesizer" ].includes(field)) {
+            if (define.list.includes(field)) {
                 const list = {
                     "include": [], "exclude": []
                 };
@@ -1005,49 +1033,21 @@ export function search_song_by_filter(filter, sort, order, count = 50, index = 1
                 const temp = item.metadata.target[field];
                 
                 if (
-                    list.include.every(item => temp.includes(item)) &&
-                    list.exclude.every(item => !temp.includes(item))
+                    (list.include.length && !list.include.includes(temp)) ||
+                    (list.exclude.length && list.exclude.includes(temp))
                 ) {
-                    flag = true;
+                    flag = false;
                 }
             }
 
-            if (field.startsWith("publish_date")) {
-                const type = field.slice(13); // publish_date.xxx 的 xxx 部分
-
-                const publish_date = new Date(item.platform.publish);
-
-                if (type === "end") {
-                    flag = publish_date <= value;
-                }
-
-                if (type === "start") {
-                    flag = publish_date >= value;
-                }
-            }
-
-            if (field === "copyright") {
-                flag = item.platform.copyright === value;
-            }
-
-            if (field === "type") {
-                flag = item.metadata.type === value;
-            }
-
-            if (field === "keywords") {
-                const name = item.metadata.name.toLowerCase();
-
-                // 检查 value 中都所有部分是否包含在 name 之中（不区分大小写）
-
-                flag = value.every(
-                    item => name.includes(item.toLowerCase())
-                );
+            if (define.equal.includes(field) && item.metadata[field] !== value) {
+                flag = false;
             }
         }
 
-        if (!flag) return;
-
-        result.push(item);
+        if (flag) {
+            result.push(item);
+        }
     });
 
     result.sort((a, b) => {
@@ -1208,7 +1208,7 @@ export function get_song_list_by_pool_id(target, count = 50, index = 1) {
 
         const depend = get_depend_board_entry_info();
 
-        const result = database.select_item("Snapshot_Table", {
+        const result = operator.select_item("Snapshot_Table", {
             where, "control": {
                 "order": {
                     "column": type,
@@ -1219,7 +1219,7 @@ export function get_song_list_by_pool_id(target, count = 50, index = 1) {
         });
 
         const mapping = Object.fromEntries(
-            database.select_item("Mark_Table", {
+            operator.select_item("Mark_Table", {
                 "where": [
                     {
                         "column": "type",
@@ -1250,7 +1250,7 @@ export function get_song_list_by_pool_id(target, count = 50, index = 1) {
         );
 
         return {
-            "total": database.count_item(
+            "total": operator.count_item(
                 "Snapshot_Table", { where }
             )[0]["COUNT(*)"],
             "result": result.map(

@@ -226,7 +226,7 @@ app.register("/list/song/by_:type", (request, response) => {
      */
     const param = parse_param(request, {
         "count": 50, "index": 1
-    }), receive = config.uptime();
+    }), receive = process.uptime();
     const instance = { response, request };
 
     if (!check_param(param, receive, instance)) return;
@@ -504,17 +504,6 @@ app.register("/history/song/rank", (request, response) => {
     })), receive = process.uptime();
     const instance = { response, request };
 
-    if (param.issue.length > 1) {
-        const result = check_parameter(
-            instance, "issue", receive,
-            param.issue, "count", {
-                "range": { "maximum": 128 }
-            }
-        );
-
-        if (!result) return;
-    }
-
     if (!check_param(param, receive, instance)) return;
 
     for (const [ key, value ] of Object.entries(param)) {
@@ -620,7 +609,7 @@ app.register("/search/song/by_filter", (request, response) => {
 
         if ([ "copyright", "type" ].includes(field)) {
             if (!check_parameter(
-                instance, field, receive, value, "count", {
+                instance, field, receive,value, "count", {
                     "range": { "maximum": 1 }
                 }
             )) return;
@@ -628,12 +617,12 @@ app.register("/search/song/by_filter", (request, response) => {
             filter[field] = value[0];
         }
 
-        if (field.startsWith("publish_date")) {
+        if (field.startsWith("publish")) {
             if (!check_parameter(
                 instance, field, receive, value[0], "date"
             )) return;
 
-            filter[field] = new Date(value[0]).toISOString();
+            filter[field] = new Date(value[0]);
         }
     }
 
