@@ -223,27 +223,21 @@ export function get_rank_by_song_id(config) {
         });
     }
 
-    options.control = {};
+    const slice = pagination(config.count, config.index);
 
-    if (config.count > 0) {
-        options.control.result = pagination(
-            config.count, config.index
-        );
-    }
+    const result = operator.select_item(
+        "Rank_Table", options
+    ).sort((a, b) => {
+        if (config.sort === "newest") {
+            return b.issue - a.issue;
+        }
 
-    options.control.order = {
-        "column": "issue",
-        "method": {
-            "newest": "descending",
-            "oldest": "ascending"
-        } [ config.sort ]
-    };
+        return a.issue - b.issue;
+    });
 
     return {
         "where": options.where,
-        "result": operator.select_item(
-            "Rank_Table", options
-        )
+        "result": result.slice(slice.offset, slice.offset + slice.limit)
     };
 }
 
@@ -651,28 +645,20 @@ export function get_platform_count_history_by_id(target, order, count = 50, inde
     };
 
     const history = operator.select_item(
-        "Snapshot_Table", {
-            where, "control": {
-                "result": {
-                    "limit": count,
-                    "offset": count * (index - 1)
-                },
-                "order": {
-                    "column": "snapshot_at",
-                    "method": {
-                        "newest": "descending",
-                        "oldest": "ascending"
-                    } [ order ]
-                }
-            }
+        "Snapshot_Table", { where }
+    ).sort((a, b) => {
+        if (order === "newest") {
+            return b.snapshot_at > a.snapshot_at ? -1 : 1;
         }
-    );
+
+        return a.snapshot_at > b.snapshot_at ? -1 : 1;
+    });
+
+    const slice = pagination(count, index);
 
     return {
-        "total": operator.count_item(
-            "Snapshot_Table", { where }
-        )[0]["COUNT(*)"],
-        "result": history.map(item => ({
+        "total": history.length,
+        "result": history.slice(slice.offset, slice.offset + slice.limit).map(item => ({
             "date": item.snapshot_at, "count": {
                 "view": item.view, "like": item.like,
                 "coin": item.coin, "favorite": item.favorite

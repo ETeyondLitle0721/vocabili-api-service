@@ -576,24 +576,6 @@
             "column": [
                 "board", "rank", "issue"
             ]
-        },
-        {
-            "name": "Snapshot_Count_Index",
-            "flag": "if-not-exists",
-            "table": "Snapshot_Table",
-            "column": [
-                "view", "coin", "like", "favorite"
-            ],
-            "order": "desc"
-        },
-        {
-            "name": "Rank_Mix_Index",
-            "flag": "if-not-exists",
-            "table": "Rank_Table",
-            "column": [
-                "count", "point", "issue"
-            ],
-            "order": "desc"
         }
     ]
 }
