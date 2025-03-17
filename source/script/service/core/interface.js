@@ -538,7 +538,8 @@ export function parse_song_rank_info(song) {
             "board": song.rank,
             "favorite": song.favorite_rank
         },
-        "count": song.point ?? -1,
+        "point": song.point,
+        "count": song.count ?? -1,
         "change": {
             "view": song.view_change,
             "like": song.like_change,
