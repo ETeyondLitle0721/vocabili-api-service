@@ -196,7 +196,7 @@ export function get_rank_by_song_id(config) {
         "where": [
             {
                 "column": "target",
-                "operator": "equal",
+                "operator": "within",
                 "value": config.target
             },
             {
@@ -236,6 +236,7 @@ export function get_rank_by_song_id(config) {
     });
 
     return {
+        "raw": result,
         "where": options.where,
         "result": result.slice(slice.offset, slice.offset + slice.limit)
     };
@@ -592,12 +593,10 @@ export function get_board_entry_info(issue, board = "vocaoid-weekly", count = 50
     };
 
     const last_rank = get_rank_by_song_id({
-        board, count,
-        "issue": metadata.board.catalog[
-            metadata.issue.index - 1
-        ].issue, // 获取上一期的期数
+        board, count, part,
+        "issue": issue - 1, // 获取上一期的期数
         "target": song_ids
-    }).result;
+    }).raw;
 
     for (let index = 0; index < last_rank.length; index++) {
         const current = last_rank[index];
