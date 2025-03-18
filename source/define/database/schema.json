@@ -567,15 +567,25 @@
             "table": "Snapshot_Table",
             "column": [
                 "snapshot_at"
-            ]
+            ],
+            "order": "desc"
         },
         {
             "name": "Rank_Table_Mix_Index",
             "flag": "if-not-exists",
             "table": "Rank_Table",
             "column": [
-                "board", "rank", "issue"
+                "board", "rank"
             ]
+        },
+        {
+            "name": "Rank_Table_Issue_Index",
+            "flag": "if-not-exists",
+            "table": "Rank_Table",
+            "column": [
+                "issue"
+            ],
+            "order": "desc"
         }
     ]
 }

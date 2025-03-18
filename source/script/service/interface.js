@@ -20,7 +20,7 @@ import {
     get_song_list_by_mark,
     get_target_list_by_type,
     get_board_entry_info,
-    get_current_board_entry_info,
+    get_latest_board_entry_info,
     get_board_metadata_by_id,
     get_song_rank_history_info_by_id,
     get_platform_count_history_by_id,
@@ -375,7 +375,7 @@ app.register("/info/board/_latest", (request, response) => {
     }
 
     return response.send(build_response(instance, {
-        param, receive, "data": get_current_board_entry_info(
+        param, receive, "data": get_latest_board_entry_info(
             param.board, +param.count, +param.index, param.part
         )
     }, "OK"));
@@ -503,7 +503,7 @@ app.register("/metadata/board/part", (request, response) => {
 
 app.register("/history/song/rank", (request, response) => {
     /**
-     * @type {{ "board": string, "count": number, "index": number, "part": [], "issue": number[], "target": string, "sort": ("newest"|"oldest") }}
+     * @type {{ "board": string, "count": number, "index": number, "part": string, "issue": number[], "target": string, "sort": ("newest"|"oldest") }}
      */
     const param = Object.assign({
         "issue": []

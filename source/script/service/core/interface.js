@@ -178,10 +178,12 @@ export function get_mark_by_id(list) {
  * 获取歌曲历史排名数据
  * 
  * @param {object} config 配置信息
+ * @param {string} config.part 目标子刊
+ * @param {("newset"|"oldest")} config.sort 排序方式
  * @param {string} config.board 目标榜单
  * @param {number} config.count 每页数量
  * @param {number} config.index 页索引
- * @param {number} config.issue 期数列表
+ * @param {number[]} config.issue 期数列表
  * @param {string[]} config.target 目标列表
  * @returns 获取到的数据
  */
@@ -223,22 +225,27 @@ export function get_rank_by_song_id(config) {
         });
     }
 
-    const slice = pagination(config.count, config.index);
+    options.control = {};
 
-    const result = operator.select_item(
-        "Rank_Table", options
-    ).sort((a, b) => {
-        if (config.sort === "newest") {
-            return b.issue - a.issue;
-        }
+    if (config.count > 0) {
+        options.control.result = pagination(
+            config.count, config.index
+        );
+    }
 
-        return a.issue - b.issue;
-    });
+    options.control.order = {
+        "column": "issue",
+        "method": {
+            "newest": "descending",
+            "oldest": "ascending"
+        } [ config.sort ]
+    };
+
+    const result = operator.select_item("Rank_Table", options);
 
     return {
-        "raw": result,
         "where": options.where,
-        "result": result.slice(slice.offset, slice.offset + slice.limit)
+        "result": result
     };
 }
 
@@ -593,10 +600,10 @@ export function get_board_entry_info(issue, board = "vocaoid-weekly", count = 50
     };
 
     const last_rank = get_rank_by_song_id({
-        board, count, part,
+        board, part,
         "issue": issue - 1, // 获取上一期的期数
         "target": song_ids
-    }).raw;
+    }).result;
 
     for (let index = 0; index < last_rank.length; index++) {
         const current = last_rank[index];
@@ -619,7 +626,7 @@ export function get_board_entry_info(issue, board = "vocaoid-weekly", count = 50
  * @param {string} part 需要获取的目标的子刊名称
  * @returns 获取到的排行榜信息
  */
-export function get_current_board_entry_info(board = "vocaoid-weekly", count = 50, index = 1, part) {
+export function get_latest_board_entry_info(board = "vocaoid-weekly", count = 50, index = 1, part) {
     const metadata = get_board_metadata_by_id(board);
 
     return get_board_entry_info(
@@ -632,33 +639,41 @@ export function get_current_board_entry_info(board = "vocaoid-weekly", count = 5
  * 获取曲目历史统计量信息
  * 
  * @param {string} target 需要曲目
- * @param {("newest"|"oldest")} order 排序方法
+ * @param {("newest"|"oldest")} sort 排序方法
  * @param {number} count 要获取多少个
  * @param {number} index 当前的页数
  * @returns 获取到的排行榜信息
  */
-export function get_platform_count_history_by_id(target, order, count = 50, index = 1) {
+export function get_platform_count_history_by_id(target, sort, count = 50, index = 1) {
     const where = {
         "column": "target",
         "operator": "equal",
         "value": target
     };
 
-    const history = operator.select_item(
-        "Snapshot_Table", { where }
-    ).sort((a, b) => {
-        if (order === "newest") {
-            return b.snapshot_at > a.snapshot_at ? -1 : 1;
+    const result = operator.select_item(
+        "Snapshot_Table", {
+            "where": where,
+            "control": {
+                "order": {
+                    "column": "snapshot_at",
+                    "method": {
+                        "newest": "descending",
+                        "oldest": "ascending"
+                    } [ sort ]
+                },
+                "result": pagination(
+                    count, index
+                )
+            }
         }
-
-        return a.snapshot_at > b.snapshot_at ? -1 : 1;
-    });
-
-    const slice = pagination(count, index);
+    );
 
     return {
-        "total": history.length,
-        "result": history.slice(slice.offset, slice.offset + slice.limit).map(item => ({
+        "total": operator.count_item(
+            "Snapshot_Table", { where }
+        )[0]["COUNT(*)"],
+        "result": result.map(item => ({
             "date": item.snapshot_at, "count": {
                 "view": item.view, "like": item.like,
                 "coin": item.coin, "favorite": item.favorite
