@@ -1197,14 +1197,14 @@ export function search_target_by_name(type, target, threshold = 0.2, count = 50,
  */
 export function get_song_list_by_pool_id(target, count = 50, index = 1) {
     const part = target.split("-");
-    const [ type, pool ] = part;
+    
+    let [ type, pool ] = part;
 
     if (![ "view", "like", "coin", "favorite" ].includes(type)) {
         return null;
     }
 
     const latest = config.current.metadata.snapshot.at(-1);
-
     
     /**
      * 获取指定 Pool 信息对应的曲目列表
@@ -1302,15 +1302,13 @@ export function get_song_list_by_pool_id(target, count = 50, index = 1) {
         const range = [];
         const level = parseInt(pool.slice(1));
 
-        pool[0] = pool[0].toLowerCase();
-
         range[0] = 10 ** (level + 4);
 
-        if (pool[0] == "r") {
+        if (pool[0].toLowerCase() == "r") {
             range[1] = 10 ** (level + 3);
         }
 
-        if (pool[0] == "a") {
+        if (pool[0].toLowerCase() == "a") {
             range[1] = 10 ** (level + 4) * 0.9;
         }
 
