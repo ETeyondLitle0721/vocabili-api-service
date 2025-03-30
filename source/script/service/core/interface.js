@@ -1205,7 +1205,9 @@ export function get_song_list_by_pool_id(target, count = 50, index = 1) {
     }
 
     const latest = config.current.metadata.snapshot.at(-1);
-    
+
+    console.log(latest);
+
     /**
      * 获取指定 Pool 信息对应的曲目列表
      * 

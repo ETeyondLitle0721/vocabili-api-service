@@ -125,6 +125,7 @@ export function define(instance, filepath, depend, memory, special) {
                 snapshot_at AS date, COUNT(*) AS count
             FROM Snapshot_Table
             GROUP BY date
+            ORDER BY date ASC
         `).all()
     };
 
