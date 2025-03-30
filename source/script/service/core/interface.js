@@ -1280,7 +1280,9 @@ export function get_song_list_by_pool_id(target, count = 50, index = 1) {
             "total": operator.count_item(
                 "Snapshot_Table", { where }
             )[0]["COUNT(*)"],
-            "result": result.map(
+            "result": result.filter(
+                target => info[mapping[target.target]]
+            ).map(
                 (target, index) => ({
                     "rank": index + 1,
                     "count": {
