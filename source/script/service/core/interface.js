@@ -594,8 +594,8 @@ export function get_board_entry_info(issue, board = "vocaoid-weekly", count = 50
             "id": board, issue,
             "name": metadata.name,
             "date": metadata.issue.date,
-            "part": list[0].part,
-            "count": metadata.issue.part[list[0].part]
+            "part": part,
+            "count": metadata.issue.part[part]
         }
     };
 
@@ -1206,7 +1206,7 @@ export function get_song_list_by_pool_id(target, count = 50, index = 1) {
 
     const latest = config.current.metadata.snapshot.at(-1);
 
-    console.log(latest);
+    // console.log(latest);
 
     /**
      * 获取指定 Pool 信息对应的曲目列表
