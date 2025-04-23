@@ -495,6 +495,19 @@ npm run clean:database
 
 - **功能**：清理数据库中无引用的实体
 
+### merge:database
+
+```bash
+npm run merge:database mode=song
+```
+
+- **参数**：
+  - `target`：需要合并的条目的识别码（如果是多个，则需要使用英文半角逗号隔开）
+  - `source`: 数据源条目的识别码信息（要求必须存在这条记录）
+  - `product`: 合并到的条目的识别码（其他数据来自数据源）
+
+- **功能**：合并数据库中的条目
+
 ---
 
 ### locate:database

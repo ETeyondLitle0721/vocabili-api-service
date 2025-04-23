@@ -5,6 +5,7 @@
             "script": {
                 "start:service": true,
                 "init:database": true,
+                "merge:database": true,
                 "clean:database": true,
                 "update:database": true,
                 "insert:database": true,
@@ -15,6 +16,7 @@
             "script": {
                 "start:service": "./history/script/service/start.jsonl",
                 "init:database": "./history/script/database/init.jsonl",
+                "merge:database": "./history/script/database/merge.jsonl",
                 "clean:database": "./history/script/database/clean.jsonl",
                 "update:database": "./history/script/database/update.jsonl",
                 "insert:database": "./history/script/database/insert.jsonl",

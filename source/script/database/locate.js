@@ -37,7 +37,7 @@ const instance = new SQLite3(database.path, {
 if (shell.mode === "mark") {
     const target = shell.target;
 
-    const iterator =instance.prepare(
+    const iterator = instance.prepare(
         `SELECT * FROM Mark_Table WHERE value = :value;`
     ).iterate({    
         "value": target

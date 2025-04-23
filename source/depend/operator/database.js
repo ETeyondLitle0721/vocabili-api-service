@@ -75,6 +75,7 @@ import {
  * @typedef ItemUpdateOptions
  * @property {string} table 要更新的项目所处的表单的名称
  * @property {ItemSelectWhereOptions} target 选中目标的条件
+ * @property {object} data 更新后的数据（只需书写需要更新的字段，如果没有提及则表示保持不变）
  * 
  * @typedef {(TableCreateOptions|ItemInsertOptions|ItemSelectOptions|ItemUpdateOptions)} GeneralHandlerOptions
  * 
@@ -625,7 +626,7 @@ function _item_update(options = {}) {
             "table": quote(table),
             "value": part.join(", "),
             "where": parse_where(
-                target, setter
+                target, setter, getter
             )
         }
     );
