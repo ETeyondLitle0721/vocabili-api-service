@@ -814,6 +814,8 @@ if (special) {
 
     for (let index = 0; index < special.length; index++) {
         const config = special[index];
+
+        // console.log("npm run update:database mode=special file=" + path.basename(config.path) + " date=" + config.date + " issue=" + (index + 1));
         
         insert_special_board_rank(
             config.path, config.date,
@@ -925,11 +927,13 @@ const filepath = {
 
 import { close, get_song_info_by_id } from "../service/core/interface.js";
 
-updater.define(instance, filepath.define, {
-    "get_song_info": get_song_info_by_id
-}, memory, special);
-
-updater.collate(collate.index, filepath.collate);
+if (!shell.skip) {
+    updater.define(instance, filepath.define, {
+        "get_song_info": get_song_info_by_id
+    }, memory, special);
+    
+    updater.collate(collate.index, filepath.collate);
+}
 
 close();
 instance.close();

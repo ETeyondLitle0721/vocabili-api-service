@@ -58,6 +58,31 @@
             "name": "梦ノ结唱 排行榜 #3",
             "date": "2025-02-01",
             "path": "./assets/dataset/特刊/梦的结唱3.xlsx"
+        },
+        {
+            "name": "猛独侵袭曲目 排行榜",
+            "date": "2025-02-11",
+            "path": "./assets/dataset/特刊/猛独侵袭.xlsx"
+        },
+        {
+            "name": "モニタリング 排行榜",
+            "date": "2025-02-13",
+            "path": "./assets/dataset/特刊/视奸.xlsx"
+        },
+        {
+            "name": "初音ミク日 初音ミク曲目 排行榜",
+            "date": "2025-03-09",
+            "path": "./assets/dataset/特刊/39日.xlsx"
+        },
+        {
+            "name": "梦ノ结唱 排行榜 #4",
+            "date": "2025-03-27",
+            "path": "./assets/dataset/特刊/梦的结唱4.xlsx"
+        },
+        {
+            "name": "2009-2017年 每月最火曲目 排行榜",
+            "date": "2025-05-01",
+            "path": "./assets/dataset/特刊/月冠上.xlsx"
         }
     ],
     "standard": {

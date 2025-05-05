@@ -639,9 +639,8 @@ if (shell) {
 
         if (file) {
             insert_special_board_rank(
-                path.resolve(
-                    file, filepath
-                ), shell.date, +shell.issue, adder
+                path.resolve(root, file),
+                shell.date, +shell.issue, adder
             );
         }
     } else {
@@ -787,11 +786,13 @@ const filepath = {
 
 import { close, get_song_info_by_id } from "../service/core/interface.js";
 
-updater.define(instance, filepath.define, {
-    "get_song_info": get_song_info_by_id
-}, memory, special);
-
-updater.collate(collate.index, filepath.collate);
+if (!shell.skip) {
+    updater.define(instance, filepath.define, {
+        "get_song_info": get_song_info_by_id
+    }, memory, special);
+    
+    updater.collate(collate.index, filepath.collate);
+}
 
 close();
 instance.close();

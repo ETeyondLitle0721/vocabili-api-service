@@ -29,7 +29,7 @@
         "options": {
             "interface": {
                 "host": "127.0.0.1",
-                "port": 51001,
+                "port": 53001,
                 "cors": {
                     "origin": "*",
                     "methods": [
