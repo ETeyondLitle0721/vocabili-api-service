@@ -588,11 +588,7 @@ export function get_board_entry_info(issue, board = "vocaoid-weekly", count = 50
         "board": list.map(
             song => depend.parse_song(
                 target, song
-            ).map(item => {
-                item.last = null;
-
-                return item;
-            })
+            )
         ),
         "metadata": {
             "id": board, issue,
@@ -603,21 +599,19 @@ export function get_board_entry_info(issue, board = "vocaoid-weekly", count = 50
         }
     };
 
-    if (board !== "vocaloid-special") {
-        const last_rank = get_rank_by_song_id({
-            board, part,
-            "issue": issue - 1, // 获取上一期的期数
-            "target": song_ids
-        }).result;
+    const last_rank = get_rank_by_song_id({
+        board, part,
+        "issue": issue - 1, // 获取上一期的期数
+        "target": song_ids
+    }).result;
 
-        for (let index = 0; index < last_rank.length; index++) {
-            const current = last_rank[index];
-            
-            result.board[song_ids.indexOf(current.target)].last = {
-                "rank": current.rank,
-                "point": current.point
-            };
-        }
+    for (let index = 0; index < last_rank.length; index++) {
+        const current = last_rank[index];
+        
+        result.board[song_ids.indexOf(current.target)].last = {
+            "rank": current.rank,
+            "point": current.point
+        };
     }
 
     return result;
