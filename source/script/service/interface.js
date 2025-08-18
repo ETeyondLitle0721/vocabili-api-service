@@ -307,24 +307,28 @@ app.register("/info/board", (request, response) => {
         );
     }
 
-    const target = metadata.catalog.find(
-        item => item.issue === +param.issue
+    const target = param.issue.map(
+        issue => metadata.catalog.find(
+            item => item.issue === +issue
+        )
     );
 
-    if (!target) {
-        return response.send(
-            build_response(instance, {
-                param, receive
-            }, "ISSUE_NOT_EXISTS")
-        );
-    }
+    for (const current of target) {
+        if (!current) {
+            return response.send(
+                build_response(instance, {
+                    param, receive
+                }, "ISSUE_NOT_EXISTS")
+            );
+        }
 
-    if (!target.part[param.part]) {
-        return response.send(
-            build_response(instance, {
-                param, receive 
-            }, "PART_NO_EXISTS")
-        );
+        if (!current.part[param.part]) {
+            return response.send(
+                build_response(instance, {
+                    param, receive 
+                }, "PART_NO_EXISTS")
+            );
+        }
     }
 
     return response.send(build_response(instance, {
