@@ -568,6 +568,20 @@ export function parse_song_rank_info(song) {
  * @returns 获取到的排行榜信息
  */
 export function get_board_entry_info(issue, board = "vocaoid-weekly", count = 50, index = 1, part) {
+    if (Array.isArray(issue)) {
+        if (issue.length > 1) {
+            const result = [];
+
+            for (const item of issue) {
+                result.push(get_board_entry_info(item, board, count, index, part));
+            }
+
+            return result;
+        }
+
+        issue = issue[0];
+    }
+    
     const depend = get_depend_board_entry_info();
     const metadata = { "board": get_board_metadata_by_id(board) };
     const list = get_board_entry_song_list({ issue, count, index, board, part });
@@ -583,7 +597,7 @@ export function get_board_entry_info(issue, board = "vocaoid-weekly", count = 50
             item.metadata.id, item
         ]))
     );
-    
+
     const result = {
         "board": list.map(
             song => depend.parse_song(
