@@ -573,7 +573,9 @@ export function get_board_entry_info(issue, board = "vocaoid-weekly", count = 50
             const result = [];
 
             for (const item of issue) {
-                result.push(get_board_entry_info(item, board, count, index, part));
+                result.push(get_board_entry_info(
+                    item, board, count, index, part
+                ));
             }
 
             return result;
@@ -587,7 +589,7 @@ export function get_board_entry_info(issue, board = "vocaoid-weekly", count = 50
     const list = get_board_entry_song_list({ issue, count, index, board, part });
 
     metadata.issue = metadata.board.catalog.find(
-        item => item.issue === issue
+        item => item.issue === +issue
     );
 
     const song_ids = list.map(item => item.target);
@@ -602,12 +604,12 @@ export function get_board_entry_info(issue, board = "vocaoid-weekly", count = 50
         "board": list.map(
             song => depend.parse_song(
                 target, song
-            ).map(item => {
-                item.last = null;
+            )
+        ).map(item => {
+            item.last = null;
 
-                return item;
-            })
-        ),
+            return item;
+        }),
         "metadata": {
             "id": board, issue,
             "name": metadata.name,
