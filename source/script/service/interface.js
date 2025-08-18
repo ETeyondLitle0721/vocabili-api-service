@@ -292,7 +292,9 @@ app.register("/info/board", (request, response) => {
     if (!check_param(param, receive, instance)) return;
 
     for (const [ key, value ] of Object.entries(param)) {
-        param[key] = value[0];
+        if (key !== "issue") {
+            param[key] = value[0];
+        }
     }
 
     const metadata = get_board_metadata_by_id(param.board);
@@ -327,7 +329,7 @@ app.register("/info/board", (request, response) => {
 
     return response.send(build_response(instance, {
         param, receive, "data": get_board_entry_info(
-            +param.issue, param.board, +param.count,
+            param.issue, param.board, +param.count,
             +param.index, param.part
         )
     }, "OK"));
