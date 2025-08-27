@@ -26,9 +26,14 @@ const MIC = 8192; // 单次插入标识符最大数量
  * @property {string} name 上传者名称
  * @property {string} avatar 上传者头像
  * 
+ * @typedef {Object} Response
+ * @property {number} id 上传者内部标识符
+ * @property {number} exterior 上传者外部标识符
+ * @property {number} update_count 更新次数
+ * 
  * @param {(Uploader|Uploader[])} uploaders 需要更新或者插入的上传者信息列表
  * @param {Date} [instance=new Date()] 执行操作的时候的时间
- * @returns {void}
+ * @returns {Response[]} 更新或者插入的上传者信息
  */
 function upsert_uploader(uploaders, instance = new Date()) {
     if (!Array.isArray(uploaders)) {
@@ -36,13 +41,19 @@ function upsert_uploader(uploaders, instance = new Date()) {
     }
 
     if (uploaders.length > MIC) {
+        const responses = [];
+
         const groups = split_group(uploaders, MIC);
 
-        for (const group of groups) {
-            upsert_uploader(group);
+        for (let index = 0; index < groups.length; index++) {
+            const result = upsert_uploader(
+                groups[index], instance
+            );
+
+            responses.push(result);
         }
 
-        return;
+        return responses.flat(1);
     }
 
     const record = operator.record();
@@ -60,11 +71,13 @@ function upsert_uploader(uploaders, instance = new Date()) {
         }
     };
 
-    const response = {};
+    const response = {}, field_list = [
+        "id", "exterior", "update_count"
+    ];
 
     response.select = record.select(
         "uploaders", condition.select, {
-            "select": [ "exterior", "update_count" ]
+            "select": field_list
         }
     )[0].flat(2);
 
@@ -139,12 +152,16 @@ function upsert_uploader(uploaders, instance = new Date()) {
     }
 
     if (dataset.length > 0) {
+        const options = {
+            "mode": "batch",
+            "action": "execute",
+            "return_field": field_list
+        };
+        
         response.insert = record.insert(
-            "uploaders", dataset, {
-                "mode": "batch"
-            }
+            "uploaders", dataset, options
         );
     }
 
-    return;
+    return Object.values(response).flat(1);
 }
