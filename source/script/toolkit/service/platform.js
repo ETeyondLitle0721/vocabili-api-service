@@ -122,14 +122,19 @@ function upsert_uploader(uploaders, instance = new Date()) {
             };
         };
 
+        const options = {
+            "action": "execute",
+            "return_field": field_list
+        };
+
         response.update = record.update(
             "uploaders", condition, {
                 "username": generator("input", "name"),
                 "avatar": generator("input", "avatar"),
                 "update_count": generator("database", "update_count", (item) => item + 1),
                 "updated_at": current
-            }
-        );
+            }, options
+        )[0].flat(2);
     }
  
     uploaders.insert = uploaders.filter(
@@ -160,8 +165,13 @@ function upsert_uploader(uploaders, instance = new Date()) {
         
         response.insert = record.insert(
             "uploaders", dataset, options
-        );
+        )[0].flat(2);
     }
 
-    return Object.values(response).flat(1);
+    response.insert ??= [];
+    response.update ??= [];
+
+    const { update, insert } = response;
+
+    return [ update, insert ].flat(1);
 }
