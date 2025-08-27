@@ -1,0 +1,12 @@
+{
+    "input": {
+        "snapshot": "./assets/dataset/数据"
+    },
+    "output": {
+        "aggre": {
+            "platform": {
+                "title": "./source/script/dataset/output/aggre-platform-title.json"
+            }
+        }
+    }
+}

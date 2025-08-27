@@ -1,33 +1,8 @@
 {
-    "debug": true,
-    "history": {
-        "record": {
-            "script": {
-                "start:service": true,
-                "init:database": true,
-                "merge:database": true,
-                "clean:database": true,
-                "update:database": true,
-                "insert:database": true,
-                "locate:database": true
-            }
-        },
-        "filepath": {
-            "script": {
-                "start:service": "./history/script/service/start.jsonl",
-                "init:database": "./history/script/database/init.jsonl",
-                "merge:database": "./history/script/database/merge.jsonl",
-                "clean:database": "./history/script/database/clean.jsonl",
-                "update:database": "./history/script/database/update.jsonl",
-                "insert:database": "./history/script/database/insert.jsonl",
-                "locate:database": "./history/script/database/locate.jsonl"
-            }
-        }
-    },
     "service": {
         "define": "./source/define/service.json",
         "options": {
-            "interface": {
+            "default": {
                 "host": "127.0.0.1",
                 "port": 51001,
                 "cors": {

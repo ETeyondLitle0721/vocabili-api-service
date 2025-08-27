@@ -1,20 +1,7 @@
-import { deep_clone, invert_object, to_string } from "../../core.js";
+import { deep_clone, invert_object, to_string } from "../../toolkit.js";
 
 /**
- * @typedef {("bold"|"dim"|"italic"|"underline"|"blink"|"inverse"|"hidden"|"strikethrough")} ANSIMark
- * @typedef {("black"|"red"|"green"|"yellow"|"blue"|"magenta"|"cyan"|"white"|"gray"|"black-bright"|"red-bright"|"green-bright"|"yellow-bright"|"blue-bright"|"magenta-bright"|"cyan-bright"|"white-bright")} ANSIColor
- * @typedef {("orange"|"pink"|"purple"|"brown"|"teal"|"lime"|"indigo"|"violet"|"gold"|"beige"|"ivory"|"lavender"|"coral"|"turquoise"|"charcoal"|"aqua"|"chartreuse"|"periwinkle"|"salmon"|"khaki"|"plum"|"crimson"|"seashell"|"mint"|"peach"|"cherry"|"rose"|"skyblue"|"orchid"|"azure"|"zircon")} ExtraColor
- * 
- * @typedef ANSISequenceTextUnit
- * @property {string} text 需要添加样式的文本
- * @property {object} color 颜色信息
- * @property {(ANSIColor|ExtraColor)} color.background 背景色（支持以 rgb(rrr, ggg, bbb) 的形式表达）
- * @property {(ANSIColor|ExtraColor)} color.foreground 前景色（支持以 rgb(rrr, ggg, bbb) 的形式表达）
- * @property {(ANSIMark[]|ANSIMark)} mark 叠加的标记信息
- */
-
-/**
- * 映射颜色名称到 ANSI 转义码
+ * 映射颜色名称到 ANSI 转义码（展示的是背景色，前景色需要加十）
  */
 const ansi_color = {
     "black": 30, "red": 31, "green": 32, "yellow": 33, "blue": 34, "magenta": 35,
@@ -24,7 +11,7 @@ const ansi_color = {
 };
 
 /**
- * 额外扩展颜色
+ * 额外扩展颜色（仅展示了部分颜色）
  */
 const extra_color = {
     "orange": "rgb(255, 165, 0)", "pink": "rgb(255, 192, 203)",
@@ -42,376 +29,312 @@ const extra_color = {
     "peach": "rgb(255, 218, 185)", "cherry": "rgb(222, 49, 99)",
     "rose": "rgb(255, 228, 225)", "skyblue": "rgb(135, 206, 235)",
     "orchid": "rgb(218, 112, 214)", "azure": "rgb(0, 127, 255)",
-    "lavender": "rgb(255, 240, 245)", "zircon": "rgb(222, 227, 227)"
+    "zircon": "rgb(222, 227, 227)", "navy": "rgb(0, 0, 128)",
+    "olive": "rgb(128, 128, 0)", "maroon": "rgb(128, 0, 0)",
 };
 
 /**
  * 映射修饰符名称到 ANSI 转义码
  */
-const ansi_mark = {
-    "bold": 1, "dim": 2, "italic": 3, "underline": 4, "blink": 5,
-    "inverse": 7, "hidden": 8, "strikethrough": 9
-};
-
-/**
- * 键值与键名对调的 ansi_color 对象
- */
-const ansi_color_inverted = invert_object(ansi_color);
-
-/**
- * 键值与键名对调的 extra_color 对象
- */
-const extra_color_inverted = invert_object(extra_color);
-
-/**
- * 键值与键名对调的 ansi_mark 对象
- */
-const ansi_mark_inverted = invert_object(ansi_mark);
-
-
-/**
- * 重置颜色 ANSI 转义序列
- */
-const ansi_reset = "\x1b[0m";
-
-/**
- * 用于提取 ANSI 转义序列的正则表达式
- */
-const regexp = {
-    "ansi": {
-        "match": /\x1b\[[\d;]*m[^\x1b]*\x1b\[0m|[^\x1b]+/g,
-        "split": /^\x1b\[([\d;]*)m([^\x1b]*)\x1b\[0m$/
-    }
-};
-
-/** 
- * 默认的 ANSI 解析时格式
- * 
- * @type {ANSISequenceTextUnit}
- */
-const ansi_unit_default = {
-    "text": null,
-    "mark": null,
-    "color": {
-        "foreground": null,
-        "background": null
+const ansi_sgr = {
+    "set": {
+        "reset": 0, "bold": 1, "dim": 2, "italic": 3,
+        "underline": 4, "blink": 5, "fast-blink": 6,
+        "inverse": 7, "hidden": 8, "strikethrough": 9,
+        "overline": 53
+    },
+    "close": {
+        "blod": 21, "underline": 24, "blink": 25,
+        "inverse": 27, "hidden": 28, "strikethrough": 29,
+        "overline": 55
     }
 };
 
 /**
- * ANSI 256 色的 RGB 映射
+ * 解析文本中的颜色为 ANSI 转义码
+ * 
+ * @typedef {(keyof ansi_color)} BuiltinColor
+ * @typedef {(keyof extra_color)} ExtraColor
+ * @typedef {(`rgb(<integer>,<integer>,<integer>)`)} RGBColor
+ * 
+ * @typedef {(BuiltinColor|ExtraColor|RGBColor)} SupportColor
+ * 
+ * @param {SupportColor} value 需要解析的颜色字符串
+ * @param {("background"|"foreground")} scope 需要解析的颜色的作用域
+ * @returns {number[]} 解析后的 ANSI 转义码
  */
-const ansi_rgb = [ 0, 95, 135, 175, 215, 255 ];
+function parse_color(value, scope) {
+    if (value in ansi_color) {
+        const offset = {
+            "foreground": 0,
+            "background": 10
+        } [ scope ];
 
-/**
- * ANSI 标准色
- */
-const asni_std_color = [
-    [ 0, 0, 0 ],        // 黑色
-    [ 205, 0, 0 ],      // 红色
-    [ 0, 205, 0 ],      // 绿色
-    [ 205, 205, 0 ],    // 黄色
-    [ 0, 0, 205 ],      // 蓝色
-    [ 205, 0, 205 ],    // 品红
-    [ 0, 205, 205 ],    // 青色
-    [ 255, 255, 255 ],  // 白色
-    [ 85, 85, 85 ],     // 亮黑色
-    [ 255, 85, 85 ],    // 亮红色
-    [ 85, 255, 85 ],    // 亮绿色
-    [ 255, 255, 85 ],   // 亮黄色
-    [ 85, 85, 255 ],    // 亮蓝色
-    [ 255, 85, 255 ],   // 亮品红
-    [ 85, 255, 255 ],   // 亮青色
-    [ 255, 255, 255 ]   // 亮白色
-];
+        const base = ansi_color[value];
 
-/**
- * 取得颜色对应的 ANSI 代码
- * 
- * @param {string} color 需要解析的颜色字符串
- * @param {("background"|"foreground")} occasion 使用此颜色所处于的场合
- * 
- * @returns {number[]} 解析出来的颜色对应的颜色代码
- */
-function parse_color_string(color, occasion = "background") {
-    let code = [];
-
-    if (ansi_color[color]) {
-        let offest = occasion == "background" ? 10 : 0;
-
-        code.push(ansi_color[color] + offest);
-
-        return code;
+        return [ base + offset ];
     }
 
-    let prefix = occasion == "background" ? 48 : 38;
+    value = value.trim().toLowerCase();
 
-    if (typeof color === "number") {
-        let [ red, green, blue ] = parse_256_color(color);
-
-        color = `rgb(${red}, ${green}, ${blue})`;
+    if (!value.includes("(")) {
+        value = extra_color[value];
     }
 
-    if (extra_color[color]) {
-        color = extra_color[color];
-    }
+    const prefix = {
+        "foreground": 38,
+        "background": 48
+    } [ scope ];
 
-    if (color.startsWith("rgb")) {
-        let component = color.match(/rgb\s*\((.*)\)/);
-
-        if (component) {
-            component = component[1].split(/\s*,\s*/);
-
-            code.push(prefix, 2, ...component);
-        }
-    }
-
-    return code;
-}
-
-/**
- * 解析 ANSI 256 色成 RGB 颜色
- * 
- * @param {number} code 需要解析的 ANSI 256 颜色代码
- * 
- * @returns {number[]} RGB 颜色分量数组
- */
-function parse_256_color(code) {
-    if (code >= 0 && code <= 15) {
-        return asni_std_color[code];
-    }
-
-    if (code >= 16 && code <= 231) {
-        let red = Math.floor((code - 16) / 36),
-            green = Math.floor(((code - 16) % 36) / 6),
-            blue = (code - 16) % 6;
-
-        return [
-            ansi_rgb[red], ansi_rgb[green], ansi_rgb[blue]
-        ];
-    }
-
-    if (code >= 232 && code <= 255) {
-        let component = (code - 232) * 10 + 8;
-
-        return [
-            component, component, component
-        ];
-    }
-}
-
-/**
- * 将 TextUnit 编码为成符合 ANSI 标准的嵌入文本的描述序列
- * 
- * @param {ANSISequenceTextUnit} unit 需要编码的 TextUnit 列表
- * 
- * @returns {string} 编码出来的符合 ANSI 标准的嵌入文本的描述序列
- */
-function parse_text_unit(unit) {
-    let code = [];
-
-    if (unit.mark) {
-        if (typeof unit.mark === "string") {
-            unit.mark = [ unit.mark ];
-        }
-
-        unit.mark.map((name) => {
-            if (ansi_mark[name]) {
-                code.push(ansi_mark[name])
-            }
-        })
-    }
-
-    if (unit.color) {
-        let { foreground, background } = unit.color;
-
-        if (foreground) {
-            code.push(
-                ...parse_color_string(foreground, "foreground")
-            );
-        }
-
-        if (background) {
-            code.push(
-                ...parse_color_string(background, "background")
-            );
-        }
-    }
-
-    if (code.length === 0) {
-        return unit.text;
-    }
-
-    return `\x1b[${code.join(";")}m${unit.text}${ansi_reset}`;
-
-}
-
-/**
- * 解析符合 ANSI 标准的序列文本为 TextUnit 对象
- * 
- * @param {string} sequence 解析符合 ANSI 标准的序列文本
- * 
- * @returns {ANSISequenceTextUnit} 解析后生成的 TextUnit 对象
- */
-function parse_sequence(sequence) {
-    let match = sequence.match(regexp.ansi.split);
-
-    if (!match) {
-        throw new Error(`'${sequence}' 不符合 ANSI 标准所规定的序列文本`);
-    }
-
-    let [
-        _full_match, code_list, raw_text
-    ] = match, modifier = code_list.split(";").map((item) => {
-        return Number(item);
+    const parts = value.match(
+        /^rgb\((\d+),(\d+),(\d+)\)$/
+    ).slice(1, 4).map((value) => {
+        return parseInt(value, 10);
     });
 
-    /** @type {ANSISequenceTextUnit} */
-    let unit = deep_clone({
-        ...ansi_unit_default,
-        "text": raw_text,
-        "mark": []
-    });
-
-    for (let index = 0; index < modifier.length; index++) {
-        let current = modifier[index];
-
-        if (current >= 30 && current <= 37) {
-            unit.color.foreground = ansi_color_inverted[current];
-        }
-
-        if (current >= 40 && current <= 47) {
-            unit.color.background = ansi_color_inverted[current - 10];
-        }
-
-        if ([ 38, 48 ].includes(current)) {
-            let mode = modifier[index + 1],
-                occasion = current === 38 ? "foreground" : "background";
-
-            index++;
-
-            if (mode === 2) {
-                let color = `rgb(${modifier[index + 1]}, ${modifier[index + 2]}, ${modifier[index + 3]})`;
-                let result = extra_color_inverted[color];
-
-                index += 3;
-                unit.color[occasion] = result || color;
-            }
-
-            if (mode === 5) {
-                let [ red, green, blue ] = parse_256_color(modifier[index + 1]);
-
-                index += 1;
-                unit.color[occasion] = `rgb(${red}, ${green}, ${blue})`;
-            }
-        }
-
-        if (Object.values(ansi_mark).includes(current)) {
-            let key = ansi_mark_inverted[current];
-
-            if (key) {
-                unit.mark.push(key);
-            }
-        }
-    }
-
-    if (unit.mark.length === 1) {
-        unit.mark = unit.mark[0];
-    }
-
-    if (unit.mark.length === 0) {
-        unit.mark = null;
-    }
-
-    return unit;
+    return [ prefix, 2, ...parts ];
 }
 
 /**
- * 将 TextUnit 编码为成符合 ANSI 标准的嵌入文本的描述序列
+ * 解析文本中的修饰符为 ANSI 转义码
  * 
- * @param {((ANSISequenceTextUnit|string)[]|string|ANSISequenceTextUnit)} list 需要编码的 TextUnit 列表
+ * @typedef {(keyof ansi_sgr["set"])} SupportStyle
  * 
- * @returns {string} 编码出来的符合 ANSI 标准的嵌入文本的描述序列
+ * @typedef {(`bg-color:${SupportColor}`)} BackgroundColor
+ * @typedef {(`fg-color:${SupportColor}`)} ForegroundColor
+ * @typedef {(`text-style:${SupportStyle}`)} TextStyle
+ * 
+ * @typedef {(BackgroundColor|ForegroundColor|TextStyle)} TextFlag
+ * 
+ * @param {TextFlag[]} flags 需要解析的修饰符
+ * @returns {string} 构建出的 ANSI 转义码
+ */
+function parse_sgr_flags(flags) {
+    const modifier = {
+        "bg-color": [],
+        "fg-color": [],
+        "text-style": []
+    };
+
+    for (let index = 0; index < flags.length; index++) {
+        let current = flags[index];
+
+        if (current.includes(":")) {
+            const parts = current.split(":");
+
+            if (parts[0] === "bg-color") {
+                modifier["bg-color"] = parse_color(
+                    parts[1], "background"
+                );
+            }
+            
+            if (parts[0] === "fg-color") {
+                modifier["fg-color"] = parse_color(
+                    parts[1], "foreground"
+                );
+            }
+            
+            if (parts[0] === "text-style") {
+                modifier["text-style"].push(
+                    ansi_sgr["set"][parts[1]]
+                );
+            }
+        }
+    }
+
+    const values = Object.values(modifier);
+    const flat_array = values.flat(2);
+
+    return "\x1b[" + flat_array.join(";") + "m";
+}
+
+/**
+ * 解析文本中的修饰符为带有 ANSI SGR 转义码的文本
+ * 
+ * @typedef {Object} PartUnit
+ * @property {string} text 需要展示的文本内容
+ * @property {TextFlag[]} flags 展示文本期望应用的修饰符
+ * 
+ * @param {(PartUnit|PartUnit[])} list 需要展示的文本内容
+ * @returns {string} 构建出来的带有 ANSI 转义码的文本
  */
 export function encode(list) {
-    let result = "";
-
     if (!Array.isArray(list)) {
-        list = [list];
+        list = [ list ];
     }
 
+    const result = [], reset = [
+        "text-style:reset"
+    ];
+
+    const parser = parse_sgr_flags;
+
     for (let index = 0; index < list.length; index++) {
-        let current = list[index];
+        const { text, flags } = list[index];
 
-        if (typeof current !== "object") {
-            result += to_string(current);
+        const array = [
+            parser(flags), text, parser(reset)
+        ];
 
-            continue;
+        result.push(array.join(""));
+    }
+
+    return result.join("");
+}
+
+/**
+ * @typedef {(`column:<integer>`|`row:<integer>`)} CSIMovePinterWithPosition
+ * @typedef {(`dirction:${("up"|"down"|"left"|"right")}`|`distance:<integer>`)} CSIMovePinterWithDirection
+ * 
+ * @typedef {(CSIMovePinterWithPosition|CSIMovePinterWithDirection)} CSIMovePinterFlags
+ * 
+ * @typedef {(`distance:<integer>`|`direction:${("up"|"down")}`)} CSIScrollScreenFlags
+ * 
+ * @typedef {(`type:${("all"|"line")}`)} CSIResetScreenFlags
+ * 
+ * @typedef {(CSIMovePinterFlags|CSIScrollScreenFlags|CSIResetScreenFlags)} CSIFlags
+ * 
+ * @typedef {("move-pointer"|"erase-screen"|"scroll-screen")} CSIName
+ */
+
+const _printer = process.stdout.write.bind(process.stdout);
+
+/**
+ * 向输出设备打印 ANSI CSI 文本
+ * 
+ * @template {((text: string) => void)} OutputDevice
+ * 
+ * @param {CSIName} name 需要打印的 CSI 文本的名称
+ * @param {CSIFlags[]} flags 需要打印的 CSI 文本的修饰符 
+ * @param {OutputDevice} printer 输出设备
+ * @returns {ReturnType<OutputDevice>} 调用输出设备的结果
+ */
+export function print(name, flags = [], printer = _printer) {
+    const param = {}, options = {
+        "parts": [], "char": ""
+    };
+
+    for (let index = 0; index < flags.length; index++) {
+        const current = flags[index];
+
+        if (current.includes(":")) {
+            const parts = current.split(":");
+
+            const field = parts.slice(0, -1).join(":");
+
+            param[field] = parts.at(-1);
+        }
+    }
+
+    if (name === "move-pointer") {
+        if ("column" in param && "row" in param) {
+            options.parts.push(
+                param.column, param.row
+            );
+
+            options.char = "H";
+        }
+        
+        if ("distance" in param) {
+            param.dirction ??= "up";
+            param.distance ??= 1;
+
+            const code = {
+                "up": "A",
+                "down": "B",
+                "right": "C",
+                "left": "D"
+            } [ param.dirction ];
+
+            options.char = code;
+            options.parts.push(param.distance);
+        }
+    }
+
+    if (name === "scroll-screen") {
+        param.dirction ??= "up";
+        param.distance ??= 1;
+
+        const code = {
+            "up": "S",
+            "down": "T"
+        } [ param.dirction ];
+
+        options.char = code;
+        options.parts.push(param.distance);
+    }
+
+    if (name === "erase-screen") {
+        param.type ??= "all";
+
+        options.parts.push({
+            "all": "2",
+            "line": "1"
+        } [ param.type ]);
+
+        options.char = "J";
+    }
+
+    const parts = options.parts.join(";")
+
+    return printer(`\x1b[${parts}${options.char}`);
+}
+
+const regex = /(\x1b\[[0-?]*[ -/]*[@-~])/g;
+
+/**
+ * 切割文本中的 ANSI 转义码
+ * 
+ * @param {string} text 需要切割的文本
+ * @returns {string[]} 切割出来的文本列表
+ */
+function split_ansi_text(text) {
+    const result = [];
+
+    let match, lastIndex = 0;
+
+    while ((match = regex.exec(text)) !== null) {
+        if (match.index > lastIndex) {
+            result.push(text.substring(
+                lastIndex, match.index
+            ));
         }
 
-        result += parse_text_unit(current);
+        result.push(match[0]);
+        lastIndex = regex.lastIndex;
+    }
+
+    if (lastIndex < text.length) {
+        result.push(text.substring(lastIndex));
     }
 
     return result;
 }
 
 /**
- * 将符合 ANSI 标准的嵌入文本的描述序列解码为 TextUnit 列表
+ * 解析带有 ANSI SGR 转义码的文本为文本和修饰符
  * 
- * @param {string} text 符合 ANSI 标准的嵌入文本的描述序列
- * 
- * @returns {ANSISequenceTextUnit[]} 解码出来的 TextUnit 列表
+ * @param {string} text 需要解析的文本
+ * @returns {PartUnit[]} 解析出来的文本和修饰符
  */
 export function decode(text) {
-    /** @type {ANSISequenceTextUnit[]} */
-    let sequence = [], match = Array.from(text.matchAll(regexp.ansi.match)).map((item) => {
-        return item[0];
-    });
+    const parts = split_ansi_text(text);
 
-    for (let index = 0; index < match.length; index++) {
-        let current = match[index];
-
-        if (regexp.ansi.split.test(current)) {
-            sequence.push(parse_sequence(
-                current
-            ));
-
-            continue;
-        }
-
-        sequence.push(deep_clone({
-            ...ansi_unit_default,
-            "text": current
-        }));
-    }
-
-    return sequence;
+    // ...
 }
 
 /**
- * 将符合 ANSI 标准的嵌入文本的描述序列中的文本单独提取出来
+ * 去除文本中的 ANSI 转义码
  * 
- * @param {string} text 符合 ANSI 标准的嵌入文本的描述序列
- * 
- * @returns {string} 文本单独提取出来并拼接的结果
+ * @param {string} text 需要去除的文本
+ * @returns {string} 去除后的文本
  */
 export function strip(text) {
-    let list = decode(text);
-
-    return list.map((item) => {
-        return item.text;
-    }).join("");
+    return text.replace(regex, "");
 }
 
-export default {
-    "inner": {
-        "parser": {
-            "sequence": parse_sequence,
-            "unit_text": parse_text_unit,
-            "256_color": parse_256_color
-        }
-    },
-    "strip": strip,
-    "decode": decode,
-    "encode": encode
+export const parse = {
+    "sgr": {
+        "flags": parse_sgr_flags
+    }
 };
