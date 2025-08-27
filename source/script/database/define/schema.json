@@ -57,7 +57,7 @@
                             },
                             {
                                 "name": "thumbnail",
-                                "type": "integer",
+                                "type": "text",
                                 "flags": [
                                     "not-null"
                                 ]
@@ -65,7 +65,9 @@
                             {
                                 "name": "update_count",
                                 "type": "integer",
-                                "default": 1
+                                "flags": [
+                                    "not-null"
+                                ]
                             },
                             {
                                 "name": "created_at",
@@ -129,7 +131,7 @@
                             },
                             {
                                 "name": "avatar",
-                                "type": "integer",
+                                "type": "text",
                                 "flags": [
                                     "not-null"
                                 ]
@@ -137,7 +139,9 @@
                             {
                                 "name": "update_count",
                                 "type": "integer",
-                                "default": 1
+                                "flags": [
+                                    "not-null"
+                                ]
                             },
                             {
                                 "name": "updated_at",
@@ -418,44 +422,12 @@
                             }
                         ]
                     }
-                },
-                {
-                    "name": "resources",
-                    "options": {
-                        "flags": [
-                            "if-not-exists"
-                        ],
-                        "column": [
-                            {
-                                "name": "id",
-                                "type": "integer",
-                                "flags": [
-                                    "primary-key",
-                                    "auto-increment"
-                                ]
-                            },
-                            {
-                                "name": "exterior",
-                                "type": "text",
-                                "flags": [
-                                    "not-null", "unique"
-                                ]
-                            },
-                            {
-                                "name": "recorded_at",
-                                "type": "text",
-                                "flags": [
-                                    "not-null"
-                                ]
-                            }
-                        ]
-                    }
                 }
             ],
             "indexes": [
                 {
-                    "name": "video_ids_exterior_idx",
-                    "table": "video_ids",
+                    "name": "videos_exterior_idx",
+                    "table": "videos",
                     "options": {
                         "flags": [
                             "unique", "if-not-exists"
@@ -466,50 +438,14 @@
                     }
                 },
                 {
-                    "name": "video_info_vid_idx",
-                    "table": "video_info",
-                    "options": {
-                        "flags": [
-                            "unique", "if-not-exists"
-                        ],
-                        "column": [
-                            "vid"
-                        ]
-                    }
-                },
-                {
-                    "name": "video_info_uploader_idx",
-                    "table": "video_info",
-                    "options": {
-                        "flags": [
-                            "if-not-exists"
-                        ],
-                        "column": [
-                            "uploader"
-                        ]
-                    }
-                },
-                {
-                    "name": "uploader_ids_exterior_idx",
-                    "table": "uploader_ids",
+                    "name": "uploaders_exterior_idx",
+                    "table": "uploaders",
                     "options": {
                         "flags": [
                             "unique", "if-not-exists"
                         ],
                         "column": [
                             "exterior"
-                        ]
-                    }
-                },
-                {
-                    "name": "uploader_info_uid_idx",
-                    "table": "video_info",
-                    "options": {
-                        "flags": [
-                            "unique", "if-not-exists"
-                        ],
-                        "column": [
-                            "vid"
                         ]
                     }
                 },
