@@ -161,13 +161,13 @@
                     }
                 },
                 {
-                    "name": "batch_info",
+                    "name": "batches",
                     "options": {
                         "flags": [
                             "if-not-exists"
                         ],
                         "column": [
-                                {
+                            {
                                 "name": "id",
                                 "type": "integer",
                                 "flags": [
@@ -191,10 +191,7 @@
                             },
                             {
                                 "name": "ended_at",
-                                "type": "text",
-                                "flags": [
-                                    "not-null"
-                                ]
+                                "type": "text"
                             },
                             {
                                 "name": "recorded_at",

@@ -69,12 +69,12 @@ function modify(object, replacer) {
  * @param {object[]} input 需要更新或者插入的条目
  * @returns {Object<string, Object<string, any>>} 数据表表单字段数值映射表
  * 
- * @typedef {Object} Options
+ * @typedef {Object} Options1
  * @property {string} table_name 操作的目标数据表名称
  * @property {Mapper} mapper 数据表表单字段数值映射器
  * 
  * @param {(object|object[])} items 需要更新或者插入的条目
- * @param {Options} options 更新或者插入的时候的配置 
+ * @param {Options1} options 更新或者插入的时候的配置 
  * @param {Date} [instance=new Date()] 执行该操作时的 Date 实例化对象
  * @returns {Response[]} 更新或者插入的视频信息
  */
@@ -257,11 +257,6 @@ function generate_mapper(mapping, fields) {
  * @property {string} name 上传者名称
  * @property {string} avatar 上传者头像
  * 
- * @typedef {Object} Response
- * @property {number} id 上传者内部标识符
- * @property {number} exterior 上传者外部标识符
- * @property {number} update_count 更新次数
- * 
  * @param {(Uploader|Uploader[])} uploaders 需要更新或者插入的上传者信息列表
  * @param {Date} [instance=new Date()] 执行操作的时候的时间
  * @returns {Response[]} 更新或者插入的上传者信息
@@ -308,14 +303,8 @@ function upsert_uploader(uploaders, instance = new Date()) {
  * @property {number} duration 视频时长
  * @property {number} page 视频页数
  * @property {Uploader} uploader 视频上传者
- * 
  * @property {Date} created_at 视频创建时间
  * @property {Date} published_at 视频更新时间
- * 
- * @typedef {Object} Response
- * @property {number} id 视频内部标识符
- * @property {number} exterior 视频外部标识符
- * @property {number} update_count 更新次数
  * 
  * @param {(Video|Video[])} videos 需要更新或者插入的视频信息列表
  * @param {Date} [instance=new Date()] 执行操作的时候的时间
@@ -375,4 +364,78 @@ function upsert_video(videos, instance = new Date()) {
     return upsert_item(
         dataset, options, instance
     );
+}
+
+/**
+ * 分配一个批次标识符
+ * 
+ * @typedef {Object} Options2
+ * @property {number} count 批次视频数量
+ * @property {Date} start 批次开始时间
+ * @property {Date} record 批次记录时间
+ * 
+ * @param {Options2} options 本批次的配置
+ * @returns {number} 分配到的标识符
+ */
+function assgin_batch_id(options = {}) {
+    options.start ??= new Date();
+    options.record ??= new Date();
+
+    options.count ??= 0;
+
+    const record = operator.record();
+
+    const started_at = options.start.toISOString();
+    const recorded_at = options.record.toISOString();
+
+    const dataset = [{
+        "video_count": options.count,
+        "started_at": started_at,
+        "recorded_at": recorded_at
+    }];
+
+    const result = record.insert(
+        "batches", dataset, {
+            "mode": "batch",
+            "action": "execute",
+            "return_field": [
+                "id"
+            ]
+        }
+    )[0].flat(2);
+
+    return result[0].id;
+}
+
+/**
+ * 补齐批次基本信息
+ * 
+ * @typedef {Object} Options3
+ * @property {Date} end 批次结束时间
+ * 
+ * @param {number} id 需要更新的批次标识符
+ * @param {Options3} options 批次的配置信息
+ * @returns {void}
+ */
+function patch_batch_info(id, options) {
+    options.end ??= new Date();
+
+    const record = operator.record();
+
+    const end = options.end;
+
+    const condition = {
+        "column": "id",
+        "restrict": {
+            "include": [ id ]
+        }
+    };
+
+    const result = record.update(
+        "batches", condition, {
+            "ended_at": end.toISOString()
+        }
+    )[0].flat(2);
+
+    return result;
 }
