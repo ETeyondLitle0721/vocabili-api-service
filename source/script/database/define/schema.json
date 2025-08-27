@@ -39,7 +39,7 @@
                                 ]
                             },
                             {
-                                "name": "uploader",
+                                "name": "uploader_id",
                                 "type": "integer",
                                 "flags": [
                                     "not-null"
@@ -84,14 +84,14 @@
                                 ]
                             },
                             {
-                                "name": "recorded_at",
+                                "name": "updated_at",
                                 "type": "text",
                                 "flags": [
                                     "not-null"
                                 ]
                             },
                             {
-                                "name": "updated_at",
+                                "name": "recorded_at",
                                 "type": "text",
                                 "flags": [
                                     "not-null"
