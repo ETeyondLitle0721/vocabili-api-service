@@ -170,11 +170,12 @@ function upsert_item(items, options, instance = new Date()) {
 
         response.update = record.update(
             table_name, condition, {
+                "update_count": generator(
+                    "update_count"
+                ),
                 ...modify(mapping, (key) => {
                     return generator(key);
-                }),
-                "updated_at": current_datetime,
-                "update_count": generator("update_count"),
+                })
             }, options
         )[0].flat(2);
     }
@@ -191,9 +192,9 @@ function upsert_item(items, options, instance = new Date()) {
         const item = item_list[index];
 
         dataset.push({
-            ...item, "update_count": 1,
             "updated_at": current_datetime,
-            "recorded_at": current_datetime
+            "recorded_at": current_datetime,
+            ...item, "update_count": 1
         });
     }
 
@@ -256,29 +257,32 @@ function generate_mapper(mapping, fields) {
  * @property {number} id 上传者外部标识符
  * @property {string} name 上传者名称
  * @property {string} avatar 上传者头像
+ * @property {Date} [snapshot_at] 数据抓取时间
  * 
  * @param {(Uploader|Uploader[])} uploaders 需要更新或者插入的上传者信息列表
  * @param {Date} [instance=new Date()] 执行操作的时候的时间
  * @returns {Response[]} 更新或者插入的上传者信息
  */
-function upsert_uploader(uploaders, instance = new Date()) {
+export function upsert_uploader(uploaders, instance = new Date()) {
     const dataset = [], mapping = {};
 
     for (let index = 0; index < uploaders.length; index++) {
-        const { id, name, avatar } = uploaders[index];
+        const { id, ...rest } = uploaders[index];
+
+        rest.snapshot_at ??= instance;
 
         const data = {
-            "avatar": avatar,
-            "exterior": id,
-            "username": name,
+            "username": rest.name,
+            "avatar": rest.avatar, "exterior": id,
+            "recorded_at": instance.toISOString(),
+            "updated_at": rest.snapshot_at.toISOString(),
         };
 
-        dataset.push(data);
-        mapping[id] = data;
+        dataset.push(data), mapping[id] = data;
     }
 
     const field_list = [
-        "avatar", "username"
+        "avatar", "username", "updated_at", "recorded_at"
     ];
 
     const options = {
@@ -305,12 +309,13 @@ function upsert_uploader(uploaders, instance = new Date()) {
  * @property {Uploader} uploader 视频上传者
  * @property {Date} created_at 视频创建时间
  * @property {Date} published_at 视频更新时间
+ * @property {Date} [snapshot_at] 数据抓取时间
  * 
  * @param {(Video|Video[])} videos 需要更新或者插入的视频信息列表
  * @param {Date} [instance=new Date()] 执行操作的时候的时间
  * @returns {Response[]} 更新或者插入的视频信息
  */
-function upsert_video(videos, instance = new Date()) {
+export function upsert_video(videos, instance = new Date()) {
     const format = (instance) => {
         const text = instance.toISOString();
         
@@ -320,8 +325,10 @@ function upsert_video(videos, instance = new Date()) {
     const dataset = [], mapping = {};
 
     const vid_to_uid = new Map(
-        upsert_uploader(videos.map(
-            video => video.uploader
+        upsert_uploader(videos.map(video =>
+            Object.assign(video.uploader, {
+                "snapshot_at": video.snapshot_at || instance
+            })
         )).map((result, index) => {
             const video = videos[index];
 
@@ -332,6 +339,8 @@ function upsert_video(videos, instance = new Date()) {
     for (let index = 0; index < videos.length; index++) {
         const { id, ...rest } = videos[index];
 
+        rest.recorded_at ??= instance;
+
         const data = {
             "title": rest.title,
             "uploader_id": vid_to_uid.get(id),
@@ -340,15 +349,15 @@ function upsert_video(videos, instance = new Date()) {
             "page_count": rest.page,
             "created_at": format(rest.created_at),
             "published_at": format(rest.published_at),
+            "recorded_at": format(rest.recorded_at),
             "exterior": id
         };
 
-        dataset.push(data);
-        mapping[id] = data;
+        dataset.push(data), mapping[id] = data;
     }
 
     const field_list = [
-        "uploader_id",
+        "uploader_id", "recorded_at",
         "title", "duration", "page",
         "page_count", "thumbnail",
         "created_at", "published_at",
@@ -373,23 +382,27 @@ function upsert_video(videos, instance = new Date()) {
  * @property {number} count 批次视频数量
  * @property {Date} start 批次开始时间
  * @property {Date} record 批次记录时间
+ * @property {Date} end 批次结束时间
  * 
  * @param {Options2} options 本批次的配置
  * @returns {number} 分配到的标识符
  */
 function assgin_batch_id(options = {}) {
     options.start ??= new Date();
+    options.end ??= new Date();
     options.record ??= new Date();
 
     options.count ??= 0;
 
     const record = operator.record();
 
+    const ended_at = options.end.toISOString();
     const started_at = options.start.toISOString();
     const recorded_at = options.record.toISOString();
 
     const dataset = [{
         "video_count": options.count,
+        "ended_at": ended_at,
         "started_at": started_at,
         "recorded_at": recorded_at
     }];
@@ -408,34 +421,76 @@ function assgin_batch_id(options = {}) {
 }
 
 /**
- * 补齐批次基本信息
+ * 在数据库中插入一个批次的快照信息
  * 
- * @typedef {Object} Options3
- * @property {Date} end 批次结束时间
+ * @typedef {Object} VideoCounter
+ * @property {number} coin 投币数量
+ * @property {number} view 观看次数
+ * @property {number} like 点赞次数
+ * @property {number} favorite 收藏次数
  * 
- * @param {number} id 需要更新的批次标识符
- * @param {Options3} options 批次的配置信息
+ * @typedef {Object} SnapshotData
+ * @property {Video} video 视频信息
+ * @property {VideoCounter} counter 视频统计信息
+ * @property {Date} snapshot_at 数据抓取时间
+ * 
+ * @typedef {Object} Snapshot
+ * @property {object} date 快照抓取的时间范围
+ * @property {Date} date.start 数据开始抓取时间
+ * @property {Date} date.end 数据结束抓取时间
+ * @property {SnapshotData[]} data 快照数据
+ * 
+ * @param {Snapshot} snapshot 需要插入的数据
  * @returns {void}
  */
-function patch_batch_info(id, options) {
-    options.end ??= new Date();
+export function insert_snpahsots(snapshot, instance = new Date()) {
+    const bath_id = assgin_batch_id({
+        "count": snapshot.data.length,
+        "end": snapshot.date.end,
+        "record": instance,
+        "start": snapshot.date.start
+    });
 
-    const record = operator.record();
+    const videos_list = snapshot.data.map((current) =>
+        Object.assign(current.video, { "recorded_at": 
+            current.snapshot_at || instance
+        })
+    );
 
-    const end = options.end;
+    const videos = upsert_video(videos_list, instance);
 
-    const condition = {
-        "column": "id",
-        "restrict": {
-            "include": [ id ]
-        }
-    };
+    const exterior_to_vid = new Map(
+        videos.map((current) => [
+            current.exterior, current.id
+        ])
+    );
 
-    const result = record.update(
-        "batches", condition, {
-            "ended_at": end.toISOString()
-        }
-    )[0].flat(2);
+    const dataset = [];
 
-    return result;
+    for (let index = 0; index < snapshot.data.length; index++) {
+        const { video, counter, ...rest } = snapshot.data[index];
+
+        const vid = exterior_to_vid.get(video.id);
+
+        dataset.push({
+            "batch_id": bath_id,
+            "video_id": vid,
+            "count_coin": counter.coin,
+            "count_view": counter.view,
+            "count_like": counter.like,
+            "count_favorite": counter.favorite,
+            "recorded_at": instance.toISOString(),
+            "snapshot_at": (rest.snapshot_at || instance).toISOString(),
+        });
+    }
+
+    const groups = split_group(dataset, MIC);
+
+    for (let index = 0; index < groups.length; index++) {
+        operator.insert_record(
+            "snapshots", groups[index], {
+                "mode": "batch"
+            }
+        );
+    }
 }

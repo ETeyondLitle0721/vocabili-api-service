@@ -191,7 +191,10 @@
                             },
                             {
                                 "name": "ended_at",
-                                "type": "text"
+                                "type": "text",
+                                "flags": [
+                                    "not-null"
+                                ]
                             },
                             {
                                 "name": "recorded_at",
@@ -219,7 +222,7 @@
                                 ]
                             },
                             {
-                                "name": "vid",
+                                "name": "video_id",
                                 "type": "integer",
                                 "flags": [
                                     "not-null", "unique"
@@ -262,6 +265,13 @@
                             },
                             {
                                 "name": "snapshot_at",
+                                "type": "text",
+                                "flags": [
+                                    "not-null"
+                                ]
+                            },
+                            {
+                                "name": "recorded_at",
                                 "type": "text",
                                 "flags": [
                                     "not-null"
