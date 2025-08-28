@@ -1,6 +1,6 @@
 import * as platform from "../platform.js";
 
-platform.insert_snpahsots({
+platform.insert_snapshots({
     "date": { "start": new Date("2022-01-01"), "end": new Date("2022-01-02") },
     "data": [ { "video": {
         "title": "this is a test video for batch insert snapshots",

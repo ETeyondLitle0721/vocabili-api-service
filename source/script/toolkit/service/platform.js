@@ -443,7 +443,7 @@ function assgin_batch_id(options = {}) {
  * @param {Snapshot} snapshot 需要插入的数据
  * @returns {void}
  */
-export function insert_snpahsots(snapshot, instance = new Date()) {
+export function insert_snapshots(snapshot, instance = new Date()) {
     const bath_id = assgin_batch_id({
         "count": snapshot.data.length,
         "end": snapshot.date.end,
