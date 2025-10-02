@@ -85,6 +85,7 @@ application.use((request, response) => {
     const elements = {
         "method": request.method,
         "path": request.path,
+        "query": request.query,
         "params": request.params,
         "headers": request.headers,
         "data": request.data
