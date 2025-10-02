@@ -1112,14 +1112,14 @@ export function search_song_by_filter(filter, sort, order, count = 50, index = 1
         // 按照播放量数据
 
         if (sort.startsWith("stat")) {
-            const type = sort.slice(5); // stat.xxx 的 xxx 部分
+            const field = sort.slice(5); // stat.xxx 的 xxx 部分
 
-            if (!a.platform.stat) return;
+            if (!a.platform.stat) return 1;
 
-            if (!b.platform.stat) return;
+            if (!b.platform.stat) return -1;
 
-            basis.a = a.platform.stat[type];
-            basis.b = b.platform.stat[type];
+            basis.a = a.platform.stat[field];
+            basis.b = b.platform.stat[field];
         }
 
         // 按照上榜次数（周榜、日榜）
@@ -1146,8 +1146,7 @@ export function search_song_by_filter(filter, sort, order, count = 50, index = 1
         }
 
         if (sort === "default") {
-            basis.a = 0;
-            basis.b = 0;
+            basis.a = 0, basis.b = 0;
         }
 
         if (order === "desc") {

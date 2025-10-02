@@ -1,5 +1,9 @@
 {
     "interface": {
         "start": "./source/script/service/interface.js"
+    },
+
+    "reverse": {
+        "start": "./source/script/service/reverse.js"
     }
 }
