@@ -595,17 +595,22 @@ export function get_board_entry_info(issue, board = "vocaoid-weekly", count = 50
     const song_ids = list.map(item => item.target);
 
     const target = Object.fromEntries(
-        get_song_info_by_id(song_ids).map(item => ([
-            item.metadata.id, item
-        ]))
+        get_song_info_by_id(song_ids).map((current) =>
+            ([ current.metadata.id, current ])
+        )
     );
 
     const result = {
-        "board": list.map(
-            song => depend.parse_song(
+        "board": list.map((song, sindex) => {
+            const temp = depend.parse_song(
                 target, song
-            )
-        ),
+            );
+
+            temp.rank.board = (count - 1) *
+                index + sindex + 1;
+
+            return temp;
+        }),
         "metadata": {
             "id": board, issue,
             "name": metadata.name,
