@@ -606,8 +606,8 @@ export function get_board_entry_info(issue, board = "vocaoid-weekly", count = 50
                 target, song
             );
 
-            temp.rank.board = (count - 1) *
-                index + sindex + 1;
+            temp.rank.board = (index - 1) *
+                count + sindex + 1;
 
             return temp;
         }),
