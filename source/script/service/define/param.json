@@ -613,7 +613,9 @@
                 "mode": "list",
                 "options": {
                     "list": [
-                        "vocalist"
+                        "vocalist",
+                        "producer",
+                        "synthesizer"
                     ]
                 }
             }
