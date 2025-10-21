@@ -27,7 +27,8 @@ import {
     search_target_by_name,
     search_song_by_name,
     search_song_by_title,
-    search_song_by_filter
+    search_song_by_filter,
+    get_target_by_id
 } from "./core/interface.js";
 
 const root = path.resolve(".");
@@ -763,6 +764,23 @@ app.register("/check/exist/board/part", (request, response) => {
 
     return response.send(build_response(instance, {
         param, receive, "data": result
+    }, "OK"));
+});
+
+app.register("/info/:type", (request, response) => {
+    /**
+     * @type {{ "target": string[] }}
+     */
+    const param = parse_param(request);
+    const receive = process.uptime();
+    const instance = { response, request };
+
+    if (!check_param(param, receive, instance)) return;
+
+    return response.send(build_response(instance, {
+        param, receive, "data": get_target_by_id(
+            param.type || "song", param.target
+        )
     }, "OK"));
 });
 

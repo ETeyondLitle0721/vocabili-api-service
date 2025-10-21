@@ -594,5 +594,29 @@
                 }
             }
         ]
+    },
+    "/info/:type": {
+        "target": {
+            "mode": "count",
+            "options": {
+                "maximum": 50
+            }
+        },
+        "type": [
+            {
+                "mode": "count",
+                "options": {
+                    "maximum": 1
+                }
+            },
+            {
+                "mode": "list",
+                "options": {
+                    "list": [
+                        "vocalist"
+                    ]
+                }
+            }
+        ]
     }
 }

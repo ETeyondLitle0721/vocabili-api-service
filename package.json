@@ -1,6 +1,6 @@
 {
 	"name": "vocacili-api-service",
-	"version": "3.8.4",
+	"version": "3.8.6",
 	"description": "这是一个主要由 Node.js 开发的 Vocacili 项目的 API 服务源代码",
 	"keywords": [
 		"Node.js",
@@ -37,12 +37,10 @@
 		"@types/better-sqlite3": "^7.6.12",
 		"@types/cors": "^2.8.17",
 		"@types/express": "^5.0.0",
-		"@types/node": "^22.10.10",
 		"@types/xlsx": "^0.0.35",
 		"better-sqlite3": "^11.8.1",
 		"cors": "^2.8.5",
 		"express": "^4.21.2",
-		"node": "^18.20.6",
 		"uuid": "^13.0.0",
 		"ws": "^8.18.3",
 		"xlsx": "^0.18.5"
