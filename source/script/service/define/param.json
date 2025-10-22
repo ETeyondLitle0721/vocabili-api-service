@@ -204,6 +204,7 @@
                         "rank.coin",
                         "rank.favorite",
                         "point.total",
+                        "score.total",
                         "change.view",
                         "change.like",
                         "change.coin",
