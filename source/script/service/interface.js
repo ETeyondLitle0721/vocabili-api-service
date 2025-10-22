@@ -283,10 +283,11 @@ app.register("/list/:type", (request, response) => {
 
 app.register("/info/board", (request, response) => {
     /**
-     * @type {{ "board": string, "count": number, "index": number, "issue": number, "part": string }}
+     * @type {{ "board": string, "count": number, "index": number,
+     *  "issue": number, "part": string, "field": string }}
      */
     const param = parse_param(request, {
-        "count": 50, "index": 1, "part": "main"
+        "count": 50, "index": 1, "part": "main", "field": "point.total"
     }), receive = process.uptime();
     const instance = { response, request };
 
@@ -335,17 +336,18 @@ app.register("/info/board", (request, response) => {
     return response.send(build_response(instance, {
         param, receive, "data": get_board_entry_info(
             param.issue, param.board, +param.count,
-            +param.index, param.part
+            +param.index, param.part, param.field
         )
     }, "OK"));
 });
 
 app.register("/info/board/_latest", (request, response) => {
     /**
-     * @type {{ "board": string, "count": number, "index": number, "part": string }}
+     * @type {{ "board": string, "count": number,
+     *  "index": number, "part": string, "field": string }}
      */
     const param = parse_param(request, {
-        "count": 50, "index": 1, "part": "main"
+        "count": 50, "index": 1, "part": "main", "field": "point.total"
     }), receive = process.uptime();
     const instance = { response, request };
 
@@ -383,7 +385,8 @@ app.register("/info/board/_latest", (request, response) => {
 
     return response.send(build_response(instance, {
         param, receive, "data": get_latest_board_entry_info(
-            param.board, +param.count, +param.index, param.part
+            param.board, +param.count, +param.index,
+            param.part, param.field
         )
     }, "OK"));
 });

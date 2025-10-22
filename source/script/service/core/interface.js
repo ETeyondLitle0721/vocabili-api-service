@@ -283,6 +283,28 @@ export function get_board_entry_song_list(config) {
         "value": config.issue
     });
 
+    const { field } = config
+
+    const [ f1, f2 ] = field.split(".");
+
+    let column, method;
+
+    if (field === "point.total") {
+        column = "point";
+        method = "descending";
+    } else {
+        column = f2 + "." + f1;
+        method = {
+            "rank": "ascending",
+            "change": "descending"
+        } [ f1 ];
+    }
+
+    options.control.order = {
+        "column": column,
+        "method": method
+    };
+
     options.control.result = pagination(
         config.count, config.index
     );
@@ -565,16 +587,17 @@ export function parse_song_rank_info(song) {
  * @param {number} count 要获取多少个
  * @param {number} index 页索引
  * @param {string} part 需要获取的目标的子刊名称
+ * @param {string} field 排序的依据
  * @returns 获取到的排行榜信息
  */
-export function get_board_entry_info(issue, board = "vocaoid-weekly", count = 50, index = 1, part) {
+export function get_board_entry_info(issue, board = "vocaoid-weekly", count = 50, index = 1, part, field) {
     if (Array.isArray(issue)) {
         if (issue.length > 1) {
             const result = [];
 
             for (const item of issue) {
                 result.push(get_board_entry_info(
-                    item, board, count, index, part
+                    item, board, count, index, part, field
                 ));
             }
 
@@ -586,7 +609,9 @@ export function get_board_entry_info(issue, board = "vocaoid-weekly", count = 50
     
     const depend = get_depend_board_entry_info();
     const metadata = { "board": get_board_metadata_by_id(board) };
-    const list = get_board_entry_song_list({ issue, count, index, board, part });
+    const list = get_board_entry_song_list({
+        issue, count, index, board, part, field
+    });
 
     metadata.issue = metadata.board.catalog.find(
         item => item.issue === +issue
@@ -645,14 +670,15 @@ export function get_board_entry_info(issue, board = "vocaoid-weekly", count = 50
  * @param {number} count 要获取多少个
  * @param {number} index 当前的页数
  * @param {string} part 需要获取的目标的子刊名称
+ * @param {string} field 排序的依据
  * @returns 获取到的排行榜信息
  */
-export function get_latest_board_entry_info(board = "vocaoid-weekly", count = 50, index = 1, part) {
+export function get_latest_board_entry_info(board = "vocaoid-weekly", count = 50, index = 1, part, field) {
     const metadata = get_board_metadata_by_id(board);
 
     return get_board_entry_info(
         metadata.catalog.at(-1).issue,
-        board, count, index, part
+        board, count, index, part, field
     );
 }
 

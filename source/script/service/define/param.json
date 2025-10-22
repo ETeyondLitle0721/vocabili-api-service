@@ -129,6 +129,30 @@
                 }
             }
         ],
+        "field": [
+            {
+                "mode": "count",
+                "options": {
+                    "maximum": 1
+                }
+            },
+            {
+                "mode": "list",
+                "options": {
+                    "list": [
+                        "rank.view",
+                        "rank.like",
+                        "rank.coin",
+                        "rank.favorite",
+                        "point.total",
+                        "change.view",
+                        "change.like",
+                        "change.coin",
+                        "change.favorite"
+                    ]
+                }
+            }
+        ],
         "count": {
             "mode": "number",
             "options": {
@@ -163,6 +187,30 @@
                 "maximum": 1
             }
         },
+        "field": [
+            {
+                "mode": "count",
+                "options": {
+                    "maximum": 1
+                }
+            },
+            {
+                "mode": "list",
+                "options": {
+                    "list": [
+                        "rank.view",
+                        "rank.like",
+                        "rank.coin",
+                        "rank.favorite",
+                        "point.total",
+                        "change.view",
+                        "change.like",
+                        "change.coin",
+                        "change.favorite"
+                    ]
+                }
+            }
+        ],
         "count": {
             "mode": "number",
             "options": {

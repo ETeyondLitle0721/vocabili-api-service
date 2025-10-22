@@ -579,6 +579,24 @@
             ]
         },
         {
+            "name": "Rank_Table_Count_Change_Index",
+            "flag": "if-not-exists",
+            "table": "Rank_Table",
+            "column": [
+                "view_change", "favorite_change", "like_change", "coin_change"
+            ],
+            "order": "desc"
+        },
+        {
+            "name": "Rank_Table_Count_Rank_Index",
+            "flag": "if-not-exists",
+            "table": "Rank_Table",
+            "column": [
+                "view_rank", "favorite_rank", "like_rank", "coin_rank"
+            ],
+            "order": "asc"
+        },
+        {
             "name": "Rank_Table_Issue_Index",
             "flag": "if-not-exists",
             "table": "Rank_Table",
