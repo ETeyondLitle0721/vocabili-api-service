@@ -289,7 +289,7 @@ export function get_board_entry_song_list(config) {
 
     let column, method;
 
-    if (field === "point.total") {
+    if (field === "point.total" || field === "score.total") {
         column = "point";
         method = "descending";
     } else {
