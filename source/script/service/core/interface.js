@@ -293,7 +293,7 @@ export function get_board_entry_song_list(config) {
         column = "point";
         method = "descending";
     } else {
-        column = f2 + "." + f1;
+        column = f2 + "_" + f1;
         method = {
             "rank": "ascending",
             "change": "descending"
