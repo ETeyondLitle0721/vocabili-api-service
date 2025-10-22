@@ -614,6 +614,7 @@
                 "options": {
                     "list": [
                         "vocalist",
+                        "uploader",
                         "producer",
                         "synthesizer"
                     ]
