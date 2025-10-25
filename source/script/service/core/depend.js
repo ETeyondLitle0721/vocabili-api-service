@@ -183,7 +183,7 @@ export function check_parameter(instance, name, receive, target, mode, options) 
 export function build_response(instance, data = {}, code = "OK", message) {
     const { request } = instance, result = {
         "code": code, "time": new Date(), "data": data.data,
-        "status": code === "OK" ? "success" : "failed",
+        "status": code === "OK" ? "success" : "failure",
         "message": typeof message === "string" ?
             message : instance.response.get_local_text(code, message)
     };

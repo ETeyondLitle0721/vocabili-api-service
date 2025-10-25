@@ -26,7 +26,7 @@ GET /info/song?target=song_id_1,song_id_2
 
 **地址参数**:
 
-- `type` (string): 关联类型，可选值为 `uploader`, `vocalist`, `producer`, `synthesizer`。
+- `type` (string): 关联类型，可选值为 `uploader`, `vocalist`, `producer`, `synthesizer`, `pool`。
 
 **请求参数**:
 
@@ -50,7 +50,7 @@ GET /list/song/by_vocalist?target=vocalist_id_1&count=10&index=1
 
 **地址参数**:
 
-- `type` (string): 目标类型，可选值为 `song`, `board`, `uploader`, `vocalist`, `producer`, `synthesizer`。
+- `type` (string): 目标类型，可选值为 `song`, `board`, `uploader`, `vocalist`, `producer`, `synthesizer`, `platform`。
 
 **请求参数**:
 
@@ -77,7 +77,9 @@ GET /list/vocalist?count=10&index=1
 - `issue` (number[]): 期数列表。
 - `count` (number): 每页返回的曲目数量，默认为50。
 - `index` (number): 页码，默认为1。
-- `part` (string): 子刊名称。
+- `part` (string): 子刊名称，默认为 `main`。
+- `field` (string): 排序字段，可选值为 `rank.view`、`rank.like`、`rank.coin`、`rank.favorite`、`point.total`、`score.total`、`change.view`、`change.like`、`change.coin`、`change.favorite`，默认为 `point.total`。
+- `order` (string): 排序方式，可选值为 `asc`、`desc`，默认为 `default`。
 
 **示例请求**:
 
@@ -98,7 +100,9 @@ GET /info/board?board=vocaloid-weekly&part=main&issue=1&count=10&index=1
 - `board` (string): 榜单ID。
 - `count` (number): 每页返回的曲目数量，默认为50。
 - `index` (number): 页码，默认为1。
-- `part` (string): 子刊名称。
+- `part` (string): 子刊名称，默认为 `main`。
+- `field` (string): 排序字段，可选值为 `rank.view`、`rank.like`、`rank.coin`、`rank.favorite`、`point.total`、`score.total`、`change.view`、`change.like`、`change.coin`、`change.favorite`，默认为 `point.total`。
+- `order` (string): 排序方式，可选值为 `asc`、`desc`，默认为 `default`。
 
 **示例请求**:
 
@@ -117,10 +121,10 @@ GET /info/board/_latest?board=vocaloid-weekly&count=10&index=1&part=new
 **请求参数**:
 
 - `target` (string): 曲目ID。
-- `sort` (string): 获取数据的时候获取顺序，默认为oldest。
-- `part` (string): 需要获取的子刊名称，默认为main。
+- `sort` (string): 获取数据的时候获取顺序，可选值为 `newest`, `oldest`，默认为 `newest`。
+- `part` (string): 需要获取的子刊名称，默认为 `main`。
 - `issue` (number[]): 期数列表。
-- `board` (string[]): 榜单ID列表。
+- `board` (string): 榜单ID。
 - `count` (number): 每页返回的记录数量，默认为50。
 - `index` (number): 页码，默认为1。
 
@@ -141,8 +145,8 @@ GET /history/song/rank?target=song_id_1&issue=1&board=vocaloid-weekly&part=main&
 **请求参数**:
 
 - `target` (string): 曲目ID。
-- `sort` (string): 获取数据的时候获取顺序，默认为oldest。
-- `count` (number): 每页返回的记录数量，默认为300。
+- `sort` (string): 获取数据的时候获取顺序，可选值为 `newest`, `oldest`，默认为 `newest`。
+- `count` (number): 每页返回的记录数量，默认为20。
 - `index` (number): 页码，默认为1。
 
 **示例请求**:
@@ -178,7 +182,7 @@ GET /search/song/by_name?target=曲目名称&count=10&index=1
 
 **路由地址**: `/search/song/by_title`  
 **请求方法**: GET / POST  
-**描述**: 根据视频标题。
+**描述**: 根据视频标题搜索曲目。
 
 **请求参数**:
 
@@ -199,7 +203,7 @@ GET /search/song/by_title?target=标题&count=10&index=1
 
 **路由地址**: `/search/song/by_filter`  
 **请求方法**: GET / POST  
-**描述**: 根据过滤器参数。
+**描述**: 根据过滤器参数搜索曲目。
 
 **请求参数**:
 
@@ -212,8 +216,8 @@ GET /search/song/by_title?target=标题&count=10&index=1
 - `publish_start` (string): 曲目的上传日期下限（ISO 8601 格式的时间字符串）。
 - `type` (string): 曲目类型。
 - `copyright` (string): 版权状态。
-- `sort` (string): 结果的排序依据。
-- `order` (string): 结果的排序方法。
+- `sort` (string): 结果的排序依据，可选值为 `publish_date`, `stat.view`, `stat.like`, `stat.favorite`, `stat.coin`, `duration`, `count.weekly`, `count.daily`, `page`, `default`。
+- `order` (string): 结果的排序方法，可选值为 `asc`, `desc`。
 - `count` (number): 每页返回的曲目数量，默认为25。
 - `index` (number): 页码，默认为1。
 
@@ -240,6 +244,7 @@ GET /search/song/by_filter?keywords=你好,乌托邦&count=10&index=1
 - `target` (string): 目标名称。
 - `count` (number): 每页返回的目标数量，默认为25。
 - `index` (number): 页码，默认为1。
+- `threshold` (number): 匹配阈值，范围 [0, 1]，默认为 0.2。
 
 **示例请求**:
 
@@ -249,7 +254,29 @@ GET /search/vocalist/by_name?target=音&count=10&index=1
 
 ---
 
-## 12. 获取榜单元数据信息
+## 12. 获取目标信息
+
+**路由地址**: `/info/:type`  
+**请求方法**: GET / POST  
+**描述**: 根据目标ID列表获取目标的详细信息。
+
+**地址参数**:
+
+- `type` (string): 目标类型，可选值为 `vocalist`, `uploader`, `producer`, `synthesizer`。
+
+**请求参数**:
+
+- `target` (string[]): 目标ID列表，多个ID用逗号分隔。
+
+**示例请求**:
+
+```http
+GET /info/vocalist?target=vocalist_id_1,vocalist_id_2
+```
+
+---
+
+## 13. 获取榜单元数据信息
 
 **路由地址**: `/metadata/board`  
 **请求方法**: GET / POST  
@@ -262,12 +289,12 @@ GET /search/vocalist/by_name?target=音&count=10&index=1
 **示例请求**:
 
 ```http
-GET /metadata/board?target=vocaloid-weekly&part=new
+GET /metadata/board?target=vocaloid-weekly
 ```
 
 ---
 
-## 13. 获取刊物元数据信息
+## 14. 获取刊物元数据信息
 
 **路由地址**: `/metadata/board/issue`  
 **请求方法**: GET / POST  
@@ -275,7 +302,7 @@ GET /metadata/board?target=vocaloid-weekly&part=new
 
 **请求参数**:
 
-- `target` (string): 榜单ID。
+- `board` (string): 榜单ID。
 - `issue` (number): 刊物期数。
 
 **示例请求**:
@@ -286,15 +313,15 @@ GET /metadata/board/issue?target=vocaloid-weekly&issue=114
 
 ---
 
-## 14. 获取子刊元数据信息
+## 15. 获取子刊元数据信息
 
-**路由地址**: `/metadata/board/issue/part`  
+**路由地址**: `/metadata/board/part`  
 **请求方法**: GET / POST  
 **描述**: 获取指定子刊的元数据信息。
 
 **请求参数**:
 
-- `target` (string): 榜单ID。
+- `board` (string): 榜单ID。
 - `issue` (number): 刊物期数。
 - `part` (string): 子刊名称。
 
@@ -306,11 +333,11 @@ GET /metadata/board/part?target=vocaloid-weekly&issue=114&part=new
 
 ---
 
-## 15. 检查榜单的存在性
+## 16. 检查榜单的存在性
 
 **路由地址**: `/check/exist/board`  
 **请求方法**: GET / POST  
-**描述**: 检查指定榜单得存在性。
+**描述**: 检查指定榜单的存在性。
 
 **请求参数**:
 
@@ -319,12 +346,12 @@ GET /metadata/board/part?target=vocaloid-weekly&issue=114&part=new
 **示例请求**:
 
 ```http
-GET /check/exist/board?board=vocaloid-weekly
+GET /check/exist/board?target=vocaloid-weekly
 ```
 
 ---
 
-## 16. 检查刊物的存在性
+## 17. 检查刊物的存在性
 
 **路由地址**: `/check/exist/board/issue`  
 **请求方法**: GET / POST  
@@ -332,7 +359,7 @@ GET /check/exist/board?board=vocaloid-weekly
 
 **请求参数**:
 
-- `target` (string): 榜单ID。
+- `board` (string): 榜单ID。
 - `issue` (number): 刊物期数。
 
 **示例请求**:
@@ -343,15 +370,15 @@ GET /check/exist/board/issue?board=vocaloid-weekly&issue=114
 
 ---
 
-## 17. 检查子刊的存在性
+## 18. 检查子刊的存在性
 
-**路由地址**: `/check/exist/board/issue/part`  
+**路由地址**: `/check/exist/board/part`  
 **请求方法**: GET / POST  
 **描述**: 检查指定子刊的存在性。
 
 **请求参数**:
 
-- `target` (string): 榜单ID。
+- `board` (string): 榜单ID。
 - `issue` (number): 刊物期数。
 - `part` (string): 子刊名称。
 
@@ -363,7 +390,7 @@ GET /check/exist/board/part?board=vocaloid-weekly&issue=114&part=new
 
 ---
 
-## 18. 404 错误处理
+## 19. 404 错误处理
 
 **路由地址**: `*`  
 **请求方法**: 所有方法  
@@ -375,7 +402,7 @@ GET /check/exist/board/part?board=vocaloid-weekly&issue=114&part=new
 {
   "code": "NOT_FOUND",
   "time": "2023-10-01T12:00:00.000Z",
-  "status": "failed",
+  "status": "failure",
   "target": "/invalid_path",
   "message": "目标资源不存在。"
 }
@@ -404,7 +431,7 @@ GET /check/exist/board/part?board=vocaloid-weekly&issue=114&part=new
 | `PARAMETER_VALUE_ILLEGAL`  | 参数值非法                               | 请求中的参数值不符合预期的格式或类型。                               |
 | `BOARD_NOT_EXISTS`         | 目标榜单不存在                           | 请求中指定的榜单不存在。                                             |
 | `ISSUE_NOT_EXISTS`         | 目标刊目不存在                           | 请求中指定的榜单期数不存在。                                         |
-| `PART_NOT_EXISTS`         | 目标刊目不存在指定子刊                           | 请求中指定的子刊不存在。                                         |
+| `PART_NOT_EXISTS`          | 目标刊目不存在指定子刊                   | 请求中指定的子刊不存在。                                             |
 | `NO_ENTRY_EXISTS`          | 没有找到有效条目                         | 请求的目标资源没有任何有效条目。                                     |
 | `NOT_FOUND_VALID_VALUE`    | 没有找到有效值                           | 请求中缺少有效的参数值。                                             |
 
@@ -454,6 +481,7 @@ GET /check/exist/board/part?board=vocaloid-weekly&issue=114&part=new
 ## 命令列表
 
 ### init:database
+
 ```bash
 npm run init:database
 ```
@@ -494,6 +522,8 @@ npm run clean:database
 ```
 
 - **功能**：清理数据库中无引用的实体
+
+---
 
 ### merge:database
 

@@ -291,7 +291,9 @@ export function get_board_entry_song_list(config) {
 
     let column, method;
 
-    if (field === "point.total" || field === "score.total") {
+    if (field === "point.total" ||
+        field === "score.total"
+    ) {
         column = "point";
         method = "descending";
     } else {
@@ -356,7 +358,9 @@ function get_depend_song_info() {
             }
         };
 
-        for (const [ field, list ] of Object.entries(song_mark)) {
+        const entries = Object.entries(song_mark);
+
+        for (const [ field, list ] of entries) {
             let pusher;
 
             if (field === "vocalist") {
@@ -402,6 +406,9 @@ function get_depend_song_info() {
      */
     const parse_platform = (id, target, uploader) => {
         const info = target[id];
+
+        // N, [ 0, 3 ]
+        const random = parseInt(Math.random() * 4);
     
         const result = {
             "id": id, "page": info.page,
@@ -409,7 +416,7 @@ function get_depend_song_info() {
             "publish": info.published_at, "title": info.title, "uploader": [],
             "duration": info.duration, "copyright": info.copyright,
             "thumbnail": info.thumbnail ? info.thumbnail.replace(
-                "BB://I/", "https://i0.hdslb.com/bfs/archive/"
+                "BB://I/", "https://" + random  + ".hdslb.com/bfs/archive/"
             ) : null
         };
 
@@ -430,20 +437,22 @@ function get_depend_song_info() {
      * @param {string[]} ids 歌曲ID数组
      * @returns {Object} 按分类组织的标记信息对象
      */
-    const get_mark_by_song_ids = ids => Object.fromEntries(Object.entries(
-        classification(
-            get_mark_by_id(ids),
-            value => value.target
-        )
-    ).map(([key, value]) => ([
-        key, Object.fromEntries(Object.entries(
-            classification(value, value => value.type)
+    const get_mark_by_song_ids = (ids) => {
+        return Object.fromEntries(Object.entries(
+            classification(
+                get_mark_by_id(ids),
+                value => value.target
+            )
         ).map(([key, value]) => ([
-            key, unique_array(value.map(
-                item => item.value
-            ))
+            key, Object.fromEntries(Object.entries(
+                classification(value, value => value.type)
+            ).map(([key, value]) => ([
+                key, unique_array(value.map(
+                    item => item.value
+                ))
+            ])))
         ])))
-    ])));
+    };
     
     /**
      * 根据标记信息获取目标数据
@@ -451,16 +460,18 @@ function get_depend_song_info() {
      * @param {Object} mark_info 标记信息对象
      * @returns {Object} 目标数据映射表（ID到对象的映射）
      */
-    const get_target_by_mark_info = mark_info => Object.fromEntries(
-        get_target_by_id(
-            [ "producer", "vocalist", "synthesizer", "platform" ],
-            Object.values(mark_info).flat().map(
-                item => Object.values(item)
-            ).flat(2)
-        ).map(item => item.response).flat().map(
-            item => ([ item.id, item ])
+    const get_target_by_mark_info = (mark_info) => {
+        return Object.fromEntries(
+            get_target_by_id(
+                [ "producer", "vocalist", "synthesizer", "platform" ],
+                Object.values(mark_info).flat().map(
+                    item => Object.values(item)
+                ).flat(2)
+            ).map(item => item.response).flat().map(
+                item => ([ item.id, item ])
+            )
         )
-    );
+    };
     
     /**
      * 根据标记信息获取上传者信息
@@ -601,16 +612,21 @@ export function parse_song_rank_info(song) {
  * @param {number} index 页索引
  * @param {string} part 需要获取的目标的子刊名称
  * @param {string} field 排序的依据
+ * @param {string} order 排序方式
  * @returns 获取到的排行榜信息
  */
-export function get_board_entry_info(issue, board = "vocaoid-weekly", count = 50, index = 1, part, field) {
+export function get_board_entry_info(
+    issue, board = "vocaoid-weekly", count = 50, index = 1,
+    part, field, order
+) {
     if (Array.isArray(issue)) {
         if (issue.length > 1) {
             const result = [];
 
             for (const item of issue) {
                 result.push(get_board_entry_info(
-                    item, board, count, index, part, field
+                    item, board, count, index,
+                    part, field, order
                 ));
             }
 
@@ -623,7 +639,7 @@ export function get_board_entry_info(issue, board = "vocaoid-weekly", count = 50
     const depend = get_depend_board_entry_info();
     const metadata = { "board": get_board_metadata_by_id(board) };
     const list = get_board_entry_song_list({
-        issue, count, index, board, part, field
+        issue, count, index, board, part, field, order
     });
 
     metadata.issue = metadata.board.catalog.find(
@@ -704,7 +720,9 @@ export function get_latest_board_entry_info(board = "vocaoid-weekly", count = 50
  * @param {number} index 当前的页数
  * @returns 获取到的排行榜信息
  */
-export function get_platform_count_history_by_id(target, sort, count = 50, index = 1) {
+export function get_platform_count_history_by_id(
+    target, sort, count = 50, index = 1
+) {
     const where = {
         "column": "target",
         "operator": "equal",
@@ -752,7 +770,9 @@ export function get_platform_count_history_by_id(target, sort, count = 50, index
  * @param {number} index 当前的页数
  * @returns 获取到的排行榜信息
  */
-export function get_song_rank_history_info_by_id(target, issue, sort, board, part, count = 50, index = 1) {
+export function get_song_rank_history_info_by_id(
+    target, issue, sort, board, part, count = 50, index = 1
+) {
     const info = get_rank_by_song_id({
         count, index, target, issue, board, part, sort
     });

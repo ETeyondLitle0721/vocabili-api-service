@@ -793,7 +793,7 @@ app.use((request, response) => {
     return response.send({
         "code": "NOT_FOUND",
         "time": new Date().toISOString(),
-        "status": "failed",
+        "status": "failure",
         "target": request.path,
         "message": response.get_local_text("NOT_FOUND")
     });
