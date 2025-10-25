@@ -258,6 +258,8 @@ export function get_rank_by_song_id(config) {
  * @param {number} config.index 页索引
  * @param {number} config.issue 期数
  * @param {string} config.part 子刊名称
+ * @param {string} config.field 排序字段
+ * @param {string} config.order 排序方式
  * @returns 查询结果
  */
 export function get_board_entry_song_list(config) {
@@ -298,6 +300,17 @@ export function get_board_entry_song_list(config) {
             "rank": "ascending",
             "change": "descending"
         } [ f1 ];
+    }
+
+    if (options.order) {
+        const { order } = options;
+
+        if (order !== "default") {
+            method = {
+                "desc": "descending",
+                "asc": "ascending"
+            } [ order ];
+        }
     }
 
     options.control.order = {

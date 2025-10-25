@@ -173,7 +173,25 @@
                     "maximum": 131072
                 }
             }
-        }
+        },
+        "order": [
+            {
+                "mode": "count",
+                "options": {
+                    "maximum": 1
+                }
+            },
+            {
+                "mode": "list",
+                "options": {
+                    "list": [
+                        "desc",
+                        "asc",
+                        "default"
+                    ]
+                }
+            }
+        ]
     },
     "/info/board/_latest": {
         "part": {
@@ -232,7 +250,25 @@
                     "maximum": 131072
                 }
             }
-        }
+        },
+        "order": [
+            {
+                "mode": "count",
+                "options": {
+                    "maximum": 1
+                }
+            },
+            {
+                "mode": "list",
+                "options": {
+                    "list": [
+                        "desc",
+                        "asc",
+                        "default"
+                    ]
+                }
+            }
+        ]
     },
     "/history/song/rank": {
         "board": {
